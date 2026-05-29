@@ -24,7 +24,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.mariemeng.CamRent"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,7 +40,13 @@
         {
           "photosPermission": "CamRent utilise votre galerie pour ajouter des photos de voitures."
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "567eefdd-8f54-4064-ba56-15c39dcdff36"
+      }
+    }
   }
 }
