@@ -1,0 +1,110 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function validBookingCreate() {
+      return request.resource.data.keys().hasOnly([
+          'carId',
+          'carBrand',
+          'carModel',
+          'ownerId',
+          'clientId',
+          'startDate',
+          'endDate',
+          'totalDays',
+          'totalPrice',
+          'paymentMethod',
+          'paymentStatus',
+          'driverLicense',
+          'status',
+          'createdAt'
+        ])
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.paymentStatus == 'unpaid'
+        && request.resource.data.paymentMethod in ['MTN MoMo', 'Orange Money', 'Carte bancaire']
+        && request.resource.data.totalDays is int
+        && request.resource.data.totalDays >= 1
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice > 0
+        && validDriverLicense(request.resource.data.driverLicense);
+    }
+
+    function validDriverLicense(license) {
+      return license is map
+        && license.keys().hasOnly([
+          'fullName',
+          'licenseNumber',
+          'issuingCountry',
+          'issueDate',
+          'expiryDate',
+          'categories'
+        ])
+        && license.fullName is string
+        && license.fullName.size() >= 3
+        && license.licenseNumber is string
+        && license.licenseNumber.size() >= 5
+        && license.issuingCountry is string
+        && license.issuingCountry.size() >= 2
+        && license.issueDate is string
+        && license.issueDate.size() == 10
+        && license.expiryDate is string
+        && license.expiryDate.size() == 10
+        && license.categories is string
+        && license.categories.size() >= 1;
+    }
+
+    function validBookingUpdate() {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+
+      return signedIn()
+        && (
+          (
+            request.auth.uid == resource.data.ownerId
+            && changed.hasOnly(['status'])
+            && request.resource.data.status in ['confirmed', 'cancelled', 'completed']
+          )
+          || (
+            request.auth.uid == resource.data.clientId
+            && changed.hasOnly(['status'])
+            && request.resource.data.status == 'cancelled'
+          )
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || userRole() == 'owner');
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /cars/{carId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && userRole() == 'owner';
+      allow update, delete: if isOwner(resource.data.ownerId);
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if signedIn()
+        && (resource.data.clientId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow create: if signedIn() && validBookingCreate();
+      allow update: if validBookingUpdate();
+      allow delete: if false;
+    }
+  }
+}

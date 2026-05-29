@@ -1,0 +1,65 @@
+import { onRequest } from 'firebase-functions/v2/https';
+
+import { assertPost, sendJson } from './http';
+import { handleMobileMoneyPayment } from './payments/mobileMoneyHandler';
+import { handleFlutterwaveWebhook, handleMtnMomoWebhook, handleOrangeMoneyWebhook } from './payments/webhookHandlers';
+
+export const mobileMoneyPayment = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleMobileMoneyPayment(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Payment request failed',
+    });
+  }
+});
+
+export const mtnMomoWebhook = onRequest(async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleMtnMomoWebhook(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'MTN webhook failed',
+    });
+  }
+});
+
+export const orangeMoneyWebhook = onRequest(async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleOrangeMoneyWebhook(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Orange webhook failed',
+    });
+  }
+});
+
+export const flutterwaveWebhook = onRequest(async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleFlutterwaveWebhook(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Flutterwave webhook failed',
+    });
+  }
+});
