@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CamRent",
+    "name": "Autofix Pro",
     "slug": "CamRent",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "CamRent utilise votre galerie pour ajouter des photos de voitures."
+        "NSPhotoLibraryUsageDescription": "Autofix Pro utilise votre galerie pour ajouter des photos de voitures."
       }
     },
     "android": {
@@ -28,7 +28,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.mariemeng.CamRent"
+      "package": "com.mariemeng.autofixpro"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,7 +38,23 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "CamRent utilise votre galerie pour ajouter des photos de voitures."
+          "photosPermission": "Autofix Pro utilise votre galerie pour ajouter des photos de voitures."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#3B63D4",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
         }
       ],
       "expo-font"

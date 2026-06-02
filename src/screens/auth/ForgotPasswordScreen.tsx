@@ -55,7 +55,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
         </PrimaryButton>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text className="text-center font-semibold text-cameroonGreen">Retour à la connexion</Text>
+          <Text className="text-center font-semibold text-brand-blue">Retour à la connexion</Text>
         </TouchableOpacity>
       </View>
     </Screen>

@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { CAMEROON_CITIES } from '../../constants/cameroon';
 import { BackButton } from '../../components/BackButton';
+import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { registerWithEmail } from '../../services/authService';
@@ -55,7 +55,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         <View>
           <Text className="text-3xl font-black text-slate-950">Créer un compte</Text>
           <Text className="mt-2 text-base text-slate-600">
-            Rejoignez CamRent comme client ou propriétaire.
+            Rejoignez Autofix Pro comme client ou propriétaire.
           </Text>
         </View>
 
@@ -132,20 +132,20 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
               <TouchableOpacity
                 className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border px-4 py-3 ${
                   role === item.value
-                    ? 'border-cameroonGreen bg-green-50'
+                    ? 'border-brand-blue bg-blue-50'
                     : 'border-slate-200 bg-white'
                 }`}
                 key={item.value}
                 onPress={() => setRole(item.value)}
               >
                 <Ionicons
-                  color={role === item.value ? '#15803d' : '#64748b'}
+                  color={role === item.value ? '#3B63D4' : '#64748b'}
                   name={item.icon as React.ComponentProps<typeof Ionicons>['name']}
                   size={18}
                 />
                 <Text
                   className={`font-semibold ${
-                    role === item.value ? 'text-cameroonGreen' : 'text-slate-600'
+                    role === item.value ? 'text-brand-blue' : 'text-slate-600'
                   }`}
                 >
                   {item.label}
@@ -155,37 +155,14 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
         </View>
 
-        <View className="gap-3">
-          <Text className="font-semibold text-slate-800">Ville</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {CAMEROON_CITIES.map((item) => (
-              <TouchableOpacity
-                className={`rounded-xl border px-4 py-2 ${
-                  city === item
-                    ? 'border-cameroonGreen bg-green-50'
-                    : 'border-slate-200 bg-white'
-                }`}
-                key={item}
-                onPress={() => setCity(item)}
-              >
-                <Text
-                  className={`font-medium ${
-                    city === item ? 'text-cameroonGreen' : 'text-slate-600'
-                  }`}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <CitySearchInput label="Ville" onSelectCity={setCity} value={city} />
 
         <PrimaryButton disabled={!fullName || !email || !password} loading={loading} onPress={register}>
           S'inscrire
         </PrimaryButton>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text className="text-center font-semibold text-cameroonGreen">J'ai déjà un compte</Text>
+          <Text className="text-center font-semibold text-brand-blue">J'ai déjà un compte</Text>
         </TouchableOpacity>
       </View>
     </Screen>

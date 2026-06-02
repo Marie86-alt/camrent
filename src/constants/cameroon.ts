@@ -6,6 +6,37 @@ export const CAMEROON_CITIES: CameroonCity[] = [
   'Bafoussam',
   'Bamenda',
   'Garoua',
+  'Maroua',
+  'Ngaoundere',
+  'Bertoua',
+  'Ebolowa',
+  'Kribi',
+  'Limbe',
+  'Buea',
+  'Kumba',
+  'Dschang',
+  'Foumban',
+  'Nkongsamba',
+  'Edea',
+  'Loum',
+  'Mbouda',
+  'Mbalmayo',
+  'Sangmelima',
+  'Bafang',
+  'Bangangte',
+  'Meiganga',
+  'Kousseri',
+  'Mokolo',
+  'Guider',
+  'Yagoua',
+  'Batouri',
+  'Bafia',
+  'Obala',
+  'Ebebda',
+  'Tiko',
+  'Mamfe',
+  'Wum',
+  'Kumbo',
 ];
 
 export const PAYMENT_METHODS: PaymentMethod[] = ['MTN MoMo', 'Orange Money', 'Carte bancaire'];
@@ -17,3 +48,12 @@ export const PAYMENT_PROVIDER_BY_METHOD: Record<PaymentMethod, PaymentProvider> 
 };
 
 export const PHONE_PREFIX = '+237';
+
+export const CAR_PHOTO_SLOTS = [
+  { key: 'front',     label: 'Avant',          icon: 'arrow-up-circle-outline' },
+  { key: 'rear',      label: 'Arrière',         icon: 'arrow-down-circle-outline' },
+  { key: 'left',      label: 'Gauche',          icon: 'arrow-back-circle-outline' },
+  { key: 'right',     label: 'Droite',          icon: 'arrow-forward-circle-outline' },
+  { key: 'interior',  label: 'Intérieur',       icon: 'people-outline' },
+  { key: 'dashboard', label: 'Tableau de bord', icon: 'speedometer-outline' },
+] as const satisfies { key: string; label: string; icon: string }[];

@@ -14,6 +14,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    function isAdmin() {
+      return signedIn() && userRole() == 'admin';
+    }
+
     function validBookingCreate() {
       return request.resource.data.keys().hasOnly([
           'carId',
@@ -81,13 +85,18 @@ service cloud.firestore {
             && changed.hasOnly(['status'])
             && request.resource.data.status == 'cancelled'
           )
+          || (
+            isAdmin()
+            && changed.hasOnly(['status', 'disputeStatus', 'refundStatus', 'depositStatus'])
+            && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed']
+          )
         );
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || userRole() == 'owner');
+      allow read: if signedIn() && (request.auth.uid == userId || userRole() == 'owner' || isAdmin());
       allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && (request.auth.uid == userId || isAdmin());
       allow delete: if false;
     }
 
@@ -96,15 +105,45 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && userRole() == 'owner';
-      allow update, delete: if isOwner(resource.data.ownerId);
+      allow update, delete: if isOwner(resource.data.ownerId) || isAdmin();
     }
 
     match /bookings/{bookingId} {
       allow read: if signedIn()
-        && (resource.data.clientId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+        && (resource.data.clientId == request.auth.uid || resource.data.ownerId == request.auth.uid || isAdmin());
       allow create: if signedIn() && validBookingCreate();
       allow update: if validBookingUpdate();
       allow delete: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read, update: if isAdmin();
+      allow create, delete: if false;
+    }
+
+    match /adminSettings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /promoBanners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /adminNotifications/{notificationId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /adminLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
     }
   }
 }

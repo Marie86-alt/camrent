@@ -1,11 +1,11 @@
 import { createUserWithEmailAndPassword, deleteUser, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 import { findDemoUser } from './demoData';
 import { auth, db } from './firebase';
 import { hasFirebaseConfig } from './firebase';
 import { useAuthStore } from '../store/authStore';
-import type { CameroonCity, UserRole } from '../types/models';
+import type { AppUser, CameroonCity, UserRole } from '../types/models';
 import { normalizeCameroonPhone } from '../utils/validation';
 
 export type RegisterPayload = {
@@ -27,7 +27,19 @@ export async function loginWithEmail(email: string, password: string) {
     return { user: demoUser };
   }
 
-  return signInWithEmailAndPassword(auth, email.trim(), password);
+  const credentials = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const userSnapshot = await getDoc(doc(db, 'users', credentials.user.uid));
+
+  if (!userSnapshot.exists()) {
+    throw new Error('user-profile-not-found');
+  }
+
+  return {
+    user: {
+      id: credentials.user.uid,
+      ...userSnapshot.data(),
+    } as AppUser,
+  };
 }
 
 export async function registerWithEmail(payload: RegisterPayload) {
@@ -95,4 +107,8 @@ export async function deleteAccount(userId: string) {
 
   await deleteDoc(doc(db, 'users', userId));
   await deleteUser(auth.currentUser);
+}
+
+export function updateUserProfile(userId: string, payload: Partial<AppUser>) {
+  return updateDoc(doc(db, 'users', userId), payload);
 }

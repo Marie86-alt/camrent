@@ -4,12 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
+import { BrandLogo } from '../../components/BrandLogo';
 import { CarCard } from '../../components/CarCard';
 import { CarCardSkeleton } from '../../components/CarCardSkeleton';
+import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
-import { CAMEROON_CITIES } from '../../constants/cameroon';
 import { useBookings } from '../../hooks/useBookings';
 import { useAuthStore } from '../../store/authStore';
 import { useCarsStore } from '../../store/carsStore';
@@ -30,7 +31,7 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
 
 const BOOKING_STATUS_COLORS: Record<string, string> = {
   pending: '#ca8a04',
-  confirmed: '#15803d',
+  confirmed: '#3B63D4',
   cancelled: '#b91c1c',
   completed: '#64748b',
 };
@@ -47,11 +48,11 @@ export function HomeScreen() {
   useEffect(() => subscribeToAvailableCars(), [subscribeToAvailableCars]);
 
   const initials = user?.fullName
-    .split(' ')
+    ?.split(' ')
     .map((n) => n[0])
     .slice(0, 2)
     .join('')
-    .toUpperCase();
+    .toUpperCase() ?? '';
 
   const activeBooking = bookings.find(
     (b) => b.status === 'pending' || b.status === 'confirmed',
@@ -66,12 +67,12 @@ export function HomeScreen() {
       {/* ─── Header ─── */}
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2.5">
-          <View className="h-10 w-10 items-center justify-center rounded-full bg-cameroonGreen">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
             <Text className="text-sm font-black text-white">{initials}</Text>
           </View>
           <View>
             <Text className="text-xs text-slate-400">Bienvenue sur</Text>
-            <Text className="text-base font-black text-slate-950">CamRent 🇨🇲</Text>
+            <BrandLogo variant="compact" />
           </View>
         </View>
         <TouchableOpacity
@@ -81,7 +82,7 @@ export function HomeScreen() {
         >
           <Ionicons color="#64748b" name="notifications-outline" size={20} />
           {activeBooking ? (
-            <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cameroonRed" />
+            <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-danger" />
           ) : null}
         </TouchableOpacity>
       </View>
@@ -101,55 +102,36 @@ export function HomeScreen() {
         activeOpacity={0.8}
         className="flex-row items-center gap-3 rounded-2xl bg-white px-4 py-3.5"
         style={{
-          shadowColor: '#15803d',
+          shadowColor: '#3B63D4',
           shadowOpacity: 0.12,
           shadowRadius: 8,
           shadowOffset: { width: 0, height: 2 },
           elevation: 3,
           borderWidth: 1.5,
-          borderColor: '#dcfce7',
+          borderColor: '#dbeafe',
         }}
         onPress={() => navigation.navigate('Search')}
       >
-        <Ionicons color="#15803d" name="search-outline" size={20} />
+        <Ionicons color="#3B63D4" name="search-outline" size={20} />
         <Text className="flex-1 text-slate-400">Rechercher marque, modèle ou ville…</Text>
-        <View className="rounded-lg bg-cameroonGreen px-2 py-1">
+        <View className="rounded-lg bg-brand-blue px-2 py-1">
           <Ionicons color="white" name="arrow-forward" size={14} />
         </View>
       </TouchableOpacity>
 
-      {/* ─── City filters ─── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="-mx-5"
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-      >
-        {[null, ...CAMEROON_CITIES].map((city) => {
-          const isSelected = selectedCity === city;
-          const label = city ?? 'Toutes les villes';
-          return (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              className={`rounded-full px-4 py-2 ${
-                isSelected
-                  ? 'bg-cameroonGreen'
-                  : 'border border-slate-200 bg-white'
-              }`}
-              key={label}
-              onPress={() => setSelectedCity(city)}
-            >
-              <Text
-                className={`text-sm font-semibold ${
-                  isSelected ? 'text-white' : 'text-slate-600'
-                }`}
-              >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <View className="rounded-2xl bg-white p-4">
+        <CitySearchInput
+          label="Filtrer par ville"
+          onSelectCity={(city) => setSelectedCity(city || null)}
+          placeholder="Rechercher Yaounde, Douala, Kribi..."
+          value={selectedCity}
+        />
+        {selectedCity ? (
+          <TouchableOpacity className="mt-3 self-start" onPress={() => setSelectedCity(null)}>
+            <Text className="text-sm font-semibold text-brand-blue">Voir toutes les villes</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       {/* ─── Active booking banner ─── */}
       {activeBooking ? (
@@ -207,7 +189,7 @@ export function HomeScreen() {
         </Text>
         {selectedCity ? (
           <TouchableOpacity onPress={() => setSelectedCity(null)}>
-            <Text className="text-sm font-semibold text-cameroonGreen">Tout voir</Text>
+            <Text className="text-sm font-semibold text-brand-blue">Tout voir</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -239,7 +221,7 @@ export function HomeScreen() {
                 </Text>
                 {selectedCity ? (
                   <TouchableOpacity onPress={() => setSelectedCity(null)}>
-                    <Text className="text-sm font-semibold text-cameroonGreen">
+                    <Text className="text-sm font-semibold text-brand-blue">
                       Voir toutes les villes
                     </Text>
                   </TouchableOpacity>

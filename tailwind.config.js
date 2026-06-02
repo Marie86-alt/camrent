@@ -5,9 +5,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        cameroonGreen: '#15803d',
-        cameroonRed: '#b91c1c',
-        cameroonYellow: '#facc15',
+        'brand-blue': '#3B63D4',
+        'brand-blue-dark': '#2a4db8',
+        'brand-danger': '#b91c1c',
+        'brand-warning': '#facc15',
       },
     },
   },

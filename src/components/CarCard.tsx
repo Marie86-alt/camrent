@@ -34,7 +34,7 @@ export function CarCard({ car, onPress }: CarCardProps) {
             </Text>
           </View>
           <View className="items-end">
-            <Text className="font-black text-cameroonGreen">{formatFcfa(car.pricePerDay)}</Text>
+            <Text className="font-black text-brand-blue">{formatFcfa(car.pricePerDay)}</Text>
             <Text className="text-xs text-slate-400">/jour</Text>
           </View>
         </View>

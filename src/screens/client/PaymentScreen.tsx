@@ -55,11 +55,11 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
           className="items-center gap-3 rounded-xl bg-white py-8"
           style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
         >
-          <View className="h-14 w-14 items-center justify-center rounded-full bg-green-50">
-            <Ionicons color="#15803d" name="shield-checkmark-outline" size={28} />
+          <View className="h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+            <Ionicons color="#3B63D4" name="shield-checkmark-outline" size={28} />
           </View>
           <Text className="text-sm text-slate-500">Montant a regler</Text>
-          <Text className="text-4xl font-black text-cameroonGreen">{formatFcfa(amount)}</Text>
+          <Text className="text-4xl font-black text-brand-blue">{formatFcfa(amount)}</Text>
           <View className="flex-row items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1">
             <Ionicons color="#64748b" name={paymentMethod === 'Carte bancaire' ? 'card-outline' : 'phone-portrait-outline'} size={14} />
             <Text className="text-sm text-slate-600">{paymentMethod}</Text>

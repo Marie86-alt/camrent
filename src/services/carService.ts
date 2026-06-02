@@ -6,7 +6,23 @@ import type { Car } from '../types/models';
 export type CreateCarPayload = Omit<Car, 'id'>;
 
 export type UpdateCarPayload = Partial<
-  Pick<Car, 'brand' | 'city' | 'description' | 'fuelType' | 'imageUrl' | 'model' | 'pricePerDay' | 'seats' | 'transmission' | 'year'>
+  Pick<
+    Car,
+    | 'adminStatus'
+    | 'brand'
+    | 'city'
+    | 'description'
+    | 'documentsVerified'
+    | 'fuelType'
+    | 'imageUrl'
+    | 'imageUrls'
+    | 'model'
+    | 'pricePerDay'
+    | 'seats'
+    | 'technicalSheet'
+    | 'transmission'
+    | 'year'
+  >
 >;
 
 export function subscribeToAvailableCars(onData: (cars: Car[]) => void, onError: () => void) {
@@ -14,6 +30,14 @@ export function subscribeToAvailableCars(onData: (cars: Car[]) => void, onError:
 
   return onSnapshot(
     carsQuery,
+    (snapshot) => onData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Car)),
+    onError,
+  );
+}
+
+export function subscribeToAllCars(onData: (cars: Car[]) => void, onError: () => void) {
+  return onSnapshot(
+    collection(db, 'cars'),
     (snapshot) => onData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Car)),
     onError,
   );

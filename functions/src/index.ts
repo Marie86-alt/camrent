@@ -1,6 +1,8 @@
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { assertPost, sendJson } from './http';
+import { handleCitySearch } from './locations/geonames';
+import { handleSendAdminNotification } from './notifications/expoPush';
 import { handleMobileMoneyPayment } from './payments/mobileMoneyHandler';
 import { handleFlutterwaveWebhook, handleMtnMomoWebhook, handleOrangeMoneyWebhook } from './payments/webhookHandlers';
 
@@ -60,6 +62,32 @@ export const flutterwaveWebhook = onRequest(async (request, response) => {
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'Flutterwave webhook failed',
+    });
+  }
+});
+
+export const sendAdminNotification = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleSendAdminNotification(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Notification send failed',
+    });
+  }
+});
+
+export const citySearch = onRequest({ cors: true }, async (request, response) => {
+  try {
+    await handleCitySearch(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'City search failed',
     });
   }
 });

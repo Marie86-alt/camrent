@@ -201,7 +201,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <Text className="font-semibold text-slate-800">Dates de location</Text>
           <View className="flex-row gap-3">
             <TouchableOpacity
-              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'start' ? 'border-cameroonGreen' : 'border-slate-200'}`}
+              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'start' ? 'border-brand-blue' : 'border-slate-200'}`}
               onPress={() => setActiveDateField('start')}
             >
               <View className="flex-row items-center gap-1.5 mb-1">
@@ -216,7 +216,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             </View>
 
             <TouchableOpacity
-              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'end' ? 'border-cameroonGreen' : 'border-slate-200'}`}
+              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'end' ? 'border-brand-blue' : 'border-slate-200'}`}
               onPress={() => setActiveDateField('end')}
             >
               <View className="flex-row items-center gap-1.5 mb-1">
@@ -252,7 +252,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
               <TouchableOpacity
                 className={`flex-1 rounded-xl border px-4 py-3 ${
                   paymentMethod === method
-                    ? 'border-cameroonGreen bg-green-50'
+                    ? 'border-brand-blue bg-blue-50'
                     : 'border-slate-200 bg-white'
                 }`}
                 key={method}
@@ -260,7 +260,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
               >
                 <Text
                   className={`text-center font-semibold ${
-                    paymentMethod === method ? 'text-cameroonGreen' : 'text-slate-600'
+                    paymentMethod === method ? 'text-brand-blue' : 'text-slate-600'
                   }`}
                 >
                   {method}
@@ -274,7 +274,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <View>
             <Text className="font-semibold text-slate-800">Permis de conduire</Text>
             <Text className="mt-1 text-xs text-slate-500">
-              Ces informations seront transmises au propriÃ©taire pour valider la location.
+              Ces informations seront transmises au propriétaire pour valider la location.
             </Text>
           </View>
 
@@ -343,7 +343,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           </View>
           <View className="mt-1 border-t border-slate-100 pt-3 flex-row justify-between">
             <Text className="font-semibold text-slate-700">Total</Text>
-            <Text className="text-xl font-black text-cameroonGreen">{formatFcfa(totalPrice)}</Text>
+            <Text className="text-xl font-black text-brand-blue">{formatFcfa(totalPrice)}</Text>
           </View>
         </View>
 

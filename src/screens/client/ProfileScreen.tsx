@@ -1,22 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
+import { ProfilePhotoPicker } from '../../components/ProfilePhotoPicker';
 import { Screen } from '../../components/Screen';
 import { deleteAccount, logout } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 
 type InfoRowProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
   value?: string;
   last?: boolean;
 };
 
-function InfoRow({ icon, value, last }: InfoRowProps) {
-  if (!value) return null;
+function InfoRow({ icon, label, value, last }: InfoRowProps) {
   return (
-    <View className={`flex-row items-center gap-3 px-4 py-3 ${last ? '' : 'border-b border-slate-100'}`}>
+    <View
+      className={`flex-row items-center gap-3 px-4 py-3 ${last ? '' : 'border-b border-slate-100'}`}
+    >
       <Ionicons color="#64748b" name={icon} size={18} />
-      <Text className="flex-1 text-slate-700">{value}</Text>
+      <Text className="w-24 text-sm font-semibold text-slate-500">{label}</Text>
+      <Text className="flex-1 text-right text-sm text-slate-800">{value ?? '—'}</Text>
     </View>
   );
 }
@@ -24,19 +28,12 @@ function InfoRow({ icon, value, last }: InfoRowProps) {
 export function ProfileScreen() {
   const { user } = useAuth();
 
-  const initials = user?.fullName
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   const confirmDeleteAccount = () => {
     if (!user) return;
 
     Alert.alert(
       'Supprimer le compte',
-      'Cette action supprimera votre profil CamRent. Elle est irreversible.',
+      'Cette action supprimera votre profil Autofix Pro de façon irréversible.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -46,7 +43,10 @@ export function ProfileScreen() {
             try {
               await deleteAccount(user.id);
             } catch {
-              Alert.alert('Suppression impossible', 'Reconnectez-vous puis reessayez la suppression du compte.');
+              Alert.alert(
+                'Suppression impossible',
+                'Reconnectez-vous puis réessayez la suppression du compte.',
+              );
             }
           },
         },
@@ -55,46 +55,53 @@ export function ProfileScreen() {
   };
 
   return (
-    <Screen>
-      <View className="gap-5 pt-4">
-        <View className="items-center gap-3 py-4">
-          <View className="h-20 w-20 items-center justify-center rounded-full bg-cameroonGreen">
-            <Text className="text-2xl font-black text-white">{initials}</Text>
-          </View>
-          <Text className="text-xl font-bold text-slate-950">{user?.fullName}</Text>
-          <View className="rounded-full bg-green-50 px-3 py-1">
-            <Text className="text-xs font-semibold text-cameroonGreen">
-              {user?.role === 'owner' ? 'Proprietaire' : 'Client'}
-            </Text>
-          </View>
-        </View>
+    <Screen topSafeArea>
+      <View className="gap-5 px-5 pt-4">
 
+        <ProfilePhotoPicker roleLabel="Client" user={user} />
+
+        {/* ─── Infos ─── */}
         <View
-          className="overflow-hidden rounded-xl bg-white"
-          style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+          className="overflow-hidden rounded-2xl bg-white"
+          style={{
+            shadowColor: '#000',
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 1,
+          }}
         >
-          <InfoRow icon="mail-outline" value={user?.email} />
-          <InfoRow icon="call-outline" value={user?.phone} />
-          <InfoRow icon="location-outline" value={user?.city} last />
+          <InfoRow icon="mail-outline" label="Email" value={user?.email} />
+          <InfoRow icon="call-outline" label="Téléphone" value={user?.phone} />
+          <InfoRow icon="location-outline" label="Ville" value={user?.city} last />
         </View>
 
+        {/* ─── Actions ─── */}
         <TouchableOpacity
           activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 p-4"
+          className="flex-row items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-4"
           onPress={logout}
+          style={{
+            shadowColor: '#000',
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 1,
+          }}
         >
-          <Ionicons color="#b91c1c" name="log-out-outline" size={20} />
-          <Text className="font-semibold text-red-700">Se deconnecter</Text>
+          <Ionicons color="#334155" name="log-out-outline" size={20} />
+          <Text className="font-semibold text-slate-700">Se déconnecter</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-white p-4"
+          className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4"
           onPress={confirmDeleteAccount}
         >
           <Ionicons color="#b91c1c" name="trash-outline" size={20} />
           <Text className="font-semibold text-red-700">Supprimer mon compte</Text>
         </TouchableOpacity>
+
       </View>
     </Screen>
   );

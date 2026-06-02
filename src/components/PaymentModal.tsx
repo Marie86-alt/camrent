@@ -34,9 +34,9 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
             </TouchableOpacity>
           </View>
 
-          <View className="items-center rounded-xl bg-green-50 py-4">
+          <View className="items-center rounded-xl bg-blue-50 py-4">
             <Text className="text-sm text-slate-500">Total</Text>
-            <Text className="text-3xl font-black text-cameroonGreen">{formatFcfa(amount)}</Text>
+            <Text className="text-3xl font-black text-brand-blue">{formatFcfa(amount)}</Text>
           </View>
 
           <View className="gap-2">
@@ -45,14 +45,14 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
               {PAYMENT_METHODS.map((item) => (
                 <TouchableOpacity
                   className={`min-w-[30%] flex-1 rounded-xl border px-3 py-3 ${
-                    method === item ? 'border-cameroonGreen bg-green-50' : 'border-slate-200 bg-white'
+                    method === item ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'
                   }`}
                   key={item}
                   onPress={() => setMethod(item)}
                 >
                   <Text
                     className={`text-center text-sm font-semibold ${
-                      method === item ? 'text-cameroonGreen' : 'text-slate-600'
+                      method === item ? 'text-brand-blue' : 'text-slate-600'
                     }`}
                   >
                     {item}

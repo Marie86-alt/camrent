@@ -2,45 +2,123 @@ import { Ionicons } from '@expo/vector-icons';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
+import { ProfilePhotoPicker } from '../../components/ProfilePhotoPicker';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../hooks/useAuth';
 import { deleteAccount, logout } from '../../services/authService';
+import type { KycStatus } from '../../types/models';
 import type { OwnerTabParamList } from '../../types/navigation';
+
+type KycKey = KycStatus | 'none';
 
 type Props = BottomTabScreenProps<OwnerTabParamList, 'OwnerProfile'>;
 
-type SettingRowProps = {
+type InfoRowProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
   value?: string;
+  last?: boolean;
 };
 
-function SettingRow({ icon, label, value }: SettingRowProps) {
+function InfoRow({ icon, label, value, last }: InfoRowProps) {
   return (
-    <View className="flex-row items-center gap-3 border-b border-slate-100 px-4 py-3">
-      <Ionicons color="#64748b" name={icon} size={19} />
-      <Text className="flex-1 font-semibold text-slate-800">{label}</Text>
-      {value ? <Text className="text-sm text-slate-500">{value}</Text> : null}
+    <View
+      className={`flex-row items-center gap-3 px-4 py-3 ${last ? '' : 'border-b border-slate-100'}`}
+    >
+      <Ionicons color="#64748b" name={icon} size={18} />
+      <Text className="w-24 text-sm font-semibold text-slate-500">{label}</Text>
+      <Text className="flex-1 text-right text-sm text-slate-800">{value ?? '—'}</Text>
     </View>
+  );
+}
+
+const KYC_CONFIG: Record<
+  KycKey,
+  { bg: string; border: string; color: string; icon: React.ComponentProps<typeof Ionicons>['name']; title: string; subtitle: string }
+> = {
+  approved: {
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    color: '#3B63D4',
+    icon: 'shield-checkmark',
+    title: 'KYC validé',
+    subtitle: 'Votre profil chauffeur est approuvé par l\'administration.',
+  },
+  pending: {
+    bg: '#fffbeb',
+    border: '#fde68a',
+    color: '#ca8a04',
+    icon: 'time-outline',
+    title: 'Vérification en cours',
+    subtitle: 'L\'administration examine vos documents. Vous serez notifié.',
+  },
+  rejected: {
+    bg: '#fef2f2',
+    border: '#fecaca',
+    color: '#b91c1c',
+    icon: 'close-circle-outline',
+    title: 'KYC refusé',
+    subtitle: 'Corrigez vos informations et resoumettez le profil chauffeur.',
+  },
+  none: {
+    bg: '#f8fafc',
+    border: '#e2e8f0',
+    color: '#64748b',
+    icon: 'id-card-outline',
+    title: 'Profil chauffeur à compléter',
+    subtitle: 'Ajoutez votre permis, CNI et photo pour être validé.',
+  },
+};
+
+function KycCard({
+  kycStatus,
+  onPress,
+}: {
+  kycStatus?: string | null;
+  onPress: () => void;
+}) {
+  const key = (kycStatus ?? 'none') as KycKey;
+  const cfg = KYC_CONFIG[key] ?? KYC_CONFIG.none;
+  const showCta = key === 'none' || key === 'rejected';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={showCta ? 0.8 : 1}
+      className="rounded-2xl p-4"
+      onPress={showCta ? onPress : undefined}
+      style={{ backgroundColor: cfg.bg, borderWidth: 1, borderColor: cfg.border }}
+    >
+      <View className="flex-row items-center gap-3">
+        <View
+          className="h-11 w-11 items-center justify-center rounded-full"
+          style={{ backgroundColor: cfg.color + '20' }}
+        >
+          <Ionicons color={cfg.color} name={cfg.icon} size={22} />
+        </View>
+        <View className="flex-1">
+          <Text className="font-black" style={{ color: cfg.color }}>
+            {cfg.title}
+          </Text>
+          <Text className="mt-0.5 text-xs text-slate-500">{cfg.subtitle}</Text>
+        </View>
+        {showCta ? (
+          <Ionicons color={cfg.color} name="chevron-forward" size={18} />
+        ) : null}
+      </View>
+    </TouchableOpacity>
   );
 }
 
 export function OwnerProfileScreen(_props: Props) {
   const { user } = useAuth();
-
-  const initials = user?.fullName
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const { navigation } = _props;
 
   const confirmDeleteAccount = () => {
     if (!user) return;
 
     Alert.alert(
-      'Supprimer le compte proprietaire',
-      'Votre profil sera supprime. Reconnectez-vous si Firebase demande une authentification recente.',
+      'Supprimer le compte propriétaire',
+      'Votre profil sera supprimé. Reconnectez-vous si Firebase demande une authentification récente.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -50,7 +128,10 @@ export function OwnerProfileScreen(_props: Props) {
             try {
               await deleteAccount(user.id);
             } catch {
-              Alert.alert('Suppression impossible', 'Reconnectez-vous puis reessayez la suppression du compte.');
+              Alert.alert(
+                'Suppression impossible',
+                'Reconnectez-vous puis réessayez la suppression du compte.',
+              );
             }
           },
         },
@@ -60,32 +141,47 @@ export function OwnerProfileScreen(_props: Props) {
 
   return (
     <Screen topSafeArea>
-      <View className="gap-5">
-        <View className="items-center gap-3 py-3">
-          <View className="h-20 w-20 items-center justify-center rounded-full bg-cameroonGreen">
-            <Text className="text-2xl font-black text-white">{initials}</Text>
-          </View>
-          <Text className="text-xl font-bold text-slate-950">{user?.fullName}</Text>
-          <View className="rounded-full bg-green-50 px-3 py-1">
-            <Text className="text-xs font-semibold text-cameroonGreen">Proprietaire</Text>
-          </View>
+      <View className="gap-5 px-5 pt-4">
+
+        <ProfilePhotoPicker roleLabel="Propriétaire" user={user} />
+
+        {/* ─── Infos ─── */}
+        <View
+          className="overflow-hidden rounded-2xl bg-white"
+          style={{
+            shadowColor: '#000',
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 1,
+          }}
+        >
+          <InfoRow icon="mail-outline" label="Email" value={user?.email} />
+          <InfoRow icon="call-outline" label="Téléphone" value={user?.phone} />
+          <InfoRow icon="location-outline" label="Ville" value={user?.city} last />
         </View>
 
-        <View className="overflow-hidden rounded-xl bg-white">
-          <SettingRow icon="mail-outline" label="Email" value={user?.email} />
-          <SettingRow icon="call-outline" label="Telephone" value={user?.phone} />
-          <SettingRow icon="location-outline" label="Ville" value={user?.city} />
-          <SettingRow icon="notifications-outline" label="Notifications reservations" value="Activees" />
-          <SettingRow icon="card-outline" label="Paiements" value="MTN, Orange, Carte" />
-        </View>
+        {/* ─── KYC ─── */}
+        <KycCard
+          kycStatus={user?.kycStatus}
+          onPress={() => navigation.getParent()?.navigate('DriverProfile')}
+        />
 
+        {/* ─── Actions ─── */}
         <TouchableOpacity
           activeOpacity={0.8}
           className="flex-row items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-4"
           onPress={logout}
+          style={{
+            shadowColor: '#000',
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 1,
+          }}
         >
           <Ionicons color="#334155" name="log-out-outline" size={20} />
-          <Text className="font-semibold text-slate-700">Se deconnecter</Text>
+          <Text className="font-semibold text-slate-700">Se déconnecter</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -96,6 +192,7 @@ export function OwnerProfileScreen(_props: Props) {
           <Ionicons color="#b91c1c" name="trash-outline" size={20} />
           <Text className="font-semibold text-red-700">Supprimer mon compte</Text>
         </TouchableOpacity>
+
       </View>
     </Screen>
   );

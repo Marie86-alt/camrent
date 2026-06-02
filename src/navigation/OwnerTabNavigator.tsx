@@ -23,7 +23,7 @@ export function OwnerTabNavigator() {
         headerStyle: { backgroundColor: '#f8fafc' },
         headerShadowVisible: false,
         headerTintColor: '#0f172a',
-        tabBarActiveTintColor: '#15803d',
+        tabBarActiveTintColor: '#3B63D4',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           backgroundColor: '#ffffff',
@@ -53,7 +53,7 @@ export function OwnerTabNavigator() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Accueil', headerShown: false }} />
       <Tab.Screen name="ManageCars" component={ManageCarsScreen} options={{ title: 'Voitures' }} />
-      <Tab.Screen name="Reservations" component={ReservationsScreen} options={{ title: 'Reservations recues' }} />
+      <Tab.Screen name="Reservations" component={ReservationsScreen} options={{ title: 'Resa recues' }} />
       <Tab.Screen name="OwnerProfile" component={OwnerProfileScreen} options={{ title: 'Profil', headerShown: false }} />
     </Tab.Navigator>
   );

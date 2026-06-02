@@ -13,7 +13,7 @@ type StatusStyle = { label: string; textColor: string; bgColor: string };
 
 const STATUS_MAP: Record<BookingStatus, StatusStyle> = {
   pending: { label: 'En attente', textColor: 'text-yellow-700', bgColor: 'bg-yellow-50' },
-  confirmed: { label: 'Confirmée', textColor: 'text-green-700', bgColor: 'bg-green-50' },
+  confirmed: { label: 'Confirmée', textColor: 'text-blue-700', bgColor: 'bg-blue-50' },
   cancelled: { label: 'Annulée', textColor: 'text-red-700', bgColor: 'bg-red-50' },
   completed: { label: 'Terminée', textColor: 'text-slate-600', bgColor: 'bg-slate-100' },
 };
@@ -93,7 +93,7 @@ export function ReservationsScreen() {
                   <Text className="text-sm text-slate-500">
                     {item.totalDays} jour{item.totalDays > 1 ? 's' : ''} · {PAYMENT_STATUS_LABELS[item.paymentStatus]}
                   </Text>
-                  <Text className="text-lg font-black text-cameroonGreen">
+                  <Text className="text-lg font-black text-brand-blue">
                     {formatFcfa(item.totalPrice)}
                   </Text>
                 </View>
@@ -105,13 +105,13 @@ export function ReservationsScreen() {
                       <Text className="font-bold text-slate-800">Permis de conduire</Text>
                     </View>
                     <Text className="text-sm text-slate-600">
-                      {item.driverLicense.fullName} Â· {item.driverLicense.licenseNumber}
+                      {item.driverLicense.fullName} · {item.driverLicense.licenseNumber}
                     </Text>
                     <Text className="mt-1 text-xs text-slate-500">
-                      Cat. {item.driverLicense.categories} Â· {item.driverLicense.issuingCountry}
+                      Cat. {item.driverLicense.categories} · {item.driverLicense.issuingCountry}
                     </Text>
                     <Text className="mt-1 text-xs text-slate-500">
-                      Delivre le {item.driverLicense.issueDate} Â· Expire le {item.driverLicense.expiryDate}
+                      Délivré le {item.driverLicense.issueDate} · Expire le {item.driverLicense.expiryDate}
                     </Text>
                   </View>
                 ) : null}
@@ -120,7 +120,7 @@ export function ReservationsScreen() {
                   <View className="mt-4 flex-row gap-2">
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-cameroonGreen px-3 py-3"
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-brand-blue px-3 py-3"
                       onPress={() => setStatus(item, 'confirmed')}
                     >
                       <Ionicons color="white" name="checkmark-outline" size={16} />
@@ -128,7 +128,7 @@ export function ReservationsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-cameroonRed px-3 py-3"
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-brand-danger px-3 py-3"
                       onPress={() => setStatus(item, 'cancelled')}
                     >
                       <Ionicons color="white" name="close-outline" size={16} />

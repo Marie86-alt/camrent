@@ -5,6 +5,8 @@ import { HomeScreen } from '../screens/client/HomeScreen';
 import { MyBookingsScreen } from '../screens/client/MyBookingsScreen';
 import { ProfileScreen } from '../screens/client/ProfileScreen';
 import { SearchScreen } from '../screens/client/SearchScreen';
+import { useBookings } from '../hooks/useBookings';
+import { useAuth } from '../hooks/useAuth';
 import type { ClientTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<ClientTabParamList>();
@@ -16,15 +18,24 @@ const TAB_ICONS: Record<keyof ClientTabParamList, [string, string]> = {
   Profile: ['person', 'person-outline'],
 };
 
+function useActiveBookingCount() {
+  const { user } = useAuth();
+  const { bookings } = useBookings(user?.id, 'client');
+  return bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed').length;
+}
+
 export function ClientTabNavigator() {
+  const activeCount = useActiveBookingCount();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: '#f8fafc' },
         headerShadowVisible: false,
         headerTintColor: '#0f172a',
-        tabBarActiveTintColor: '#15803d',
+        tabBarActiveTintColor: '#3B63D4',
         tabBarInactiveTintColor: '#94a3b8',
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: '#ffffff',
           borderTopColor: '#e2e8f0',
@@ -56,9 +67,13 @@ export function ClientTabNavigator() {
       <Tab.Screen
         name="MyBookings"
         component={MyBookingsScreen}
-        options={{ title: 'Réservations' }}
+        options={{
+          title: 'Réservations',
+          tabBarBadge: activeCount > 0 ? activeCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#3B63D4', fontSize: 10 },
+        }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil', headerShown: false }} />
     </Tab.Navigator>
   );
 }

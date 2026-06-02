@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { DEMO_PASSWORD } from '../../services/demoData';
 import { loginWithEmail } from '../../services/authService';
@@ -24,6 +25,25 @@ import type { LoginScreenProps } from '../../types/navigation';
 
 const CAR_BG_URI =
   'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=1300&fit=crop&crop=center&q=85';
+
+function getLoginErrorMessage(error: unknown) {
+  const code = (error as { code?: string; message?: string }).code;
+  const message = (error as { message?: string }).message;
+
+  if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+    return 'Aucun compte Firebase Auth ne correspond a cet email/mot de passe.';
+  }
+
+  if (code === 'auth/invalid-email') {
+    return "L'adresse email est invalide.";
+  }
+
+  if (message === 'user-profile-not-found') {
+    return "Connexion Auth reussie, mais le profil Firestore users/{uid} est introuvable.";
+  }
+
+  return message || 'Verifiez votre email et votre mot de passe.';
+}
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const passwordRef = useRef<TextInput>(null);
@@ -37,33 +57,27 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       setLoading(true);
       const credentials = await loginWithEmail(email, password);
-      if (!hasFirebaseConfig) {
-        setUser(credentials.user as AppUser);
-      }
-    } catch {
-      Alert.alert('Connexion impossible', 'Vérifiez votre email et votre mot de passe.');
+      setUser(credentials.user as AppUser);
+    } catch (error) {
+      Alert.alert('Connexion impossible', getLoginErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#030f07' }}>
+    <View style={{ flex: 1, backgroundColor: '#08122d' }}>
       <StatusBar style="light" />
-
-      {/* ─── Fond plein écran ─── */}
       <Image
         resizeMode="cover"
         source={{ uri: CAR_BG_URI }}
         style={{ position: 'absolute', width: '100%', height: '100%' }}
       />
-
-      {/* ─── Overlay sombre ─── */}
       <View
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(3, 14, 8, 0.62)',
+          backgroundColor: 'rgba(8, 18, 45, 0.68)',
         }}
       />
 
@@ -82,40 +96,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* ─── Branding ─── */}
-            <View style={{ paddingTop: 28, paddingBottom: 32 }}>
-              <Text
-                style={{
-                  color: '#ffffff',
-                  fontSize: 46,
-                  fontWeight: '900',
-                  letterSpacing: -1.5,
-                  lineHeight: 50,
-                }}
-              >
-                CamRent
-              </Text>
-
-              {/* Drapeau */}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  height: 4,
-                  width: 100,
-                  borderRadius: 99,
-                  overflow: 'hidden',
-                  marginTop: 10,
-                }}
-              >
-                <View style={{ flex: 1, backgroundColor: '#15803d' }} />
-                <View style={{ flex: 1, backgroundColor: '#b91c1c' }} />
-                <View style={{ flex: 1, backgroundColor: '#facc15' }} />
-              </View>
-
+            <View style={{ alignItems: 'flex-start', paddingTop: 18, paddingBottom: 32 }}>
+              <BrandLogo variant="mini" dark />
               <Text
                 style={{
                   color: 'rgba(255,255,255,0.72)',
-                  marginTop: 12,
+                  marginTop: 18,
                   fontSize: 15,
                   lineHeight: 22,
                 }}
@@ -123,11 +109,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 Louez une voiture au Cameroun{'\n'}en quelques minutes.
               </Text>
             </View>
-
-            {/* ─── Carte formulaire (verre fumé) ─── */}
             <View
               style={{
-                backgroundColor: 'rgba(3, 14, 8, 0.62)',
+                backgroundColor: 'rgba(8, 18, 45, 0.62)',
                 borderRadius: 28,
                 padding: 24,
                 gap: 18,
@@ -140,8 +124,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               >
                 Se connecter
               </Text>
-
-              {/* Bandeau démo */}
               {!hasFirebaseConfig ? (
                 <View
                   style={{
@@ -154,23 +136,20 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   }}
                 >
                   <Text style={{ fontWeight: '700', color: '#fde68a', fontSize: 13 }}>
-                    Mode démo
+                    Mode demo
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
-                    Client : client@camrent.cm
+                    Client : client@autofixpro.cm
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
-                    Propriétaire : owner@camrent.cm
+                    Proprietaire : owner@autofixpro.cm
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
                     Mot de passe : {DEMO_PASSWORD}
                   </Text>
                 </View>
               ) : null}
-
-              {/* Champs */}
               <View style={{ gap: 14 }}>
-                {/* Email */}
                 <View style={{ gap: 6 }}>
                   <Text
                     style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}
@@ -198,8 +177,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                     value={email}
                   />
                 </View>
-
-                {/* Mot de passe */}
                 <View style={{ gap: 6 }}>
                   <Text
                     style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}
@@ -211,7 +188,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                       ref={passwordRef}
                       onChangeText={setPassword}
                       onSubmitEditing={login}
-                      placeholder="••••••••"
+                      placeholder="........"
                       placeholderTextColor="rgba(255,255,255,0.35)"
                       returnKeyType="done"
                       secureTextEntry={!showPassword}
@@ -240,8 +217,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                     </TouchableOpacity>
                   </View>
                 </View>
-
-                {/* Bouton connexion */}
                 <PrimaryButton
                   disabled={!email || !password}
                   loading={loading}
@@ -250,13 +225,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   Se connecter
                 </PrimaryButton>
               </View>
-
-              {/* Raccourcis démo */}
               {!hasFirebaseConfig ? (
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity
                     onPress={() => {
-                      setEmail('client@camrent.cm');
+                      setEmail('client@autofixpro.cm');
                       setPassword(DEMO_PASSWORD);
                     }}
                     style={{
@@ -281,7 +254,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
-                      setEmail('owner@camrent.cm');
+                      setEmail('owner@autofixpro.cm');
                       setPassword(DEMO_PASSWORD);
                     }}
                     style={{
@@ -306,8 +279,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   </TouchableOpacity>
                 </View>
               ) : null}
-
-              {/* Liens */}
               <View style={{ gap: 4 }}>
                 <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                   <Text
@@ -318,7 +289,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                       fontSize: 14,
                     }}
                   >
-                    Mot de passe oublié ?
+                    Mot de passe oublie ?
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -326,11 +297,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                     style={{
                       textAlign: 'center',
                       fontWeight: '700',
-                      color: '#4ade80',
+                      color: '#93c5fd',
                       fontSize: 14,
                     }}
                   >
-                    Créer un compte
+                    Creer un compte
                   </Text>
                 </TouchableOpacity>
               </View>
