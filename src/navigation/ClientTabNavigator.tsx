@@ -69,6 +69,7 @@ export function ClientTabNavigator() {
         component={MyBookingsScreen}
         options={{
           title: 'Réservations',
+          headerShown: false,
           tabBarBadge: activeCount > 0 ? activeCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#3B63D4', fontSize: 10 },
         }}

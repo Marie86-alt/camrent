@@ -65,36 +65,36 @@ export function HomeScreen() {
   const ListHeader = (
     <View className="gap-5 pb-2">
       {/* ─── Header ─── */}
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2.5">
-          <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
-            <Text className="text-sm font-black text-white">{initials}</Text>
-          </View>
-          <View>
-            <Text className="text-xs text-slate-400">Bienvenue sur</Text>
-            <BrandLogo variant="compact" />
+      <View className="gap-3">
+        {/* Top bar: logo left · actions right */}
+        <View className="flex-row items-center justify-between">
+          <BrandLogo variant="xs" />
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              className="h-10 w-10 items-center justify-center rounded-full bg-white"
+              style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+              onPress={() => navigation.navigate('MyBookings')}
+            >
+              <Ionicons color="#64748b" name="notifications-outline" size={20} />
+              {activeBooking ? (
+                <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-danger" />
+              ) : null}
+            </TouchableOpacity>
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
+              <Text className="text-sm font-black text-white">{initials}</Text>
+            </View>
           </View>
         </View>
-        <TouchableOpacity
-          className="h-10 w-10 items-center justify-center rounded-full bg-white"
-          style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
-          onPress={() => navigation.navigate('MyBookings')}
-        >
-          <Ionicons color="#64748b" name="notifications-outline" size={20} />
-          {activeBooking ? (
-            <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-danger" />
-          ) : null}
-        </TouchableOpacity>
-      </View>
 
-      {/* ─── Greeting ─── */}
-      <View>
-        <Text className="text-2xl font-black text-slate-950">
-          Bonjour, {user?.fullName?.split(' ')[0]} 👋
-        </Text>
-        <Text className="mt-1 text-slate-500">
-          Trouvez votre voiture idéale au Cameroun
-        </Text>
+        {/* Greeting */}
+        <View>
+          <Text className="text-2xl font-black text-slate-950">
+            Bonjour, {user?.fullName?.split(' ')[0]} 👋
+          </Text>
+          <Text className="mt-0.5 text-sm text-slate-500">
+            Trouvez votre voiture idéale au Cameroun
+          </Text>
+        </View>
       </View>
 
       {/* ─── Search bar (tappable) ─── */}

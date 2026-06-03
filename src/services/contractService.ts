@@ -3,6 +3,7 @@ import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { uploadSignature } from './storageService';
 import type { Booking } from '../types/models';
+import { formatFullDate } from '../utils/dates';
 
 function buildContractRef(bookingId: string) {
   const year = new Date().getFullYear();
@@ -28,12 +29,9 @@ export async function signContract(booking: Booking, signatureBase64: string): P
 
 export function buildContractText(booking: Booking, clientName: string): string {
   const ref = booking.contractRef ?? buildContractRef(booking.id);
-  const today = new Date().toLocaleDateString('fr-FR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-  });
-
-  const start = toLocalDate(booking.startDate).toLocaleDateString('fr-FR');
-  const end = toLocalDate(booking.endDate).toLocaleDateString('fr-FR');
+  const today = formatFullDate(new Date());
+  const start = formatFullDate(toLocalDate(booking.startDate));
+  const end = formatFullDate(toLocalDate(booking.endDate));
 
   return `CONTRAT DE LOCATION DE VÉHICULE
 Référence : ${ref}

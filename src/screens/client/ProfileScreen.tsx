@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
+import { BrandLogo } from '../../components/BrandLogo';
 import { ProfilePhotoPicker } from '../../components/ProfilePhotoPicker';
 import { Screen } from '../../components/Screen';
 import { deleteAccount, logout } from '../../services/authService';
@@ -58,6 +59,26 @@ export function ProfileScreen() {
     <Screen topSafeArea>
       <View className="gap-5 px-5 pt-4">
 
+        {/* ─── Header ─── */}
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between">
+            <BrandLogo variant="xs" />
+            <TouchableOpacity
+              className="h-10 w-10 items-center justify-center rounded-full bg-red-50"
+              onPress={logout}
+              style={{ borderWidth: 1, borderColor: '#fecaca', elevation: 1 }}
+            >
+              <Ionicons color="#b91c1c" name="log-out-outline" size={18} />
+            </TouchableOpacity>
+          </View>
+          <View>
+            <Text className="text-xs font-medium text-slate-400">Mon compte</Text>
+            <Text className="mt-0.5 text-2xl font-black text-slate-950">
+              {user?.fullName?.split(' ')[0] ?? 'Profil'} 👋
+            </Text>
+          </View>
+        </View>
+
         <ProfilePhotoPicker roleLabel="Client" user={user} />
 
         {/* ─── Infos ─── */}
@@ -77,22 +98,6 @@ export function ProfileScreen() {
         </View>
 
         {/* ─── Actions ─── */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-4"
-          onPress={logout}
-          style={{
-            shadowColor: '#000',
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            shadowOffset: { width: 0, height: 1 },
-            elevation: 1,
-          }}
-        >
-          <Ionicons color="#334155" name="log-out-outline" size={20} />
-          <Text className="font-semibold text-slate-700">Se déconnecter</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           activeOpacity={0.8}
           className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4"

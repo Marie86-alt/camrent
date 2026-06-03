@@ -224,8 +224,8 @@ export function EditCarScreen({ navigation, route }: Props) {
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setLicensePlate} placeholder="Immatriculation" value={licensePlate} />
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setChassisNumber} placeholder="Numéro de châssis" value={chassisNumber} />
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" keyboardType="numeric" onChangeText={setMileage} placeholder="Kilométrage" value={mileage} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setInsuranceExpiry} placeholder="Expiration assurance (AAAA-MM-JJ)" value={insuranceExpiry} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setTechnicalInspectionExpiry} placeholder="Expiration contrôle technique (AAAA-MM-JJ)" value={technicalInspectionExpiry} />
+          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setInsuranceExpiry} placeholder="Expiration assurance (ex: 03/06/2027)" value={insuranceExpiry} />
+          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setTechnicalInspectionExpiry} placeholder="Expiration contrôle technique (ex: 03/06/2027)" value={technicalInspectionExpiry} />
           <TouchableOpacity
             activeOpacity={0.8}
             className={`flex-row items-center gap-2 rounded-xl border p-3.5 ${

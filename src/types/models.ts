@@ -57,6 +57,7 @@ export type AppUser = {
     licenseExpiryDate?: string;
     licenseNumber?: string;
     nationalIdNumber?: string;
+    profilePhotoUrl?: string;
   };
 };
 

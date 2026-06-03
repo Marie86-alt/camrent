@@ -50,10 +50,10 @@ export const PAYMENT_PROVIDER_BY_METHOD: Record<PaymentMethod, PaymentProvider> 
 export const PHONE_PREFIX = '+237';
 
 export const CAR_PHOTO_SLOTS = [
-  { key: 'front',     label: 'Avant',          icon: 'arrow-up-circle-outline' },
-  { key: 'rear',      label: 'Arrière',         icon: 'arrow-down-circle-outline' },
-  { key: 'left',      label: 'Gauche',          icon: 'arrow-back-circle-outline' },
-  { key: 'right',     label: 'Droite',          icon: 'arrow-forward-circle-outline' },
-  { key: 'interior',  label: 'Intérieur',       icon: 'people-outline' },
+  { key: 'front', label: 'Avant', icon: 'arrow-up-circle-outline' },
+  { key: 'rear', label: 'Arri\u00e8re', icon: 'arrow-down-circle-outline' },
+  { key: 'left', label: 'Gauche', icon: 'arrow-back-circle-outline' },
+  { key: 'right', label: 'Droite', icon: 'arrow-forward-circle-outline' },
+  { key: 'interior', label: 'Int\u00e9rieur', icon: 'people-outline' },
   { key: 'dashboard', label: 'Tableau de bord', icon: 'speedometer-outline' },
 ] as const satisfies { key: string; label: string; icon: string }[];

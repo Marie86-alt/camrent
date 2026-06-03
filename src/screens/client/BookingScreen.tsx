@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemo, useState } from 'react';
 import { Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import type { KeyboardTypeOptions } from 'react-native';
 
 import { PAYMENT_METHODS } from '../../constants/cameroon';
 import { BackButton } from '../../components/BackButton';
@@ -13,9 +14,20 @@ import { useAuthStore } from '../../store/authStore';
 import type { PaymentMethod } from '../../types/models';
 import type { BookingScreenProps } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
-import { formatDate, getRentalDays } from '../../utils/dates';
+import { formatDate, formatInputDate, getRentalDays, parseHumanDate } from '../../utils/dates';
 
 type DateField = 'start' | 'end';
+
+const TEXT = {
+  bookingError: "La r\u00e9servation n'a pas pu \u00eatre cr\u00e9\u00e9e.",
+  bookingSubmit: 'Confirmer la r\u00e9servation',
+  dateInfo: 'Minimum 1 jour \u00b7 D\u00e9but et fin le m\u00eame jour comptent pour 1 jour',
+  duration: 'Dur\u00e9e',
+  issueDate: 'D\u00e9livr\u00e9 le',
+  licenseHelp: 'Ces informations seront transmises au propri\u00e9taire pour valider la location.',
+  sessionExpired: 'Session expir\u00e9e',
+  start: 'D\u00e9but',
+};
 
 type DriverLicenseForm = {
   fullName: string;
@@ -35,22 +47,35 @@ const INITIAL_DRIVER_LICENSE: DriverLicenseForm = {
   categories: 'B',
 };
 
-const DATE_FORMAT_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+function formatLicenseDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+
+  if (digits.length <= 2) return day;
+  if (digits.length <= 4) return `${day}/${month}`;
+  return `${day}/${month}/${year}`;
+}
 
 type LicenseInputProps = {
+  keyboardType?: KeyboardTypeOptions;
   label: string;
+  maxLength?: number;
   onChangeText: (value: string) => void;
   placeholder: string;
   value: string;
 };
 
-function LicenseInput({ label, onChangeText, placeholder, value }: LicenseInputProps) {
+function LicenseInput({ keyboardType, label, maxLength, onChangeText, placeholder, value }: LicenseInputProps) {
   return (
     <View className="gap-1.5">
       <Text className="text-xs font-semibold uppercase text-slate-500">{label}</Text>
       <TextInput
         autoCapitalize="words"
         className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-950"
+        keyboardType={keyboardType}
+        maxLength={maxLength}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
@@ -109,26 +134,32 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       return null;
     }
 
-    if (!DATE_FORMAT_REGEX.test(normalized.issueDate) || !DATE_FORMAT_REGEX.test(normalized.expiryDate)) {
-      Alert.alert('Dates invalides', 'Utilisez le format AAAA-MM-JJ pour les dates du permis.');
+    const issueDate = parseHumanDate(normalized.issueDate);
+    const expiryDate = parseHumanDate(normalized.expiryDate);
+
+    if (!issueDate || !expiryDate) {
+      Alert.alert('Dates invalides', 'Utilisez un format comme 03/06/2026 ou 3 juin 2026.');
       return null;
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const expiryDate = new Date(`${normalized.expiryDate}T00:00:00`);
 
-    if (Number.isNaN(expiryDate.getTime()) || expiryDate < today) {
+    if (expiryDate < today) {
       Alert.alert('Permis expire', 'La reservation est refusee car le permis de conduire n est plus valide.');
       return null;
     }
 
-    return normalized;
+    return {
+      ...normalized,
+      issueDate: formatInputDate(issueDate),
+      expiryDate: formatInputDate(expiryDate),
+    };
   };
 
   const reserve = async () => {
     if (!user) {
-      Alert.alert('Session expirée', 'Reconnectez-vous pour réserver.');
+      Alert.alert(TEXT.sessionExpired, 'Reconnectez-vous pour reserver.');
       return;
     }
 
@@ -163,7 +194,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         paymentMethod,
       });
     } catch {
-      Alert.alert('Erreur', 'La réservation n\'a pas pu être créée.');
+      Alert.alert('Erreur', TEXT.bookingError);
     } finally {
       setLoading(false);
     }
@@ -206,7 +237,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             >
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
-                <Text className="text-xs text-slate-500">Début</Text>
+                <Text className="text-xs text-slate-500">{TEXT.start}</Text>
               </View>
               <Text className="font-bold text-slate-950">{formatDate(startDate)}</Text>
             </TouchableOpacity>
@@ -230,7 +261,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <View className="flex-row items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2">
             <Ionicons color="#3b82f6" name="information-circle-outline" size={16} />
             <Text className="text-xs text-blue-600">
-              Minimum 1 jour · Début et fin le même jour comptent pour 1 jour
+              {TEXT.dateInfo}
             </Text>
           </View>
         </View>
@@ -274,14 +305,14 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <View>
             <Text className="font-semibold text-slate-800">Permis de conduire</Text>
             <Text className="mt-1 text-xs text-slate-500">
-              Ces informations seront transmises au propriétaire pour valider la location.
+              {TEXT.licenseHelp}
             </Text>
           </View>
 
           <LicenseInput
             label="Nom complet sur le permis"
             onChangeText={(value) => updateDriverLicense('fullName', value)}
-            placeholder="Ex: Marie Menguene"
+            placeholder="Ex: Jean Kamga"
             value={driverLicense.fullName}
           />
 
@@ -314,17 +345,21 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <View className="flex-row gap-3">
             <View className="flex-1">
               <LicenseInput
-                label="Delivre le"
-                onChangeText={(value) => updateDriverLicense('issueDate', value)}
-                placeholder="AAAA-MM-JJ"
+                keyboardType="number-pad"
+                label={TEXT.issueDate}
+                maxLength={10}
+                onChangeText={(value) => updateDriverLicense('issueDate', formatLicenseDateInput(value))}
+                placeholder="Ex: 03/06/2026"
                 value={driverLicense.issueDate}
               />
             </View>
             <View className="flex-1">
               <LicenseInput
+                keyboardType="number-pad"
                 label="Expire le"
-                onChangeText={(value) => updateDriverLicense('expiryDate', value)}
-                placeholder="AAAA-MM-JJ"
+                maxLength={10}
+                onChangeText={(value) => updateDriverLicense('expiryDate', formatLicenseDateInput(value))}
+                placeholder="Ex: 03/06/2030"
                 value={driverLicense.expiryDate}
               />
             </View>
@@ -336,7 +371,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
         >
           <View className="flex-row justify-between">
-            <Text className="text-slate-500">Durée</Text>
+            <Text className="text-slate-500">{TEXT.duration}</Text>
             <Text className="font-bold text-slate-950">
               {totalDays} jour{totalDays > 1 ? 's' : ''}
             </Text>
@@ -347,9 +382,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           </View>
         </View>
 
-        <PrimaryButton loading={loading} onPress={reserve}>
-          Confirmer la réservation
-        </PrimaryButton>
+        <PrimaryButton loading={loading} onPress={reserve}>{TEXT.bookingSubmit}</PrimaryButton>
       </View>
     </Screen>
   );

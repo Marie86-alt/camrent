@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { subscribeToAllBookings, updateBookingAdminFields } from '../../services/adminService';
 import type { Booking, BookingStatus } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
+import { formatDate } from '../../utils/dates';
 
 const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
   { label: 'Toutes', value: 'all' },
@@ -20,7 +21,7 @@ function toReadableDate(value: Booking['startDate']) {
   if (!value) return 'Non renseigne';
   const maybeTimestamp = value as unknown as { toDate?: () => Date };
   const date = typeof maybeTimestamp.toDate === 'function' ? maybeTimestamp.toDate() : value;
-  return new Intl.DateTimeFormat('fr-FR').format(date);
+  return formatDate(date);
 }
 
 function statusLabel(status: BookingStatus) {

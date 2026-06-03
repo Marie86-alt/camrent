@@ -7,7 +7,7 @@ import { useBookings } from '../../hooks/useBookings';
 import { updateBookingStatus } from '../../services/bookingService';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
-import { formatDate } from '../../utils/dates';
+import { formatDateRange } from '../../utils/dates';
 
 type StatusStyle = { label: string; textColor: string; bgColor: string };
 
@@ -86,7 +86,7 @@ export function ReservationsScreen() {
                 </View>
 
                 <Text className="mt-2 text-sm text-slate-500">
-                  {formatDate(toDate(item.startDate))} → {formatDate(toDate(item.endDate))}
+                  {formatDateRange(toDate(item.startDate), toDate(item.endDate))}
                 </Text>
 
                 <View className="mt-1 flex-row items-center justify-between">

@@ -1,28 +1,18 @@
 import { Image, View } from 'react-native';
 
 type Props = {
-  variant?: 'full' | 'compact' | 'mini';
+  variant?: 'full' | 'compact' | 'mini' | 'xs';
   dark?: boolean;
 };
 
-export function BrandLogo({ variant = 'full', dark = false }: Props) {
-  const width = variant === 'mini' ? 178 : variant === 'compact' ? 142 : 220;
-  const height = variant === 'mini' ? 54 : variant === 'compact' ? 50 : 78;
-
-  const containerStyle = dark
-    ? variant === 'mini'
-      ? { alignSelf: 'flex-start' as const }
-      : {
-          backgroundColor: 'rgba(255,255,255,0.94)',
-          borderRadius: 12,
-          paddingHorizontal: 10,
-        }
-    : undefined;
+export function BrandLogo({ variant = 'full' }: Props) {
+  const width = variant === 'xs' ? 90 : variant === 'mini' ? 178 : variant === 'compact' ? 142 : 220;
+  const height = variant === 'xs' ? 32 : variant === 'mini' ? 54 : variant === 'compact' ? 50 : 78;
 
   return (
     <View
       className="items-center justify-center"
-      style={containerStyle}
+      style={variant === 'mini' || variant === 'xs' ? { alignSelf: 'flex-start' } : undefined}
     >
       <Image
         resizeMode="contain"

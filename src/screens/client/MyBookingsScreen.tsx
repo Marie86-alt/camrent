@@ -7,6 +7,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { BookingCard } from '../../components/BookingCard';
+import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
@@ -26,6 +27,13 @@ export function MyBookingsScreen() {
   const { bookings, error, loading } = useBookings(user?.id, 'client');
   const [filter, setFilter] = useState<Filter>('active');
 
+  const initials = user?.fullName
+    ?.split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() ?? '';
+
   const handleSignContract = (booking: Booking) => {
     navigation.navigate('Contract', { booking });
   };
@@ -40,8 +48,19 @@ export function MyBookingsScreen() {
   const displayed = filter === 'active' ? activeBookings : historyBookings;
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} topSafeArea>
       <View className="flex-1 px-5 pt-4">
+        {/* ─── Header ─── */}
+        <View className="mb-4 gap-3">
+          <View className="flex-row items-center justify-between">
+            <BrandLogo variant="xs" />
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
+              <Text className="text-sm font-black text-white">{initials}</Text>
+            </View>
+          </View>
+          <Text className="text-2xl font-black text-slate-950">Mes réservations</Text>
+        </View>
+
         {loading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#3B63D4" size="large" />
@@ -50,8 +69,6 @@ export function MyBookingsScreen() {
           <FlatList
             ListHeaderComponent={
               <View className="mb-4 gap-4">
-                <Text className="text-2xl font-black text-slate-950">Mes réservations</Text>
-
                 {/* ─── Filter tabs ─── */}
                 <View className="flex-row rounded-xl bg-slate-100 p-1">
                   <TouchableOpacity

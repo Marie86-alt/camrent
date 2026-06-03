@@ -135,31 +135,34 @@ export function AdminDashboardScreen() {
     <Screen scroll={false} topSafeArea>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-5 px-5 pb-8 pt-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <BrandLogo variant="compact" />
-              <View>
-                <Text className="text-xs text-slate-400">Panel d'administration</Text>
-                <Text className="text-lg font-black text-slate-950">
-                  Bonjour, {user?.fullName?.split(' ')[0]}
-                </Text>
-              </View>
+          <View className="gap-3">
+            {/* Top bar: logo left · logout right */}
+            <View className="flex-row items-center justify-between">
+              <BrandLogo variant="xs" />
+              <TouchableOpacity
+                className="h-10 w-10 items-center justify-center rounded-full bg-red-50"
+                onPress={logout}
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#fecaca',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                  shadowOffset: { width: 0, height: 1 },
+                  elevation: 1,
+                }}
+              >
+                <Ionicons color="#b91c1c" name="log-out-outline" size={20} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              className="h-10 w-10 items-center justify-center rounded-full bg-red-50"
-              onPress={logout}
-              style={{
-                borderWidth: 1,
-                borderColor: '#fecaca',
-                shadowColor: '#000',
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                shadowOffset: { width: 0, height: 1 },
-                elevation: 1,
-              }}
-            >
-              <Ionicons color="#b91c1c" name="log-out-outline" size={20} />
-            </TouchableOpacity>
+
+            {/* Greeting */}
+            <View>
+              <Text className="text-xs font-medium text-slate-400">Panel d'administration</Text>
+              <Text className="mt-0.5 text-2xl font-black text-slate-950">
+                Bonjour, {user?.fullName?.split(' ')[0]} 👋
+              </Text>
+            </View>
           </View>
           <View
             className="rounded-2xl bg-slate-950 p-5"

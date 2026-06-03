@@ -57,3 +57,15 @@ export async function uploadUserProfilePhoto(userId: string, localUri: string) {
 
   return getDownloadURL(photoRef);
 }
+
+export async function uploadDriverProfilePhoto(userId: string, localUri: string) {
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+  const photoRef = ref(storage, `users/${userId}/driver-profile/photo-${Date.now()}.jpg`);
+
+  await uploadBytes(photoRef, blob, {
+    contentType: blob.type || 'image/jpeg',
+  });
+
+  return getDownloadURL(photoRef);
+}

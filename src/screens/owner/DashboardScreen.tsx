@@ -13,7 +13,7 @@ import { updateBookingStatus } from '../../services/bookingService';
 import type { Booking, BookingStatus, PaymentMethod } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
-import { formatDate } from '../../utils/dates';
+import { formatDate, formatDateRange } from '../../utils/dates';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<OwnerTabParamList, 'Dashboard'>,
@@ -89,48 +89,46 @@ export function DashboardScreen({ navigation }: Props) {
     <Screen scroll={false} topSafeArea>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-6 px-5 pb-8 pt-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <BrandLogo variant="compact" />
-              <View>
-                <Text className="text-xs text-slate-400">Tableau de bord</Text>
-                <Text className="text-lg font-black text-slate-950">
-                  Bonjour, {user?.fullName?.split(' ')[0]}
-                </Text>
+          <View className="gap-3">
+            {/* Top bar: logo left · actions right */}
+            <View className="flex-row items-center justify-between">
+              <BrandLogo variant="xs" />
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  className="h-10 w-10 items-center justify-center rounded-full bg-white"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOpacity: 0.06,
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 1 },
+                    elevation: 1,
+                  }}
+                  onPress={() => navigation.navigate('Reservations')}
+                >
+                  <Ionicons color="#64748b" name="notifications-outline" size={20} />
+                  {pendingBookings.length > 0 ? (
+                    <View className="absolute right-2 top-1.5 h-4 w-4 items-center justify-center rounded-full bg-brand-danger">
+                      <Text className="text-xs font-black text-white">{pendingBookings.length}</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue"
+                  onPress={() => navigation.navigate('OwnerProfile')}
+                >
+                  <Text className="text-sm font-black text-white">
+                    {user?.fullName?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() ?? '?'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <View className="flex-row gap-2">
-              <TouchableOpacity
-                className="h-10 w-10 items-center justify-center rounded-full bg-white"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.06,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
-                onPress={() => navigation.navigate('Reservations')}
-              >
-                <Ionicons color="#64748b" name="notifications-outline" size={20} />
-                {pendingBookings.length > 0 ? (
-                  <View className="absolute right-2 top-1.5 h-4 w-4 items-center justify-center rounded-full bg-brand-danger">
-                    <Text className="text-xs font-black text-white">{pendingBookings.length}</Text>
-                  </View>
-                ) : null}
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="h-10 w-10 items-center justify-center rounded-full bg-white"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.06,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
-                onPress={() => navigation.navigate('OwnerProfile')}
-              >
-                <Ionicons color="#64748b" name="person-outline" size={20} />
-              </TouchableOpacity>
+
+            {/* Greeting */}
+            <View>
+              <Text className="text-xs font-medium text-slate-400">Tableau de bord propriétaire</Text>
+              <Text className="mt-0.5 text-2xl font-black text-slate-950">
+                Bonjour, {user?.fullName?.split(' ')[0]} 👋
+              </Text>
             </View>
           </View>
 
@@ -252,8 +250,7 @@ export function DashboardScreen({ navigation }: Props) {
                       <View className="flex-1">
                         <Text className="font-bold text-slate-950">{carLabel}</Text>
                         <Text className="mt-0.5 text-xs text-slate-500">
-                          {formatDate(toDate(booking.startDate))} {TEXT.arrow}{' '}
-                          {formatDate(toDate(booking.endDate))}
+                          {formatDateRange(toDate(booking.startDate), toDate(booking.endDate))}
                         </Text>
                         <Text className="mt-0.5 text-xs text-slate-500">
                           {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''}{' '}

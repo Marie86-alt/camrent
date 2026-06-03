@@ -85,6 +85,7 @@ export function AdminDriversScreen() {
     () => drivers.find((driver) => driver.id === selectedId) ?? drivers[0],
     [drivers, selectedId],
   );
+  const selectedDriverPhotoUrl = selectedDriver?.driverProfile?.profilePhotoUrl ?? selectedDriver?.photoUrl;
 
   const pendingCount = drivers.filter((driver) => driver.status === 'pending_validation' || driver.kycStatus === 'pending').length;
   const suspendedCount = drivers.filter((driver) => driver.status === 'suspended' || driver.status === 'banned').length;
@@ -172,11 +173,11 @@ export function AdminDriversScreen() {
                   <Text className="flex-1 text-xl font-black text-slate-950">Fiche chauffeur</Text>
                 </View>
 
-                {selectedDriver.photoUrl ? (
+                {selectedDriverPhotoUrl ? (
                   <Image
                     className="h-28 w-28 self-center rounded-full bg-slate-100"
                     resizeMode="cover"
-                    source={{ uri: selectedDriver.photoUrl }}
+                    source={{ uri: selectedDriverPhotoUrl }}
                   />
                 ) : null}
 
@@ -194,7 +195,7 @@ export function AdminDriversScreen() {
                 <DetailLine label="Disponibilite" value={selectedDriver.driverProfile?.isAvailable ? 'Disponible' : 'Non renseigne'} />
                 <DetailLine label="Note moyenne" value={selectedDriver.ratingAverage ? `${selectedDriver.ratingAverage}/5` : undefined} />
                 <DetailLine label="Missions" value={selectedDriver.missionsCount ?? 0} />
-                <DetailLine label="Photo chauffeur" value={selectedDriver.photoUrl ? 'Photo fournie' : undefined} />
+                <DetailLine label="Photo chauffeur" value={selectedDriver.driverProfile?.profilePhotoUrl ? 'Photo fournie' : undefined} />
                 <DetailLine label="CNI" value={selectedDriver.documents?.nationalIdUrl ? 'Document fourni' : undefined} />
                 <DetailLine label="CNI verso" value={selectedDriver.documents?.nationalIdBackUrl ? 'Document fourni' : undefined} />
                 <DetailLine label="Permis" value={selectedDriver.documents?.driverLicenseUrl ? 'Document fourni' : undefined} />

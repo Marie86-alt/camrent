@@ -8,7 +8,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../hooks/useAuth';
 import { updateUserProfile } from '../../services/authService';
-import { uploadUserDocument } from '../../services/storageService';
+import { uploadDriverProfilePhoto, uploadUserDocument } from '../../services/storageService';
 import { useAuthStore } from '../../store/authStore';
 import type { AppUser } from '../../types/models';
 import type { OwnerStackParamList } from '../../types/navigation';
@@ -90,9 +90,41 @@ export function DriverProfileScreen(_props: Props) {
   const [licenseCategories, setLicenseCategories] = useState(user?.driverProfile?.licenseCategories ?? 'B');
   const [nationalIdNumber, setNationalIdNumber] = useState(user?.driverProfile?.nationalIdNumber ?? '');
   const [experienceYears, setExperienceYears] = useState(String(user?.driverProfile?.experienceYears ?? ''));
+  const [driverPhotoUrl, setDriverPhotoUrl] = useState(user?.driverProfile?.profilePhotoUrl ?? '');
   const [documents, setDocuments] = useState<AppUser['documents']>(user?.documents ?? {});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<DocumentKey | null>(null);
   const [saving, setSaving] = useState(false);
+
+  async function pickDriverPhoto() {
+    if (!user) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission requise', 'Autorisez la galerie pour ajouter la photo chauffeur.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      mediaTypes: ['images' as const],
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+
+    try {
+      setUploadingPhoto(true);
+      const url = await uploadDriverProfilePhoto(user.id, result.assets[0].uri);
+      setDriverPhotoUrl(url);
+    } catch {
+      Alert.alert('Upload impossible', "La photo chauffeur n'a pas pu etre envoyee.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function pickDocument(key: DocumentKey) {
     if (!user) return;
@@ -143,6 +175,7 @@ export function DriverProfileScreen(_props: Props) {
         licenseExpiryDate,
         licenseNumber,
         nationalIdNumber,
+        profilePhotoUrl: driverPhotoUrl,
       },
       kycStatus: 'pending',
       status: 'pending_validation',
@@ -176,7 +209,7 @@ export function DriverProfileScreen(_props: Props) {
 
         <View className="gap-4">
           <Field label="Numero de permis" onChangeText={setLicenseNumber} placeholder="Ex: CE123456" value={licenseNumber} />
-          <Field label="Expiration permis" onChangeText={setLicenseExpiryDate} placeholder="AAAA-MM-JJ" value={licenseExpiryDate} />
+          <Field label="Expiration permis" onChangeText={setLicenseExpiryDate} placeholder="Ex: 03/06/2030" value={licenseExpiryDate} />
           <Field label="Categories permis" onChangeText={setLicenseCategories} placeholder="B, C" value={licenseCategories} />
           <Field label="Numero CNI" onChangeText={setNationalIdNumber} placeholder="Numero CNI" value={nationalIdNumber} />
           <Field
@@ -190,12 +223,26 @@ export function DriverProfileScreen(_props: Props) {
 
         <View className="gap-3">
           <Text className="text-lg font-black text-slate-950">Documents</Text>
-          <View className="rounded-xl border border-slate-200 bg-white p-4">
-            <Text className="font-bold text-slate-900">Photo chauffeur</Text>
-            <Text className="mt-1 text-sm text-slate-500">
-              La photo chauffeur utilise la photo de profil du compte proprietaire.
-            </Text>
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            className="flex-row items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+            onPress={pickDriverPhoto}
+          >
+            {driverPhotoUrl ? (
+              <Image className="h-16 w-16 rounded-full bg-slate-100" resizeMode="cover" source={{ uri: driverPhotoUrl }} />
+            ) : (
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                <Ionicons color="#64748b" name="person-outline" size={24} />
+              </View>
+            )}
+            <View className="flex-1">
+              <Text className="font-bold text-slate-900">Photo chauffeur</Text>
+              <Text className="text-xs font-semibold text-slate-500">
+                {uploadingPhoto ? 'Upload en cours...' : driverPhotoUrl ? 'Photo chauffeur ajout\u00e9e' : 'Ajouter une photo chauffeur'}
+              </Text>
+            </View>
+            <Ionicons color="#94a3b8" name="chevron-forward" size={18} />
+          </TouchableOpacity>
           {(Object.keys(documentLabels) as DocumentKey[]).map((key) => (
             <DocumentButton
               key={key}
@@ -206,7 +253,7 @@ export function DriverProfileScreen(_props: Props) {
           ))}
         </View>
 
-        <PrimaryButton loading={saving || Boolean(uploadingKey)} onPress={saveProfile}>
+        <PrimaryButton loading={saving || uploadingPhoto || Boolean(uploadingKey)} onPress={saveProfile}>
           Envoyer pour validation
         </PrimaryButton>
       </View>

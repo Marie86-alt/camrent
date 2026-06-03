@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { Booking, BookingStatus } from '../types/models';
 import { formatFcfa } from '../utils/currency';
-import { formatDate } from '../utils/dates';
+import { formatDateRange } from '../utils/dates';
 
 type BookingCardProps = {
   booking: Booking;
@@ -17,11 +17,17 @@ type StatusStyle = {
   border: string;
 };
 
+const TEXT = {
+  carFallback: 'V\u00e9hicule r\u00e9serv\u00e9',
+  contractSigned: 'Contrat sign\u00e9',
+  dot: '\u00b7',
+};
+
 const STATUS_MAP: Record<BookingStatus, StatusStyle> = {
   pending: { label: 'En attente', color: '#ca8a04', bg: '#fefce8', border: '#facc15' },
-  confirmed: { label: 'Confirmée', color: '#3B63D4', bg: '#eff6ff', border: '#bfdbfe' },
-  cancelled: { label: 'Annulée', color: '#b91c1c', bg: '#fef2f2', border: '#fca5a5' },
-  completed: { label: 'Terminée', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1' },
+  confirmed: { label: 'Confirm\u00e9e', color: '#3B63D4', bg: '#eff6ff', border: '#bfdbfe' },
+  cancelled: { label: 'Annul\u00e9e', color: '#b91c1c', bg: '#fef2f2', border: '#fca5a5' },
+  completed: { label: 'Termin\u00e9e', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1' },
 };
 
 const PAYMENT_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -45,7 +51,7 @@ export function BookingCard({ booking, onSignContract }: BookingCardProps) {
   const carLabel =
     booking.carBrand && booking.carModel
       ? `${booking.carBrand} ${booking.carModel}`
-      : 'Véhicule réservé';
+      : TEXT.carFallback;
   const paymentIcon = PAYMENT_ICONS[booking.paymentMethod] ?? 'cash-outline';
   const paymentColor = PAYMENT_COLORS[booking.paymentMethod] ?? '#64748b';
 
@@ -62,31 +68,27 @@ export function BookingCard({ booking, onSignContract }: BookingCardProps) {
         borderLeftColor: status.border,
       }}
     >
-      <View className="p-4 gap-3">
-        {/* ─── Header ─── */}
+      <View className="gap-3 p-4">
         <View className="flex-row items-start justify-between gap-3">
           <View className="flex-1">
             <Text className="text-base font-bold text-slate-950">{carLabel}</Text>
             <Text className="mt-0.5 text-xs text-slate-500">
-              {formatDate(toDate(booking.startDate))} → {formatDate(toDate(booking.endDate))}
+              {formatDateRange(toDate(booking.startDate), toDate(booking.endDate))}
             </Text>
           </View>
-          <View
-            className="rounded-full px-3 py-1"
-            style={{ backgroundColor: status.bg }}
-          >
+          <View className="rounded-full px-3 py-1" style={{ backgroundColor: status.bg }}>
             <Text className="text-xs font-bold" style={{ color: status.color }}>
               {status.label}
             </Text>
           </View>
         </View>
 
-        {/* ─── Footer ─── */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Ionicons color={paymentColor} name={paymentIcon} size={14} />
             <Text className="text-xs text-slate-500">
-              {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''} · {booking.paymentMethod}
+              {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''} {TEXT.dot}{' '}
+              {booking.paymentMethod}
             </Text>
           </View>
           <Text className="text-base font-black text-brand-blue">
@@ -94,22 +96,21 @@ export function BookingCard({ booking, onSignContract }: BookingCardProps) {
           </Text>
         </View>
 
-        {/* ─── Permis ─── */}
         {booking.driverLicense ? (
           <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2">
             <Ionicons color="#64748b" name="id-card-outline" size={13} />
             <Text className="text-xs text-slate-400">
-              Permis {booking.driverLicense.licenseNumber} · Cat. {booking.driverLicense.categories}
+              Permis {booking.driverLicense.licenseNumber} {TEXT.dot} Cat.{' '}
+              {booking.driverLicense.categories}
             </Text>
           </View>
         ) : null}
 
-        {/* ─── Contrat ─── */}
-        {booking.status === 'confirmed' && (
-          booking.contractStatus === 'client_signed' ? (
+        {booking.status === 'confirmed' &&
+          (booking.contractStatus === 'client_signed' ? (
             <View className="flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5">
               <Ionicons color="#3B63D4" name="shield-checkmark" size={15} />
-              <Text className="text-xs font-bold text-brand-blue">Contrat signé</Text>
+              <Text className="text-xs font-bold text-brand-blue">{TEXT.contractSigned}</Text>
             </View>
           ) : onSignContract ? (
             <TouchableOpacity
@@ -120,8 +121,7 @@ export function BookingCard({ booking, onSignContract }: BookingCardProps) {
               <Ionicons color="white" name="document-text-outline" size={15} />
               <Text className="text-xs font-bold text-white">Signer le contrat</Text>
             </TouchableOpacity>
-          ) : null
-        )}
+          ) : null)}
       </View>
     </View>
   );
