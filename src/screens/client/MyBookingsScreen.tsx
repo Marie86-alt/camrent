@@ -133,6 +133,7 @@ export function MyBookingsScreen() {
               <BookingCard
                 booking={item}
                 onSignContract={() => handleSignContract(item)}
+                onReview={() => navigation.navigate('Review', { booking: item })}
               />
             )}
             showsVerticalScrollIndicator={false}

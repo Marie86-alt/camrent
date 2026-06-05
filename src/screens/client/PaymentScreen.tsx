@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 
 import { PAYMENT_PROVIDER_BY_METHOD } from '../../constants/cameroon';
+import { BackButton } from '../../components/BackButton';
 import { PaymentModal } from '../../components/PaymentModal';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -49,8 +50,9 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
   };
 
   return (
-    <Screen>
-      <View className="gap-6 pt-6">
+    <Screen topSafeArea>
+      <View className="gap-6">
+        <BackButton navigation={navigation} />
         <View
           className="items-center gap-3 rounded-xl bg-white py-8"
           style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}

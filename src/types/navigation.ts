@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import type { Booking, Car } from './models';
+import type { AppUser, Booking, Car } from './models';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -19,9 +19,42 @@ export type ClientStackParamList = {
   Tabs: undefined;
   CarDetail: { car: Car };
   Booking: { car: Car };
+  DriverList: { carCity: string; carId: string; startDate?: string; endDate?: string; selectable?: boolean };
+  DriverDetail: { driver: AppUser };
   Payment: { amount: number; bookingId: string; paymentMethod: import('./models').PaymentMethod };
   Contract: { booking: Booking };
+  Review: { booking: Booking };
 };
+
+export type PublicTabParamList = {
+  Home: undefined;
+  Search: undefined;
+};
+
+export type PublicStackParamList = {
+  PublicTabs: undefined;
+  CarDetail: { car: Car };
+  Booking: { car: Car };
+  DriverList: { carCity: string; carId: string; startDate?: string; endDate?: string; selectable?: boolean };
+  DriverDetail: { driver: AppUser };
+  AuthPrompt: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+};
+
+export type DriverTabParamList = {
+  DriverMissions: undefined;
+  DriverCalendar: undefined;
+  DriverOwnProfile: undefined;
+};
+
+export type DriverStackParamList = {
+  DriverTabs: undefined;
+  DriverReviewClient: { booking: Booking };
+};
+
+export type DriverReviewClientScreenProps = NativeStackScreenProps<DriverStackParamList, 'DriverReviewClient'>;
 
 export type OwnerTabParamList = {
   Dashboard: undefined;
@@ -35,6 +68,7 @@ export type OwnerStackParamList = {
   AddCar: undefined;
   EditCar: { car: Car };
   DriverProfile: undefined;
+  OwnerDrivers: undefined;
 };
 
 export type AdminStackParamList = {
@@ -61,3 +95,5 @@ export type CarDetailScreenProps = NativeStackScreenProps<ClientStackParamList, 
 export type BookingScreenProps = NativeStackScreenProps<ClientStackParamList, 'Booking'>;
 export type PaymentScreenProps = NativeStackScreenProps<ClientStackParamList, 'Payment'>;
 export type ContractScreenProps = NativeStackScreenProps<ClientStackParamList, 'Contract'>;
+export type DriverListScreenProps = NativeStackScreenProps<ClientStackParamList, 'DriverList'>;
+export type ReviewScreenProps = NativeStackScreenProps<ClientStackParamList, 'Review'>;

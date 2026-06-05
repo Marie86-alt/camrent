@@ -12,10 +12,24 @@ export type CreateBookingPayload = {
   startDate: Date;
   totalDays: number;
   totalPrice: number;
+  withDriver?: boolean;
+  driverId?: string;
+  driverName?: string;
+  driverPhotoUrl?: string;
+  driverPricePerDay?: number;
 };
 
-export function createBooking(payload: CreateBookingPayload) {
-  return addDoc(collection(db, 'bookings'), {
+export async function createBooking(payload: CreateBookingPayload) {
+  const driverFields = payload.driverId
+    ? {
+        driverId: payload.driverId,
+        driverName: payload.driverName ?? '',
+        driverPricePerDay: payload.driverPricePerDay ?? 0,
+        ...(payload.driverPhotoUrl ? { driverPhotoUrl: payload.driverPhotoUrl } : {}),
+      }
+    : {};
+
+  const ref = await addDoc(collection(db, 'bookings'), {
     carId: payload.car.id,
     carBrand: payload.car.brand,
     carModel: payload.car.model,
@@ -30,7 +44,32 @@ export function createBooking(payload: CreateBookingPayload) {
     driverLicense: payload.driverLicense,
     status: 'pending',
     createdAt: serverTimestamp(),
+    withDriver: payload.withDriver ?? false,
+    ...driverFields,
   });
+
+  if (payload.driverId) {
+    import('./notificationService')
+      .then(({ sendPushNotificationToUser }) =>
+        sendPushNotificationToUser(
+          payload.driverId!,
+          'Nouvelle mission 🚗',
+          `Demande pour ${payload.car.brand} ${payload.car.model} — ${payload.totalDays} jour${payload.totalDays > 1 ? 's' : ''}`,
+        ),
+      )
+      .catch(() => {});
+  }
+
+  return ref;
+}
+
+export function subscribeToDriverBookings(driverId: string, onData: (bookings: Booking[]) => void, onError: () => void) {
+  const q = query(collection(db, 'bookings'), where('driverId', '==', driverId));
+  return onSnapshot(
+    q,
+    (snapshot) => onData(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Booking)),
+    onError,
+  );
 }
 
 export function subscribeToClientBookings(clientId: string, onData: (bookings: Booking[]) => void, onError: () => void) {

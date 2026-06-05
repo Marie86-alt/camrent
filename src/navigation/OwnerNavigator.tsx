@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AddCarScreen } from '../screens/owner/AddCarScreen';
 import { DriverProfileScreen } from '../screens/owner/DriverProfileScreen';
 import { EditCarScreen } from '../screens/owner/EditCarScreen';
+import { OwnerDriversScreen } from '../screens/owner/OwnerDriversScreen';
 import type { OwnerStackParamList } from '../types/navigation';
 import { OwnerTabNavigator } from './OwnerTabNavigator';
 
@@ -23,6 +24,7 @@ export function OwnerNavigator() {
       <Stack.Screen name="AddCar" component={AddCarScreen} options={{ title: 'Ajouter' }} />
       <Stack.Screen name="EditCar" component={EditCarScreen} options={{ title: 'Modifier' }} />
       <Stack.Screen name="DriverProfile" component={DriverProfileScreen} options={{ title: 'Profil chauffeur' }} />
+      <Stack.Screen name="OwnerDrivers" component={OwnerDriversScreen} options={{ title: 'Mes chauffeurs' }} />
     </Stack.Navigator>
   );
 }

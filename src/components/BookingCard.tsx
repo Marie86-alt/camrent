@@ -8,6 +8,7 @@ import { formatDateRange } from '../utils/dates';
 type BookingCardProps = {
   booking: Booking;
   onSignContract?: () => void;
+  onReview?: () => void;
 };
 
 type StatusStyle = {
@@ -46,7 +47,7 @@ function toDate(value: Date): Date {
   return typeof (value as any).toDate === 'function' ? (value as any).toDate() : value;
 }
 
-export function BookingCard({ booking, onSignContract }: BookingCardProps) {
+export function BookingCard({ booking, onSignContract, onReview }: BookingCardProps) {
   const status = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
   const carLabel =
     booking.carBrand && booking.carModel
@@ -122,6 +123,18 @@ export function BookingCard({ booking, onSignContract }: BookingCardProps) {
               <Text className="text-xs font-bold text-white">Signer le contrat</Text>
             </TouchableOpacity>
           ) : null)}
+
+        {booking.status === 'completed' && !booking.reviewSubmitted && onReview ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-amber-50 py-2.5"
+            style={{ borderWidth: 1, borderColor: '#fde68a' }}
+            onPress={onReview}
+          >
+            <Ionicons color="#ca8a04" name="star-outline" size={15} />
+            <Text className="text-xs font-bold text-yellow-700">Laisser un avis</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );

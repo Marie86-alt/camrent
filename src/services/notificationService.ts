@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { arrayUnion, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 import { db } from './firebase';
 
@@ -74,4 +74,24 @@ export async function registerUserPushToken(userId: string) {
   });
 
   return token;
+}
+
+export async function sendPushNotificationToUser(
+  userId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  const snap = await getDoc(doc(db, 'users', userId));
+  if (!snap.exists()) return;
+
+  const tokens: string[] = snap.data().expoPushTokens ?? [];
+  if (tokens.length === 0) return;
+
+  const messages = tokens.map((token) => ({ to: token, title, body, sound: 'default' }));
+
+  await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(messages),
+  });
 }

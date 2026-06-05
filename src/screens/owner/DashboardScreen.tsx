@@ -400,6 +400,44 @@ export function DashboardScreen({ navigation }: Props) {
                 <Text className="text-sm font-semibold text-slate-700">{TEXT.reservations}</Text>
               </TouchableOpacity>
             </View>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className="flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white py-4"
+                style={{
+                  shadowColor: '#000',
+                  shadowOpacity: 0.04,
+                  shadowRadius: 4,
+                  shadowOffset: { width: 0, height: 1 },
+                  elevation: 1,
+                }}
+                onPress={() => navigation.navigate('OwnerDrivers')}
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                  <Ionicons color="#3B63D4" name="people-outline" size={20} />
+                </View>
+                <Text className="text-sm font-semibold text-slate-700">Mes chauffeurs</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className="flex-1 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 py-4"
+                style={{
+                  shadowColor: '#3B63D4',
+                  shadowOpacity: 0.08,
+                  shadowRadius: 4,
+                  shadowOffset: { width: 0, height: 1 },
+                  elevation: 1,
+                }}
+                onPress={() => navigation.navigate('DriverProfile')}
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-xl bg-white">
+                  <Ionicons color="#3B63D4" name="person-add-outline" size={20} />
+                </View>
+                <Text className="text-sm font-semibold text-brand-blue">Ajouter chauffeur</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>

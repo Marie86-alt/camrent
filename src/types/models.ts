@@ -34,6 +34,7 @@ export type AppUser = {
   phone: string;
   photoUrl?: string;
   role: UserRole;
+  ownerId?: string;
   city: CameroonCity;
   createdAt: Date;
   status?: AccountStatus;
@@ -58,6 +59,8 @@ export type AppUser = {
     licenseNumber?: string;
     nationalIdNumber?: string;
     profilePhotoUrl?: string;
+    pricePerDay?: number;
+    blockedDates?: string[];
   };
 };
 
@@ -114,6 +117,13 @@ export type Booking = {
   clientSignatureUrl?: string;
   contractSignedAt?: Date;
   contractRef?: string;
+  withDriver?: boolean;
+  driverId?: string;
+  driverName?: string;
+  driverPhotoUrl?: string;
+  driverPricePerDay?: number;
+  reviewSubmitted?: boolean;
+  driverReviewSubmitted?: boolean;
 };
 
 export type PaymentFlow = {

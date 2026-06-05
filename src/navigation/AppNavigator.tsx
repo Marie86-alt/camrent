@@ -3,9 +3,10 @@ import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
 
 import { AdminNavigator } from './AdminNavigator';
-import { AuthStack } from './AuthStack';
 import { ClientNavigator } from './ClientNavigator';
+import { DriverNavigator } from './DriverNavigator';
 import { OwnerNavigator } from './OwnerNavigator';
+import { PublicNavigator } from './PublicNavigator';
 import { hasFirebaseConfig } from '../services/firebase';
 import { useAuthStore } from '../store/authStore';
 
@@ -34,11 +35,13 @@ export function AppNavigator() {
   return (
     <NavigationContainer>
       {!user ? (
-        <AuthStack />
+        <PublicNavigator />
       ) : user.role === 'admin' ? (
         <AdminNavigator />
       ) : user.role === 'owner' ? (
         <OwnerNavigator />
+      ) : user.role === 'driver' ? (
+        <DriverNavigator />
       ) : (
         <ClientNavigator />
       )}

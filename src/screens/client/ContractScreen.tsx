@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 
+import { BackButton } from '../../components/BackButton';
+
 import { SignaturePad } from '../../components/SignaturePad';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -53,8 +55,11 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
   };
 
   return (
-    <Screen scroll={false} topSafeArea={false}>
+    <Screen scroll={false} topSafeArea>
       <View className="flex-1">
+        <View className="px-5 pt-4 pb-1">
+          <BackButton navigation={navigation} />
+        </View>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 20, paddingBottom: 8 }}

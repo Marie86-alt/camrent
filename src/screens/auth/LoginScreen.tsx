@@ -21,7 +21,6 @@ import { loginWithEmail } from '../../services/authService';
 import { hasFirebaseConfig } from '../../services/firebase';
 import { useAuthStore } from '../../store/authStore';
 import type { AppUser } from '../../types/models';
-import type { LoginScreenProps } from '../../types/navigation';
 
 const CAR_BG_URI =
   'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=1300&fit=crop&crop=center&q=85';
@@ -44,6 +43,14 @@ function getLoginErrorMessage(error: unknown) {
 
   return message || 'Verifiez votre email et votre mot de passe.';
 }
+
+type LoginScreenProps = {
+  navigation: {
+    canGoBack: () => boolean;
+    goBack: () => void;
+    navigate: (screen: 'ForgotPassword' | 'Register') => void;
+  };
+};
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const passwordRef = useRef<TextInput>(null);
@@ -96,7 +103,26 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={{ alignItems: 'flex-start', paddingTop: 18, paddingBottom: 32 }}>
+            <View style={{ alignItems: 'flex-start', paddingTop: 8, paddingBottom: 32 }}>
+              {navigation.canGoBack() ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => navigation.goBack()}
+                  style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 42,
+                    width: 42,
+                    marginBottom: 18,
+                    borderRadius: 21,
+                    backgroundColor: 'rgba(255,255,255,0.16)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.2)',
+                  }}
+                >
+                  <Ionicons color="#ffffff" name="arrow-back" size={22} />
+                </TouchableOpacity>
+              ) : null}
               <BrandLogo variant="mini" dark />
               <Text
                 style={{

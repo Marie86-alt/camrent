@@ -33,6 +33,11 @@ service cloud.firestore {
           'paymentStatus',
           'driverLicense',
           'status',
+          'withDriver',
+          'driverId',
+          'driverName',
+          'driverPhotoUrl',
+          'driverPricePerDay',
           'createdAt'
         ])
         && request.resource.data.clientId == request.auth.uid
@@ -43,7 +48,22 @@ service cloud.firestore {
         && request.resource.data.totalDays >= 1
         && request.resource.data.totalPrice is number
         && request.resource.data.totalPrice > 0
+        && validBookingDriverFields()
         && validDriverLicense(request.resource.data.driverLicense);
+    }
+
+    function validBookingDriverFields() {
+      return !request.resource.data.keys().hasAny(['withDriver'])
+        || request.resource.data.withDriver == false
+        || (
+          request.resource.data.withDriver == true
+          && request.resource.data.driverId is string
+          && request.resource.data.driverId.size() > 0
+          && request.resource.data.driverName is string
+          && request.resource.data.driverName.size() > 0
+          && request.resource.data.driverPricePerDay is number
+          && request.resource.data.driverPricePerDay >= 0
+        );
     }
 
     function validDriverLicense(license) {
@@ -110,7 +130,12 @@ service cloud.firestore {
 
     match /bookings/{bookingId} {
       allow read: if signedIn()
-        && (resource.data.clientId == request.auth.uid || resource.data.ownerId == request.auth.uid || isAdmin());
+        && (
+          resource.data.clientId == request.auth.uid
+          || resource.data.ownerId == request.auth.uid
+          || resource.data.driverId == request.auth.uid
+          || isAdmin()
+        );
       allow create: if signedIn() && validBookingCreate();
       allow update: if validBookingUpdate();
       allow delete: if false;

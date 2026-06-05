@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
@@ -47,49 +47,62 @@ export function HomeScreen() {
 
   useEffect(() => subscribeToAvailableCars(), [subscribeToAvailableCars]);
 
-  const initials = user?.fullName
-    ?.split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() ?? '';
+  const isGuest = !user;
+  const initials =
+    user?.fullName
+      ?.split(' ')
+      .map((name) => name[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() ?? '';
 
-  const activeBooking = bookings.find(
-    (b) => b.status === 'pending' || b.status === 'confirmed',
-  );
-
-  const displayedCars = selectedCity
-    ? cars.filter((c) => c.city === selectedCity)
-    : cars;
+  const activeBooking = bookings.find((booking) => booking.status === 'pending' || booking.status === 'confirmed');
+  const displayedCars = selectedCity ? cars.filter((car) => car.city === selectedCity) : cars;
 
   const ListHeader = (
     <View className="gap-5 pb-2">
-      {/* ─── Header ─── */}
       <View className="gap-3">
-        {/* Top bar: logo left · actions right */}
         <View className="flex-row items-center justify-between">
           <BrandLogo variant="xs" />
           <View className="flex-row items-center gap-2">
-            <TouchableOpacity
-              className="h-10 w-10 items-center justify-center rounded-full bg-white"
-              style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
-              onPress={() => navigation.navigate('MyBookings')}
-            >
-              <Ionicons color="#64748b" name="notifications-outline" size={20} />
-              {activeBooking ? (
-                <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-danger" />
-              ) : null}
-            </TouchableOpacity>
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
-              <Text className="text-sm font-black text-white">{initials}</Text>
-            </View>
+            {isGuest ? (
+              <TouchableOpacity
+                className="flex-row items-center gap-1.5 rounded-full bg-white px-3.5 py-2"
+                onPress={() => (navigation as any).navigate('Login')}
+                style={{
+                  shadowColor: '#000',
+                  shadowOpacity: 0.07,
+                  shadowRadius: 4,
+                  shadowOffset: { width: 0, height: 1 },
+                  elevation: 1,
+                  borderWidth: 1,
+                  borderColor: '#e2e8f0',
+                }}
+              >
+                <Ionicons color="#3B63D4" name="person-outline" size={15} />
+                <Text className="text-sm font-semibold text-slate-700">Se connecter</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  className="h-10 w-10 items-center justify-center rounded-full bg-white"
+                  onPress={() => navigation.navigate('MyBookings')}
+                  style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+                >
+                  <Ionicons color="#64748b" name="notifications-outline" size={20} />
+                  {activeBooking ? <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-danger" /> : null}
+                </TouchableOpacity>
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-blue">
+                  <Text className="text-sm font-black text-white">{initials}</Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 
-        {/* Greeting */}
         <View>
           <Text className="text-2xl font-black text-slate-950">
-            Bonjour, {user?.fullName?.split(' ')[0]} 👋
+            {isGuest ? 'Bienvenue sur Autofix Pro' : `Bonjour, ${user?.fullName?.split(' ')[0]} 👋`}
           </Text>
           <Text className="mt-0.5 text-sm text-slate-500">
             Trouvez votre voiture idéale au Cameroun
@@ -97,10 +110,10 @@ export function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Search bar (tappable) ─── */}
       <TouchableOpacity
         activeOpacity={0.8}
         className="flex-row items-center gap-3 rounded-2xl bg-white px-4 py-3.5"
+        onPress={() => navigation.navigate('Search')}
         style={{
           shadowColor: '#3B63D4',
           shadowOpacity: 0.12,
@@ -110,10 +123,9 @@ export function HomeScreen() {
           borderWidth: 1.5,
           borderColor: '#dbeafe',
         }}
-        onPress={() => navigation.navigate('Search')}
       >
         <Ionicons color="#3B63D4" name="search-outline" size={20} />
-        <Text className="flex-1 text-slate-400">Rechercher marque, modèle ou ville…</Text>
+        <Text className="flex-1 text-slate-400">Rechercher marque, modèle ou ville...</Text>
         <View className="rounded-lg bg-brand-blue px-2 py-1">
           <Ionicons color="white" name="arrow-forward" size={14} />
         </View>
@@ -133,11 +145,11 @@ export function HomeScreen() {
         ) : null}
       </View>
 
-      {/* ─── Active booking banner ─── */}
-      {activeBooking ? (
+      {!isGuest && activeBooking ? (
         <TouchableOpacity
           activeOpacity={0.85}
           className="flex-row items-center gap-3 overflow-hidden rounded-2xl bg-white p-4"
+          onPress={() => navigation.navigate('MyBookings')}
           style={{
             shadowColor: '#000',
             shadowOpacity: 0.07,
@@ -147,17 +159,12 @@ export function HomeScreen() {
             borderLeftWidth: 4,
             borderLeftColor: BOOKING_STATUS_COLORS[activeBooking.status],
           }}
-          onPress={() => navigation.navigate('MyBookings')}
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-full"
             style={{ backgroundColor: BOOKING_STATUS_COLORS[activeBooking.status] + '18' }}
           >
-            <Ionicons
-              color={BOOKING_STATUS_COLORS[activeBooking.status]}
-              name="car-outline"
-              size={20}
-            />
+            <Ionicons color={BOOKING_STATUS_COLORS[activeBooking.status]} name="car-outline" size={20} />
           </View>
           <View className="flex-1">
             <Text className="text-xs font-semibold text-slate-400">Réservation active</Text>
@@ -166,10 +173,7 @@ export function HomeScreen() {
                 ? `${activeBooking.carBrand} ${activeBooking.carModel}`
                 : 'Véhicule réservé'}
             </Text>
-            <Text
-              className="mt-0.5 text-xs font-semibold"
-              style={{ color: BOOKING_STATUS_COLORS[activeBooking.status] }}
-            >
+            <Text className="mt-0.5 text-xs font-semibold" style={{ color: BOOKING_STATUS_COLORS[activeBooking.status] }}>
               {BOOKING_STATUS_LABELS[activeBooking.status]}
             </Text>
           </View>
@@ -177,15 +181,12 @@ export function HomeScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {/* ─── Section title ─── */}
       <View className="flex-row items-center justify-between">
         <Text className="text-lg font-bold text-slate-950">
           {selectedCity ? `Voitures à ${selectedCity}` : 'Voitures disponibles'}
-          {!loading && displayedCars.length > 0 && (
-            <Text className="text-base font-semibold text-slate-400">
-              {' '}({displayedCars.length})
-            </Text>
-          )}
+          {!loading && displayedCars.length > 0 ? (
+            <Text className="text-base font-semibold text-slate-400"> ({displayedCars.length})</Text>
+          ) : null}
         </Text>
         {selectedCity ? (
           <TouchableOpacity onPress={() => setSelectedCity(null)}>
@@ -202,7 +203,7 @@ export function HomeScreen() {
         {loading ? (
           <FlatList
             ListHeaderComponent={ListHeader}
-            data={Array.from({ length: SKELETON_COUNT }, (_, i) => i)}
+            data={Array.from({ length: SKELETON_COUNT }, (_, index) => index)}
             keyExtractor={(item) => String(item)}
             renderItem={() => <CarCardSkeleton />}
             scrollEnabled
@@ -221,9 +222,7 @@ export function HomeScreen() {
                 </Text>
                 {selectedCity ? (
                   <TouchableOpacity onPress={() => setSelectedCity(null)}>
-                    <Text className="text-sm font-semibold text-brand-blue">
-                      Voir toutes les villes
-                    </Text>
+                    <Text className="text-sm font-semibold text-brand-blue">Voir toutes les villes</Text>
                   </TouchableOpacity>
                 ) : (
                   <Text className="text-center text-sm text-slate-400">
@@ -235,10 +234,7 @@ export function HomeScreen() {
             data={displayedCars}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <CarCard
-                car={item}
-                onPress={() => navigation.navigate('CarDetail', { car: item })}
-              />
+              <CarCard car={item} onPress={() => navigation.navigate('CarDetail', { car: item })} />
             )}
             showsVerticalScrollIndicator={false}
           />

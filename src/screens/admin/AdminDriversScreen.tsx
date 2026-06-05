@@ -66,7 +66,7 @@ export function AdminDriversScreen() {
   useEffect(() => {
     const unsubscribe = subscribeToAllUsers(
       (items) => {
-        const driverLikeUsers = items.filter((user) => user.role === 'owner' || user.role === 'driver');
+        const driverLikeUsers = items.filter((user) => user.role === 'driver');
         setDrivers(driverLikeUsers);
         setSelectedId((current) => current ?? driverLikeUsers[0]?.id ?? null);
         setLoading(false);
@@ -93,6 +93,20 @@ export function AdminDriversScreen() {
   async function updateSelected(payload: Partial<AppUser>, successMessage: string) {
     if (!selectedDriver) return;
 
+    const missingDriverDocuments =
+      !selectedDriver.driverProfile?.profilePhotoUrl ||
+      !selectedDriver.documents?.nationalIdUrl ||
+      !selectedDriver.documents?.nationalIdBackUrl ||
+      !selectedDriver.documents?.driverLicenseUrl;
+
+    if (payload.kycStatus === 'approved' && missingDriverDocuments) {
+      Alert.alert(
+        'Documents obligatoires',
+        "Ajoutez la photo, la CNI recto/verso et le permis du chauffeur avant de valider le KYC.",
+      );
+      return;
+    }
+
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedDriver.id, payload);
@@ -118,6 +132,25 @@ export function AdminDriversScreen() {
         onPress: () => updateSelected(payload, successMessage),
       },
     ]);
+  }
+
+  function confirmKycApproval() {
+    if (!selectedDriver) return;
+
+    if (!selectedDriver.driverProfile?.profilePhotoUrl) {
+      Alert.alert(
+        'Photo obligatoire',
+        "Ajoutez une photo de profil chauffeur avant de valider le KYC.",
+      );
+      return;
+    }
+
+    confirmAction(
+      'Valider le KYC',
+      `Confirmez-vous la validation du KYC de ${selectedDriver.fullName} ?`,
+      { kycStatus: 'approved', status: 'active', adminLastActionReason: 'KYC chauffeur valide par admin' },
+      'Le KYC du chauffeur est valide.',
+    );
   }
 
   return (

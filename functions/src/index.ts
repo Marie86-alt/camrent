@@ -1,10 +1,12 @@
 import { onRequest } from 'firebase-functions/v2/https';
 
+import { handleCreateOwnerDriver, handleListAvailableDrivers } from './drivers/ownerDrivers';
 import { assertPost, sendJson } from './http';
 import { handleCitySearch } from './locations/geonames';
 import { handleSendAdminNotification } from './notifications/expoPush';
 import { handleMobileMoneyPayment } from './payments/mobileMoneyHandler';
 import { handleFlutterwaveWebhook, handleMtnMomoWebhook, handleOrangeMoneyWebhook } from './payments/webhookHandlers';
+import { handleSubmitReview } from './reviews/reviewSubmit';
 
 export const mobileMoneyPayment = onRequest({ cors: true }, async (request, response) => {
   try {
@@ -88,6 +90,47 @@ export const citySearch = onRequest({ cors: true }, async (request, response) =>
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'City search failed',
+    });
+  }
+});
+
+export const createOwnerDriver = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleCreateOwnerDriver(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Driver creation failed',
+    });
+  }
+});
+
+export const submitReview = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleSubmitReview(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Review submit failed',
+    });
+  }
+});
+
+export const listAvailableDrivers = onRequest({ cors: true }, async (request, response) => {
+  try {
+    await handleListAvailableDrivers(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Driver listing failed',
     });
   }
 });
