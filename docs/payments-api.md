@@ -1,16 +1,15 @@
-# API paiements Mobile Money
+# API paiements Campay
 
-L'app Expo n'appelle jamais directement Orange Money ou MTN MoMo. Elle appelle un backend CamRent, qui garde les secrets operateurs et met a jour Firestore avec l'Admin SDK.
+L'app Expo n'appelle jamais directement Campay, Orange Money, MTN MoMo ou un prestataire carte bancaire. Elle appelle un backend Autofix Pro/CamRent, qui garde les secrets de paiement et met a jour Firestore avec l'Admin SDK.
 
 ## Endpoint mobile
 
 Firebase Functions expose les endpoints deployes sous la forme:
 
 - `mobileMoneyPayment`
-- `mtnMomoWebhook`
-- `orangeMoneyWebhook`
+- `campayWebhook`
 
-En production, `EXPO_PUBLIC_PAYMENTS_API_URL` doit pointer vers l'URL HTTPS de `mobileMoneyPayment`.
+En production, `EXPO_PUBLIC_PAYMENTS_API_URL` doit pointer vers l'URL HTTPS de `mobileMoneyPayment`. Cette fonction cree un lien de paiement Campay avec `payment_options` adapte a la methode choisie.
 
 `POST /payments/mobile-money`
 
@@ -49,10 +48,10 @@ Reponse attendue:
 2. Recharger la reservation depuis Firestore.
 3. Refuser le paiement si `paymentStatus` n'est pas `unpaid` ou `failed`.
 4. Ignorer le montant envoye par le client et utiliser `booking.totalPrice`.
-5. Appeler Orange Money ou MTN MoMo selon `provider`.
+5. Creer un lien de paiement Campay selon `provider`.
 6. Enregistrer une transaction dans `payments/{paymentId}`.
 7. Mettre `bookings/{bookingId}.paymentStatus` a `pending`.
-8. Recevoir le webhook/callback operateur.
+8. Recevoir le webhook/callback Campay.
 9. Passer `paymentStatus` a `paid` ou `failed`.
 10. Passer la reservation a `confirmed` uniquement apres paiement valide.
 
@@ -61,6 +60,14 @@ Reponse attendue:
 Ces variables doivent rester cote backend uniquement:
 
 ```env
+CAMPAY_APP_USERNAME=
+CAMPAY_APP_PASSWORD=
+CAMPAY_BASE_URL=https://demo.campay.net
+CAMPAY_REDIRECT_URL=
+CAMPAY_FAILURE_REDIRECT_URL=
+CAMPAY_WEBHOOK_URL=https://your-functions-url/campayWebhook
+CAMPAY_WEBHOOK_SECRET=
+
 MTN_MOMO_COLLECTION_BASE_URL=https://sandbox.momodeveloper.mtn.com/collection
 MTN_MOMO_CALLBACK_URL=https://your-functions-url/mtnMomoWebhook
 MTN_MOMO_SUBSCRIPTION_KEY=
@@ -84,6 +91,21 @@ MOBILE_MONEY_ENV=sandbox
 ```
 
 ## Endpoints webhooks
+
+### Campay
+
+`POST /campayWebhook`
+
+Campay peut renvoyer la reference interne `external_reference` ou sa propre `reference`. Le backend retrouve la transaction, puis normalise:
+
+- `SUCCESSFUL` -> `paymentStatus: paid`, `status: confirmed`
+- `FAILED` -> `paymentStatus: failed`
+
+Si `CAMPAY_WEBHOOK_SECRET` est defini, le webhook doit envoyer le header:
+
+```txt
+x-camrent-webhook-secret: votre-secret
+```
 
 ### MTN MoMo
 

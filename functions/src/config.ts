@@ -16,7 +16,11 @@ export function mobileMoneyEnv() {
   return optionalEnv('MOBILE_MONEY_ENV', 'sandbox');
 }
 
-export function webhookSecret(provider: 'mtn-momo' | 'orange-money' | 'flutterwave') {
+export function webhookSecret(provider: 'mtn-momo' | 'orange-money' | 'flutterwave' | 'campay') {
+  if (provider === 'campay') {
+    return optionalEnv('CAMPAY_WEBHOOK_SECRET');
+  }
+
   if (provider === 'mtn-momo') {
     return optionalEnv('MTN_MOMO_WEBHOOK_SECRET');
   }

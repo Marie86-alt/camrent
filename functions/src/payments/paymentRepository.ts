@@ -64,18 +64,53 @@ export async function markBookingPaymentPending(bookingId: string) {
   });
 }
 
+export async function markProviderPaymentStarted(params: {
+  checkoutUrl?: string;
+  providerReference?: string;
+  raw?: unknown;
+  reference: string;
+}) {
+  await db.collection('payments').doc(params.reference).update({
+    checkoutUrl: params.checkoutUrl,
+    providerReference: params.providerReference,
+    rawProviderResponse: params.raw,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+async function getPaymentSnapshot(reference: string) {
+  const paymentRef = db.collection('payments').doc(reference);
+  const paymentSnapshot = await paymentRef.get();
+
+  if (paymentSnapshot.exists) {
+    return { paymentRef, paymentSnapshot };
+  }
+
+  const providerReferenceSnapshot = await db
+    .collection('payments')
+    .where('providerReference', '==', reference)
+    .limit(1)
+    .get();
+
+  if (providerReferenceSnapshot.empty) {
+    throw new Error('Payment not found');
+  }
+
+  const fallbackPaymentSnapshot = providerReferenceSnapshot.docs[0];
+
+  return {
+    paymentRef: fallbackPaymentSnapshot.ref,
+    paymentSnapshot: fallbackPaymentSnapshot,
+  };
+}
+
 export async function updatePaymentFromProvider(params: {
   provider: PaymentProvider;
   reference: string;
   status: PaymentStatus;
   raw: unknown;
 }) {
-  const paymentRef = db.collection('payments').doc(params.reference);
-  const paymentSnapshot = await paymentRef.get();
-
-  if (!paymentSnapshot.exists) {
-    throw new Error('Payment not found');
-  }
+  const { paymentRef, paymentSnapshot } = await getPaymentSnapshot(params.reference);
 
   const payment = paymentSnapshot.data() as { bookingId: string; provider: PaymentProvider };
 
@@ -83,6 +118,41 @@ export async function updatePaymentFromProvider(params: {
     throw new Error('Payment provider mismatch');
   }
 
+  const bookingRef = db.collection('bookings').doc(payment.bookingId);
+
+  await db.runTransaction(async (transaction) => {
+    transaction.update(paymentRef, {
+      providerStatus: params.status,
+      rawCallback: params.raw,
+      status: params.status,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    if (params.status === 'success') {
+      transaction.update(bookingRef, {
+        paymentStatus: 'paid',
+        status: 'confirmed',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    if (params.status === 'failed') {
+      transaction.update(bookingRef, {
+        paymentStatus: 'failed',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
+}
+
+export async function updatePaymentFromGateway(params: {
+  reference: string;
+  status: PaymentStatus;
+  raw: unknown;
+}) {
+  const { paymentRef, paymentSnapshot } = await getPaymentSnapshot(params.reference);
+  const payment = paymentSnapshot.data() as { bookingId: string };
   const bookingRef = db.collection('bookings').doc(payment.bookingId);
 
   await db.runTransaction(async (transaction) => {

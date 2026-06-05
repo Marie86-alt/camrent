@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { webhookSecret } from '../config';
 import { sendJson } from '../http';
 import type { PaymentStatus } from '../types';
-import { updatePaymentFromProvider } from './paymentRepository';
+import { updatePaymentFromGateway, updatePaymentFromProvider } from './paymentRepository';
 
 function normalizeMtnStatus(status: unknown): PaymentStatus {
   if (status === 'SUCCESSFUL') {
@@ -45,7 +45,21 @@ function normalizeFlutterwaveStatus(status: unknown): PaymentStatus {
   return 'pending';
 }
 
-function validateWebhookSecret(request: Request, provider: 'mtn-momo' | 'orange-money' | 'flutterwave') {
+function normalizeCampayStatus(status: unknown): PaymentStatus {
+  const normalized = String(status ?? '').toUpperCase();
+
+  if (['SUCCESSFUL', 'SUCCESS', 'PAID', 'COMPLETED'].includes(normalized)) {
+    return 'success';
+  }
+
+  if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(normalized)) {
+    return 'failed';
+  }
+
+  return 'pending';
+}
+
+function validateWebhookSecret(request: Request, provider: 'mtn-momo' | 'orange-money' | 'flutterwave' | 'campay') {
   const expectedSecret = webhookSecret(provider);
 
   if (!expectedSecret) {
@@ -57,6 +71,23 @@ function validateWebhookSecret(request: Request, provider: 'mtn-momo' | 'orange-
   }
 
   return request.header('x-camrent-webhook-secret') === expectedSecret;
+}
+
+function readCampayReference(body: Record<string, unknown>) {
+  const data = (body.data ?? body.transaction ?? body.payment ?? body) as Record<string, unknown>;
+
+  return (
+    body.external_reference ??
+    body.externalReference ??
+    data.external_reference ??
+    data.externalReference ??
+    body.reference ??
+    data.reference ??
+    body.transaction_reference ??
+    body.transactionReference ??
+    data.transaction_reference ??
+    data.transactionReference
+  );
 }
 
 export async function handleMtnMomoWebhook(request: Request, response: Response) {
@@ -129,6 +160,30 @@ export async function handleFlutterwaveWebhook(request: Request, response: Respo
     raw: request.body,
     reference,
     status: normalizeFlutterwaveStatus(data?.status ?? request.body?.status),
+  });
+
+  sendJson(response, 200, { ok: true });
+}
+
+export async function handleCampayWebhook(request: Request, response: Response) {
+  if (!validateWebhookSecret(request, 'campay')) {
+    sendJson(response, 401, { error: 'Invalid webhook secret' });
+    return;
+  }
+
+  const reference = readCampayReference(request.body ?? {});
+
+  if (!reference) {
+    sendJson(response, 400, { error: 'Missing Campay payment reference' });
+    return;
+  }
+
+  const data = request.body?.data ?? request.body?.transaction ?? request.body?.payment ?? request.body;
+
+  await updatePaymentFromGateway({
+    raw: request.body,
+    reference: String(reference),
+    status: normalizeCampayStatus(data?.status ?? request.body?.status),
   });
 
   sendJson(response, 200, { ok: true });

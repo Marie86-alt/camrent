@@ -2,10 +2,14 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Request, Response } from 'express';
 
 import { getAuthenticatedUid, sendJson } from '../http';
-import { requestCardPayment } from './cardProvider';
-import { requestMtnMomoPayment } from './mtnMomoProvider';
-import { requestOrangeMoneyPayment } from './orangeMoneyProvider';
-import { createPaymentRecord, getOwnedBooking, getUserPaymentProfile, markBookingPaymentPending } from './paymentRepository';
+import { requestCampayPayment } from './campayProvider';
+import {
+  createPaymentRecord,
+  getOwnedBooking,
+  getUserPaymentProfile,
+  markBookingPaymentPending,
+  markProviderPaymentStarted,
+} from './paymentRepository';
 import { validatePaymentPayload } from './validation';
 
 export async function handleMobileMoneyPayment(request: Request, response: Response) {
@@ -40,21 +44,25 @@ export async function handleMobileMoneyPayment(request: Request, response: Respo
     customerEmail: profile.email,
     customerName: profile.fullName,
     phone: payload.phone,
+    method: payload.method,
+    provider: payload.provider,
     reference,
   };
 
-  const providerResponse =
-    payload.provider === 'mtn-momo'
-      ? await requestMtnMomoPayment(providerRequest)
-      : payload.provider === 'orange-money'
-        ? await requestOrangeMoneyPayment(providerRequest)
-        : await requestCardPayment(providerRequest);
+  const providerResponse = await requestCampayPayment(providerRequest);
+
+  await markProviderPaymentStarted({
+    checkoutUrl: providerResponse.checkoutUrl,
+    providerReference: providerResponse.reference,
+    raw: providerResponse.raw,
+    reference,
+  });
 
   await markBookingPaymentPending(payload.bookingId);
 
   sendJson(response, 200, {
     checkoutUrl: providerResponse.checkoutUrl,
-    reference: providerResponse.reference,
+    reference,
     status: providerResponse.status,
   });
 }

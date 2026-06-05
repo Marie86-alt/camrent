@@ -5,7 +5,12 @@ import { assertPost, sendJson } from './http';
 import { handleCitySearch } from './locations/geonames';
 import { handleSendAdminNotification } from './notifications/expoPush';
 import { handleMobileMoneyPayment } from './payments/mobileMoneyHandler';
-import { handleFlutterwaveWebhook, handleMtnMomoWebhook, handleOrangeMoneyWebhook } from './payments/webhookHandlers';
+import {
+  handleCampayWebhook,
+  handleFlutterwaveWebhook,
+  handleMtnMomoWebhook,
+  handleOrangeMoneyWebhook,
+} from './payments/webhookHandlers';
 import { handleSubmitReview } from './reviews/reviewSubmit';
 
 export const mobileMoneyPayment = onRequest({ cors: true }, async (request, response) => {
@@ -64,6 +69,21 @@ export const flutterwaveWebhook = onRequest(async (request, response) => {
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'Flutterwave webhook failed',
+    });
+  }
+});
+
+export const campayWebhook = onRequest(async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleCampayWebhook(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Campay webhook failed',
     });
   }
 });
