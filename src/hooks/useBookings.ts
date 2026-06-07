@@ -25,8 +25,18 @@ export function useBookings(userId?: string, role: 'client' | 'owner' = 'client'
 
     setLoading(true);
     const subscribe = role === 'owner' ? subscribeToOwnerBookings : subscribeToClientBookings;
-    const unsubscribe = subscribe(userId, setBookings, () => setError('Impossible de charger les reservations.'));
-    setLoading(false);
+    const unsubscribe = subscribe(
+      userId,
+      (items) => {
+        setBookings(items);
+        setError(null);
+        setLoading(false);
+      },
+      () => {
+        setError('Impossible de charger les reservations.');
+        setLoading(false);
+      },
+    );
 
     return unsubscribe;
   }, [role, userId]);

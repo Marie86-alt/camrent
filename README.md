@@ -1,4 +1,4 @@
-# CamRent
+# Autofix Pro
 
 Application Expo React Native en TypeScript pour une plateforme de location de voitures au Cameroun.
 
@@ -59,12 +59,11 @@ firebase deploy --only firestore:rules,storage
 
 Les prix sont calcules en FCFA, les numeros sont valides au format `+237XXXXXXXXX`, et les paiements proposes sont MTN MoMo et Orange Money.
 
-## Paiements Orange Money / MTN MoMo
+## Paiements Campay
 
-Les APIs operateurs doivent etre appelees depuis un backend CamRent, pas directement depuis Expo. Le contrat mobile/backend est documente dans `docs/payments-api.md`.
+Les APIs paiement doivent etre appelees depuis un backend Autofix Pro, pas directement depuis Expo. Le contrat mobile/backend est documente dans `docs/payments-api.md`.
 
 Le dossier `functions/` contient maintenant:
 
 - `mobileMoneyPayment`: endpoint appele par l'app mobile.
-- `mtnMomoWebhook`: callback MTN MoMo.
-- `orangeMoneyWebhook`: callback Orange Money.
+- `campayWebhook`: callback Campay.

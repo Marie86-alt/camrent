@@ -53,6 +53,7 @@ export type AppUser = {
   };
   driverProfile?: {
     experienceYears?: number;
+    isIndependent?: boolean;
     isAvailable?: boolean;
     licenseCategories?: string;
     licenseExpiryDate?: string;
@@ -81,6 +82,7 @@ export type Car = {
   description: string;
   adminStatus?: 'pending_review' | 'approved' | 'rejected';
   documentsVerified?: boolean;
+  allowIndependentDrivers?: boolean;
   technicalSheet?: {
     licensePlate?: string;
     chassisNumber?: string;

@@ -1,31 +1,50 @@
-import { useEffect, useRef } from 'react';
-import { Animated, View } from 'react-native';
+import { useEffect } from 'react';
+import { View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 export function CarCardSkeleton() {
-  const opacity = useRef(new Animated.Value(0.45)).current;
+  const opacity = useSharedValue(0.45);
 
   useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.45, duration: 650, useNativeDriver: true }),
-      ]),
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 650 }),
+        withTiming(0.45, { duration: 650 }),
+      ),
+      -1,
     );
-    pulse.start();
-    return () => pulse.stop();
+    return () => {
+      cancelAnimation(opacity);
+    };
   }, [opacity]);
+
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      opacity: opacity.value,
+    }),
+    [],
+  );
 
   return (
     <Animated.View
       className="mb-4 overflow-hidden rounded-xl bg-white"
-      style={{
-        opacity,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-      }}
+      style={[
+        animatedStyle,
+        {
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 2,
+        },
+      ]}
     >
       <View className="h-44 bg-slate-200" />
       <View className="gap-3 p-4">

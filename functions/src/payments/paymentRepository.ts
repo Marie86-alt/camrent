@@ -51,8 +51,8 @@ export async function getUserPaymentProfile(uid: string) {
   const user = userSnapshot.data() as { email?: string; fullName?: string; phone?: string } | undefined;
 
   return {
-    email: user?.email ?? `client-${uid}@camrent.local`,
-    fullName: user?.fullName ?? 'Client CamRent',
+    email: user?.email ?? `client-${uid}@autofix-pro.local`,
+    fullName: user?.fullName ?? 'Client Autofix Pro',
     phone: user?.phone,
   };
 }

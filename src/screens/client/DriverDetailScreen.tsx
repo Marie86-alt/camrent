@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
@@ -6,16 +7,12 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useAuthStore } from '../../store/authStore';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
-import type { AppUser } from '../../types/models';
+import type { ClientStackParamList, DriverDetailScreenProps, PublicDriverDetailScreenProps, PublicStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 
 type Props = {
-  navigation: any;
-  route: {
-    params: {
-      driver: AppUser;
-    };
-  };
+  navigation: NativeStackNavigationProp<ClientStackParamList & PublicStackParamList>;
+  route: DriverDetailScreenProps['route'] | PublicDriverDetailScreenProps['route'];
 };
 
 function InfoRow({
@@ -65,6 +62,7 @@ export function DriverDetailScreen({ navigation, route }: Props) {
   const { setSelectedDriver } = useBookingDraftStore();
 
   const photoUrl = driver.driverProfile?.profilePhotoUrl ?? driver.photoUrl;
+  const isIndependent = driver.driverProfile?.isIndependent === true;
   const initials = driver.fullName
     .split(' ')
     .map((part) => part[0])
@@ -75,7 +73,7 @@ export function DriverDetailScreen({ navigation, route }: Props) {
 
   function handleSelect() {
     if (!user) {
-      navigation.navigate('AuthPrompt');
+      navigation.navigate('Login');
       return;
     }
     setSelectedDriver(driver);
@@ -125,6 +123,11 @@ export function DriverDetailScreen({ navigation, route }: Props) {
               <View className="h-2 w-2 rounded-full bg-green-500" />
               <Text className="text-xs font-bold text-green-700">
                 Chauffeur certifié · {driver.city}
+              </Text>
+            </View>
+            <View className={`mt-2 rounded-full px-3 py-1 ${isIndependent ? 'bg-blue-50' : 'bg-slate-100'}`}>
+              <Text className={`text-xs font-bold ${isIndependent ? 'text-brand-blue' : 'text-slate-600'}`}>
+                {isIndependent ? 'Chauffeur ind\u00e9pendant' : 'Chauffeur du propri\u00e9taire'}
               </Text>
             </View>
           </View>

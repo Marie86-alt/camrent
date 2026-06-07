@@ -205,12 +205,12 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       });
 
       navigation.navigate('Payment', {
-        amount: totalPrice,
+        amount: booking.totalPrice,
         bookingId: booking.id,
         paymentMethod,
       });
-    } catch {
-      Alert.alert('Erreur', TEXT.bookingError);
+    } catch (error) {
+      Alert.alert('Erreur', error instanceof Error ? error.message : TEXT.bookingError);
     } finally {
       setLoading(false);
     }

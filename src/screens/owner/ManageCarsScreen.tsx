@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -82,6 +82,108 @@ function AdminStatusBanner({ car }: { car: Car }) {
   );
 }
 
+function OwnerCarListItem({
+  car,
+  onDelete,
+  onEdit,
+  onToggleAvailability,
+}: {
+  car: Car;
+  onDelete: (car: Car) => void;
+  onEdit: (car: Car) => void;
+  onToggleAvailability: (car: Car) => void;
+}) {
+  return (
+    <View
+      className="mb-4 overflow-hidden rounded-2xl bg-white"
+      style={{
+        shadowColor: '#000',
+        shadowOpacity: 0.07,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+      }}
+    >
+      <Image
+        className="h-44 w-full bg-slate-200"
+        resizeMode="cover"
+        source={{ uri: car.imageUrl }}
+      />
+
+      <View
+        className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-full px-3 py-1"
+        style={{
+          backgroundColor: car.isAvailable
+            ? 'rgba(59,99,212,0.9)'
+            : 'rgba(185,28,28,0.85)',
+        }}
+      >
+        <View className="h-1.5 w-1.5 rounded-full bg-white" />
+        <Text className="text-xs font-bold text-white">
+          {car.isAvailable ? 'Disponible' : 'D\u00e9sactiv\u00e9e'}
+        </Text>
+      </View>
+
+      <View className="gap-3 p-4">
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-lg font-black text-slate-950">
+              {car.brand} {car.model}
+            </Text>
+            <Text className="text-sm text-slate-500">
+              {car.city} {'\u00b7'} {car.year} {'\u00b7'} {car.seats} places
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className="font-black text-brand-blue">
+              {formatFcfa(car.pricePerDay)}
+            </Text>
+            <Text className="text-xs text-slate-400">/jour</Text>
+          </View>
+        </View>
+
+        <AdminStatusBanner car={car} />
+
+        <View className="flex-row gap-2">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-3"
+            onPress={() => onEdit(car)}
+          >
+            <Ionicons color="white" name="create-outline" size={16} />
+            <Text className="font-semibold text-white">Modifier</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl px-3 py-3 ${
+              car.isAvailable ? 'bg-brand-danger' : 'bg-brand-blue'
+            }`}
+            onPress={() => onToggleAvailability(car)}
+          >
+            <Ionicons
+              color="white"
+              name={car.isAvailable ? 'pause-circle-outline' : 'play-circle-outline'}
+              size={16}
+            />
+            <Text className="font-semibold text-white">
+              {car.isAvailable ? 'D\u00e9sactiver' : 'R\u00e9activer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
+          onPress={() => onDelete(car)}
+        >
+          <Ionicons color="#b91c1c" name="trash-outline" size={16} />
+          <Text className="text-sm font-semibold text-red-700">Supprimer</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export function ManageCarsScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { cars, error } = useCars(user?.id);
@@ -92,15 +194,15 @@ export function ManageCarsScreen({ navigation }: Props) {
     [cars, selectedCity],
   );
 
-  const toggleAvailability = async (car: Car) => {
+  const toggleAvailability = useCallback(async (car: Car) => {
     try {
       await setCarAvailability(car.id, !car.isAvailable);
     } catch {
       Alert.alert('Erreur', 'Impossible de modifier la disponibilité.');
     }
-  };
+  }, []);
 
-  const confirmDeleteCar = (car: Car) => {
+  const confirmDeleteCar = useCallback((car: Car) => {
     Alert.alert(
       'Supprimer cette voiture',
       `${car.brand} ${car.model} sera retirée de votre flotte. Cette action est définitive.`,
@@ -119,7 +221,22 @@ export function ManageCarsScreen({ navigation }: Props) {
         },
       ],
     );
-  };
+  }, []);
+  const carKeyExtractor = useCallback((item: Car) => item.id, []);
+  const editCar = useCallback((car: Car) => {
+    navigation.navigate('EditCar', { car });
+  }, [navigation]);
+  const renderCar = useCallback(
+    ({ item }: { item: Car }) => (
+      <OwnerCarListItem
+        car={item}
+        onDelete={confirmDeleteCar}
+        onEdit={editCar}
+        onToggleAvailability={toggleAvailability}
+      />
+    ),
+    [confirmDeleteCar, editCar, toggleAvailability],
+  );
 
   return (
     <Screen scroll={false}>
@@ -155,100 +272,8 @@ export function ManageCarsScreen({ navigation }: Props) {
             </View>
           }
           data={displayedCars}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View
-              className="mb-4 overflow-hidden rounded-2xl bg-white"
-              style={{
-                shadowColor: '#000',
-                shadowOpacity: 0.07,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 2 },
-                elevation: 2,
-              }}
-            >
-              <Image
-                className="h-44 w-full bg-slate-200"
-                resizeMode="cover"
-                source={{ uri: item.imageUrl }}
-              />
-
-              {/* Availability pill over image */}
-              <View
-                className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-full px-3 py-1"
-                style={{
-                  backgroundColor: item.isAvailable
-                    ? 'rgba(59,99,212,0.9)'
-                    : 'rgba(185,28,28,0.85)',
-                }}
-              >
-                <View className="h-1.5 w-1.5 rounded-full bg-white" />
-                <Text className="text-xs font-bold text-white">
-                  {item.isAvailable ? 'Disponible' : 'Désactivée'}
-                </Text>
-              </View>
-
-              <View className="gap-3 p-4">
-                {/* Car name + price */}
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-lg font-black text-slate-950">
-                      {item.brand} {item.model}
-                    </Text>
-                    <Text className="text-sm text-slate-500">
-                      {item.city} · {item.year} · {item.seats} places
-                    </Text>
-                  </View>
-                  <View className="items-end">
-                    <Text className="font-black text-brand-blue">
-                      {formatFcfa(item.pricePerDay)}
-                    </Text>
-                    <Text className="text-xs text-slate-400">/jour</Text>
-                  </View>
-                </View>
-
-                {/* Admin status banner */}
-                <AdminStatusBanner car={item} />
-
-                {/* Action buttons */}
-                <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-3"
-                    onPress={() => navigation.navigate('EditCar', { car: item })}
-                  >
-                    <Ionicons color="white" name="create-outline" size={16} />
-                    <Text className="font-semibold text-white">Modifier</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl px-3 py-3 ${
-                      item.isAvailable ? 'bg-brand-danger' : 'bg-brand-blue'
-                    }`}
-                    onPress={() => toggleAvailability(item)}
-                  >
-                    <Ionicons
-                      color="white"
-                      name={item.isAvailable ? 'pause-circle-outline' : 'play-circle-outline'}
-                      size={16}
-                    />
-                    <Text className="font-semibold text-white">
-                      {item.isAvailable ? 'Désactiver' : 'Réactiver'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
-                  onPress={() => confirmDeleteCar(item)}
-                >
-                  <Ionicons color="#b91c1c" name="trash-outline" size={16} />
-                  <Text className="text-sm font-semibold text-red-700">Supprimer</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+          keyExtractor={carKeyExtractor}
+          renderItem={renderCar}
           showsVerticalScrollIndicator={false}
         />
       </View>

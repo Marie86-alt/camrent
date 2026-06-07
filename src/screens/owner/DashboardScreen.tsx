@@ -14,6 +14,7 @@ import type { Booking, BookingStatus, PaymentMethod } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 import { formatDate, formatDateRange } from '../../utils/dates';
+import { toJsDate } from '../../utils/firestoreDate';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<OwnerTabParamList, 'Dashboard'>,
@@ -48,10 +49,6 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; color: string }[] = 
   { key: 'Orange Money', label: 'Orange Money', color: '#f97316' },
   { key: 'Carte bancaire', label: 'Carte bancaire', color: '#3b82f6' },
 ];
-
-function toDate(value: Date): Date {
-  return typeof (value as any).toDate === 'function' ? (value as any).toDate() : value;
-}
 
 async function handleStatusUpdate(
   booking: Booking,
@@ -250,7 +247,7 @@ export function DashboardScreen({ navigation }: Props) {
                       <View className="flex-1">
                         <Text className="font-bold text-slate-950">{carLabel}</Text>
                         <Text className="mt-0.5 text-xs text-slate-500">
-                          {formatDateRange(toDate(booking.startDate), toDate(booking.endDate))}
+                          {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
                         </Text>
                         <Text className="mt-0.5 text-xs text-slate-500">
                           {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''}{' '}
@@ -323,7 +320,7 @@ export function DashboardScreen({ navigation }: Props) {
                     <View className="flex-1">
                       <Text className="font-semibold text-slate-950">{carLabel}</Text>
                       <Text className="text-xs text-slate-400">
-                        {formatDate(toDate(booking.startDate))}
+                        {formatDate(toJsDate(booking.startDate))}
                       </Text>
                     </View>
                     <View>

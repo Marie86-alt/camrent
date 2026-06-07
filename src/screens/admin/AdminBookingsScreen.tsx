@@ -8,6 +8,7 @@ import { subscribeToAllBookings, updateBookingAdminFields } from '../../services
 import type { Booking, BookingStatus } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
 import { formatDate } from '../../utils/dates';
+import { toJsDate } from '../../utils/firestoreDate';
 
 const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
   { label: 'Toutes', value: 'all' },
@@ -19,9 +20,7 @@ const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
 
 function toReadableDate(value: Booking['startDate']) {
   if (!value) return 'Non renseigne';
-  const maybeTimestamp = value as unknown as { toDate?: () => Date };
-  const date = typeof maybeTimestamp.toDate === 'function' ? maybeTimestamp.toDate() : value;
-  return formatDate(date);
+  return formatDate(toJsDate(value));
 }
 
 function statusLabel(status: BookingStatus) {

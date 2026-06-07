@@ -70,8 +70,13 @@ export function AddCarScreen() {
   const { user } = useAuth();
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [year, setYear] = useState('');
   const [pricePerDay, setPricePerDay] = useState('');
   const [city, setCity] = useState<CameroonCity>('Yaounde');
+  const [seats, setSeats] = useState('');
+  const [transmission, setTransmission] = useState<'Automatique' | 'Manuelle'>('Automatique');
+  const [fuelType, setFuelType] = useState<'Essence' | 'Diesel' | 'Hybride' | 'Electrique'>('Essence');
+  const [description, setDescription] = useState('');
   const [photoUris, setPhotoUris] = useState<(string | null)[]>(Array(6).fill(null));
   const [registrationDocumentUri, setRegistrationDocumentUri] = useState<string | null>(null);
   const [licensePlate, setLicensePlate] = useState('');
@@ -79,6 +84,7 @@ export function AddCarScreen() {
   const [mileage, setMileage] = useState('');
   const [insuranceExpiry, setInsuranceExpiry] = useState('');
   const [technicalInspectionExpiry, setTechnicalInspectionExpiry] = useState('');
+  const [allowIndependentDrivers, setAllowIndependentDrivers] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handlePickPhoto = async (index: number) => {
@@ -111,7 +117,12 @@ export function AddCarScreen() {
   const resetForm = () => {
     setBrand('');
     setModel('');
+    setYear('');
     setPricePerDay('');
+    setSeats('');
+    setTransmission('Automatique');
+    setFuelType('Essence');
+    setDescription('');
     setPhotoUris(Array(6).fill(null));
     setRegistrationDocumentUri(null);
     setLicensePlate('');
@@ -119,13 +130,38 @@ export function AddCarScreen() {
     setMileage('');
     setInsuranceExpiry('');
     setTechnicalInspectionExpiry('');
+    setAllowIndependentDrivers(false);
   };
 
   const submit = async () => {
     if (!user) return;
 
-    if (!photoUris[0]) {
-      Alert.alert('Photo requise', 'Ajoutez au moins la photo avant de la voiture.');
+    if (photoUris.some((uri) => !uri)) {
+      Alert.alert('Photos requises', 'Ajoutez les 6 photos du vehicule avant de publier.');
+      return;
+    }
+
+    const numericYear = Number(year);
+    const numericSeats = Number(seats);
+    const numericPrice = Number(pricePerDay);
+
+    if (!brand.trim() || !model.trim() || !description.trim()) {
+      Alert.alert('Informations manquantes', 'Renseignez la marque, le modele et la description.');
+      return;
+    }
+
+    if (!Number.isInteger(numericYear) || numericYear < 1990 || numericYear > new Date().getFullYear() + 1) {
+      Alert.alert('Annee invalide', 'Renseignez une annee valide pour le vehicule.');
+      return;
+    }
+
+    if (!Number.isInteger(numericSeats) || numericSeats < 2 || numericSeats > 9) {
+      Alert.alert('Places invalides', 'Renseignez un nombre de places entre 2 et 9.');
+      return;
+    }
+
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      Alert.alert('Prix invalide', 'Renseignez un prix journalier valide.');
       return;
     }
 
@@ -150,20 +186,21 @@ export function AddCarScreen() {
 
       await createCar({
         ownerId: user.id,
-        brand,
-        model,
-        year: new Date().getFullYear(),
+        brand: brand.trim(),
+        model: model.trim(),
+        year: numericYear,
         city,
-        pricePerDay: Number(pricePerDay),
+        pricePerDay: numericPrice,
         imageUrl,
         imageUrls,
-        seats: 5,
-        transmission: 'Automatique',
-        fuelType: 'Essence',
+        seats: numericSeats,
+        transmission,
+        fuelType,
         isAvailable: true,
-        description: 'Voiture disponible \u00e0 la location sur Autofix Pro.',
+        description: description.trim(),
         adminStatus: 'pending_review',
         documentsVerified: false,
+        allowIndependentDrivers,
         technicalSheet: {
           licensePlate: licensePlate.trim(),
           chassisNumber: chassisNumber.trim(),
@@ -202,7 +239,7 @@ export function AddCarScreen() {
             </Text>
           </View>
           <Text className="text-xs text-slate-400">
-            La photo avant est obligatoire. Les 6 angles augmentent vos chances de validation.
+            Les 6 angles sont obligatoires pour permettre la validation admin.
           </Text>
 
           <View className="flex-row flex-wrap gap-3">
@@ -256,6 +293,7 @@ export function AddCarScreen() {
           <Text className="text-base font-black text-slate-950">Informations principales</Text>
           <CarInput label="Marque" onChangeText={setBrand} placeholder="Ex: Toyota" value={brand} />
           <CarInput label={'Mod\u00e8le'} onChangeText={setModel} placeholder="Ex: Corolla" value={model} />
+          <CarInput keyboardType="numeric" label="Annee" onChangeText={setYear} placeholder="Ex: 2021" value={year} />
           <CitySearchInput label={'Ville du v\u00e9hicule'} onSelectCity={setCity} value={city} />
           <CarInput
             keyboardType="numeric"
@@ -264,6 +302,75 @@ export function AddCarScreen() {
             placeholder="Ex: 30000 FCFA"
             value={pricePerDay}
           />
+          <CarInput keyboardType="numeric" label="Nombre de places" onChangeText={setSeats} placeholder="Ex: 5" value={seats} />
+
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold uppercase text-slate-500">Boite de vitesse</Text>
+            <View className="flex-row gap-2">
+              {(['Automatique', 'Manuelle'] as const).map((option) => (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  className={`flex-1 rounded-xl border py-3 ${transmission === option ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}
+                  key={option}
+                  onPress={() => setTransmission(option)}
+                >
+                  <Text className={`text-center font-bold ${transmission === option ? 'text-brand-blue' : 'text-slate-600'}`}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold uppercase text-slate-500">Carburant</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {(['Essence', 'Diesel', 'Hybride', 'Electrique'] as const).map((option) => (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  className={`rounded-xl border px-4 py-2.5 ${fuelType === option ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}
+                  key={option}
+                  onPress={() => setFuelType(option)}
+                >
+                  <Text className={`font-bold ${fuelType === option ? 'text-brand-blue' : 'text-slate-600'}`}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold uppercase text-slate-500">Description</Text>
+            <TextInput
+              className="min-h-24 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-950"
+              maxLength={500}
+              multiline
+              onChangeText={setDescription}
+              placeholder="Ex: Vehicule propre, climatise, disponible pour ville et route."
+              placeholderTextColor="#94a3b8"
+              textAlignVertical="top"
+              value={description}
+            />
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            className={`flex-row items-center gap-3 rounded-2xl border p-4 ${
+              allowIndependentDrivers ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'
+            }`}
+            onPress={() => setAllowIndependentDrivers((value) => !value)}
+          >
+            <View
+              className={`h-6 w-6 items-center justify-center rounded-full ${
+                allowIndependentDrivers ? 'bg-brand-blue' : 'bg-slate-100'
+              }`}
+            >
+              {allowIndependentDrivers ? <Ionicons color="white" name="checkmark" size={16} /> : null}
+            </View>
+            <View className="flex-1">
+              <Text className="font-bold text-slate-950">Autoriser les chauffeurs ind\u00e9pendants</Text>
+              <Text className="mt-1 text-xs text-slate-500">
+                J'autorise les chauffeurs ind\u00e9pendants v\u00e9rifi\u00e9s \u00e0 conduire ce v\u00e9hicule.
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View
@@ -310,7 +417,16 @@ export function AddCarScreen() {
         </View>
 
         <PrimaryButton
-          disabled={!brand || !model || !city || !pricePerDay || (!photoUris[0] && hasFirebaseConfig)}
+          disabled={
+            !brand ||
+            !model ||
+            !year ||
+            !city ||
+            !pricePerDay ||
+            !seats ||
+            !description ||
+            (hasFirebaseConfig && photoUris.some((uri) => !uri))
+          }
           loading={loading}
           onPress={submit}
         >

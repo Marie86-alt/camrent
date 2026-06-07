@@ -10,16 +10,13 @@ import { updateUserProfile } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/authStore';
 import type { Booking } from '../../types/models';
+import { toJsDate } from '../../utils/firestoreDate';
 
 const MONTHS_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-function toDate(v: Date): Date {
-  return typeof (v as any).toDate === 'function' ? (v as any).toDate() : v;
-}
 
 function dateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -64,7 +61,7 @@ export function DriverCalendarScreen() {
 
   function getMissionStatus(date: Date) {
     for (const b of activeBookings) {
-      if (isBetween(date, toDate(b.startDate), toDate(b.endDate))) return b.status;
+      if (isBetween(date, toJsDate(b.startDate), toJsDate(b.endDate))) return b.status;
     }
     return null;
   }
@@ -249,7 +246,7 @@ export function DriverCalendarScreen() {
                     {b.carBrand} {b.carModel}
                   </Text>
                   <Text className="mt-0.5 text-xs text-slate-500">
-                    {toDate(b.startDate).toLocaleDateString('fr-FR')} → {toDate(b.endDate).toLocaleDateString('fr-FR')}
+                    {toJsDate(b.startDate).toLocaleDateString('fr-FR')} → {toJsDate(b.endDate).toLocaleDateString('fr-FR')}
                   </Text>
                 </View>
               ))}

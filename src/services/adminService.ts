@@ -31,6 +31,56 @@ export function updateUserAdminStatus(userId: string, payload: Partial<AppUser>)
   return updateDoc(doc(db, 'users', userId), payload);
 }
 
+export type CreateIndependentDriverAdminPayload = {
+  city: CameroonCity;
+  driverLicenseUrl: string;
+  email: string;
+  experienceYears: number;
+  fullName: string;
+  licenseCategories: string;
+  licenseExpiryDate: string;
+  licenseNumber: string;
+  nationalIdBackUrl: string;
+  nationalIdNumber: string;
+  nationalIdUrl: string;
+  password: string;
+  phone: string;
+  pricePerDay: number;
+  profilePhotoUrl: string;
+};
+
+function getCreateIndependentDriverEndpoint() {
+  const explicit = process.env.EXPO_PUBLIC_CREATE_INDEPENDENT_DRIVER_API_URL;
+  if (explicit) return explicit;
+
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+  return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/createIndependentDriver` : undefined;
+}
+
+export async function createIndependentDriverByAdmin(payload: CreateIndependentDriverAdminPayload) {
+  const endpoint = getCreateIndependentDriverEndpoint();
+  if (!endpoint) {
+    throw new Error('EXPO_PUBLIC_CREATE_INDEPENDENT_DRIVER_API_URL manquant.');
+  }
+
+  const token = await auth.currentUser?.getIdToken();
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || 'La creation du chauffeur independant a echoue.');
+  }
+
+  return response.json() as Promise<{ driverId: string; email: string; status: AppUser['status'] }>;
+}
+
 export function updateBookingAdminFields(bookingId: string, payload: Partial<Booking>) {
   return updateDoc(doc(db, 'bookings', bookingId), payload);
 }

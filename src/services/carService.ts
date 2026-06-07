@@ -9,6 +9,7 @@ export type UpdateCarPayload = Partial<
   Pick<
     Car,
     | 'adminStatus'
+    | 'allowIndependentDrivers'
     | 'brand'
     | 'city'
     | 'description'
@@ -16,6 +17,7 @@ export type UpdateCarPayload = Partial<
     | 'fuelType'
     | 'imageUrl'
     | 'imageUrls'
+    | 'isAvailable'
     | 'model'
     | 'pricePerDay'
     | 'seats'

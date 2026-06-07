@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { CAR_PHOTO_SLOTS } from '../../constants/cameroon';
+import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
-import { subscribeToAllCars } from '../../services/carService';
+import { subscribeToAllCars, updateCar } from '../../services/carService';
 import type { Car } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
 
@@ -161,6 +162,7 @@ export function AdminVehicleReviewScreen() {
   const [cars, setCars] = useState<Car[]>([]);
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewActionLoading, setReviewActionLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,6 +188,55 @@ export function AdminVehicleReviewScreen() {
   );
 
   const incompleteCars = cars.filter((car) => getCarPhotos(car).length < 6 || !car.technicalSheet).length;
+
+  async function approveSelectedCar() {
+    if (!selectedCar) return;
+
+    try {
+      setReviewActionLoading('approve');
+      await updateCar(selectedCar.id, {
+        adminStatus: 'approved',
+        documentsVerified: true,
+        isAvailable: true,
+      });
+      Alert.alert('Annonce approuvee', 'Le vehicule est maintenant visible par les clients.');
+    } catch {
+      Alert.alert('Erreur', "L'annonce n'a pas pu etre approuvee.");
+    } finally {
+      setReviewActionLoading(null);
+    }
+  }
+
+  async function rejectSelectedCar() {
+    if (!selectedCar) return;
+
+    Alert.alert(
+      'Rejeter cette annonce',
+      'Le vehicule sera masque aux clients. Le proprietaire devra corriger les photos ou la fiche technique.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Rejeter',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setReviewActionLoading('reject');
+              await updateCar(selectedCar.id, {
+                adminStatus: 'rejected',
+                documentsVerified: false,
+                isAvailable: false,
+              });
+              Alert.alert('Annonce rejetee', "L'annonce a ete masquee.");
+            } catch {
+              Alert.alert('Erreur', "L'annonce n'a pas pu etre rejetee.");
+            } finally {
+              setReviewActionLoading(null);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <Screen topSafeArea>
@@ -247,6 +298,34 @@ export function AdminVehicleReviewScreen() {
 
                 <PhotoGrid car={selectedCar} />
                 <TechnicalSheet car={selectedCar} />
+
+                <View className="gap-3 rounded-xl bg-white p-4">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons color="#3B63D4" name="shield-checkmark-outline" size={20} />
+                    <Text className="text-lg font-black text-slate-950">Decision admin</Text>
+                  </View>
+                  <Text className="text-sm leading-5 text-slate-500">
+                    Approuver rend le vehicule visible. Rejeter masque l'annonce jusqu'a correction par le proprietaire.
+                  </Text>
+                  <View className="gap-3">
+                    <PrimaryButton
+                      loading={reviewActionLoading === 'approve'}
+                      onPress={approveSelectedCar}
+                    >
+                      Approuver l'annonce
+                    </PrimaryButton>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      className="items-center rounded-xl border border-red-200 bg-red-50 py-3"
+                      disabled={reviewActionLoading !== null}
+                      onPress={rejectSelectedCar}
+                    >
+                      <Text className="font-bold text-red-700">
+                        {reviewActionLoading === 'reject' ? 'Rejet en cours...' : "Rejeter l'annonce"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             ) : null}
           </View>

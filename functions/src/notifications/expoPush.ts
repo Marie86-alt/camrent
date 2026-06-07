@@ -156,7 +156,7 @@ export async function handleSendAdminNotification(request: Request, response: Re
   const tokens = await collectTargetTokens(notification);
   const messages = tokens.map((token) => ({
     to: token,
-    title: notification.title ?? 'CamRent',
+    title: notification.title ?? 'Autofix Pro',
     body: notification.message ?? '',
     sound: 'default' as const,
     data: {

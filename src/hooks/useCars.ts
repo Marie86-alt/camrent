@@ -20,10 +20,30 @@ export function useCars(ownerId?: string) {
 
     setLoading(true);
     const unsubscribe = ownerId
-      ? subscribeToOwnerCars(ownerId, setCars, () => setError('Impossible de charger vos voitures.'))
-      : subscribeToAvailableCars(setCars, () => setError('Impossible de charger les voitures.'));
+      ? subscribeToOwnerCars(
+          ownerId,
+          (items) => {
+            setCars(items);
+            setError(null);
+            setLoading(false);
+          },
+          () => {
+            setError('Impossible de charger vos voitures.');
+            setLoading(false);
+          },
+        )
+      : subscribeToAvailableCars(
+          (items) => {
+            setCars(items);
+            setError(null);
+            setLoading(false);
+          },
+          () => {
+            setError('Impossible de charger les voitures.');
+            setLoading(false);
+          },
+        );
 
-    setLoading(false);
     return unsubscribe;
   }, [ownerId]);
 

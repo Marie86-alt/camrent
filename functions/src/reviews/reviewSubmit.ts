@@ -97,6 +97,18 @@ export async function handleSubmitReview(request: Request, response: Response) {
     throw new Error('Chauffeur invalide pour cette reservation.');
   }
 
+  const existingReviewSnapshot = await db
+    .collection('reviews')
+    .where('bookingId', '==', bookingId)
+    .where('targetId', '==', targetId)
+    .where('targetType', '==', targetType)
+    .limit(1)
+    .get();
+
+  if (!existingReviewSnapshot.empty) {
+    throw new Error('Un avis existe deja pour cette reservation.');
+  }
+
   await db.collection('reviews').add({
     authorId: uid,
     bookingId,

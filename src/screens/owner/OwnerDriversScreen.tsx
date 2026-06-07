@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 
@@ -12,7 +13,7 @@ import type { OwnerStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 
 type Props = {
-  navigation: any;
+  navigation: NativeStackNavigationProp<OwnerStackParamList, 'OwnerDrivers'>;
 };
 
 function statusLabel(driver: AppUser) {

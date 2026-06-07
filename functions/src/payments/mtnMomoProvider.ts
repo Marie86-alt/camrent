@@ -69,7 +69,7 @@ export async function requestMtnMomoPayment(
         partyIdType: 'MSISDN',
         partyId: request.phone.replace('+', ''),
       },
-      payerMessage: 'Paiement CamRent',
+      payerMessage: 'Paiement Autofix Pro',
       payeeNote: `Reservation ${request.bookingId}`,
     }),
   });

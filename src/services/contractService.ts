@@ -4,6 +4,7 @@ import { db } from './firebase';
 import { uploadSignature } from './storageService';
 import type { Booking } from '../types/models';
 import { formatFullDate } from '../utils/dates';
+import { toJsDate } from '../utils/firestoreDate';
 
 function buildContractRef(bookingId: string) {
   const year = new Date().getFullYear();
@@ -30,8 +31,8 @@ export async function signContract(booking: Booking, signatureBase64: string): P
 export function buildContractText(booking: Booking, clientName: string): string {
   const ref = booking.contractRef ?? buildContractRef(booking.id);
   const today = formatFullDate(new Date());
-  const start = formatFullDate(toLocalDate(booking.startDate));
-  const end = formatFullDate(toLocalDate(booking.endDate));
+  const start = formatFullDate(toJsDate(booking.startDate));
+  const end = formatFullDate(toJsDate(booking.endDate));
 
   return `CONTRAT DE LOCATION DE VÉHICULE
 Référence : ${ref}
@@ -41,7 +42,7 @@ Fait le ${today} à Cameroun
 ARTICLE 1 — PARTIES
 
 PROPRIÉTAIRE (bailleur) :
-Identifié sur la plateforme CamRent
+Identifié sur la plateforme Autofix Pro
 Référence interne : ${booking.ownerId.slice(-8).toUpperCase()}
 
 LOCATAIRE :
@@ -103,8 +104,4 @@ Le présent contrat est régi par le droit camerounais et les dispositions de l'
 ARTICLE 9 — SIGNATURE ÉLECTRONIQUE
 
 En apposant sa signature numérique ci-dessous, le locataire reconnaît avoir lu et accepté les présentes conditions. La signature électronique a valeur contractuelle conformément aux dispositions légales en vigueur.`;
-}
-
-function toLocalDate(value: Date): Date {
-  return typeof (value as any).toDate === 'function' ? (value as any).toDate() : value;
 }

@@ -1,6 +1,6 @@
 # API paiements Campay
 
-L'app Expo n'appelle jamais directement Campay, Orange Money, MTN MoMo ou un prestataire carte bancaire. Elle appelle un backend Autofix Pro/CamRent, qui garde les secrets de paiement et met a jour Firestore avec l'Admin SDK.
+L'app Expo n'appelle jamais directement Campay, Orange Money, MTN MoMo ou un prestataire carte bancaire. Elle appelle un backend Autofix Pro, qui garde les secrets de paiement et met a jour Firestore avec l'Admin SDK.
 
 ## Endpoint mobile
 

@@ -96,4 +96,7 @@ export type BookingScreenProps = NativeStackScreenProps<ClientStackParamList, 'B
 export type PaymentScreenProps = NativeStackScreenProps<ClientStackParamList, 'Payment'>;
 export type ContractScreenProps = NativeStackScreenProps<ClientStackParamList, 'Contract'>;
 export type DriverListScreenProps = NativeStackScreenProps<ClientStackParamList, 'DriverList'>;
+export type PublicDriverListScreenProps = NativeStackScreenProps<PublicStackParamList, 'DriverList'>;
+export type DriverDetailScreenProps = NativeStackScreenProps<ClientStackParamList, 'DriverDetail'>;
+export type PublicDriverDetailScreenProps = NativeStackScreenProps<PublicStackParamList, 'DriverDetail'>;
 export type ReviewScreenProps = NativeStackScreenProps<ClientStackParamList, 'Review'>;

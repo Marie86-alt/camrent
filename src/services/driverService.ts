@@ -9,6 +9,7 @@ function getDriversEndpoint() {
 }
 
 export async function listAvailableDrivers(params: {
+  carId?: string;
   city: string;
   endDate?: string;
   startDate?: string;
@@ -20,6 +21,7 @@ export async function listAvailableDrivers(params: {
 
   const url = new URL(endpoint);
   url.searchParams.set('city', params.city);
+  if (params.carId) url.searchParams.set('carId', params.carId);
   if (params.startDate) url.searchParams.set('startDate', params.startDate);
   if (params.endDate) url.searchParams.set('endDate', params.endDate);
 

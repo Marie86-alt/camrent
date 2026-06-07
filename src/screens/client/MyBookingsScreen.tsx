@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -34,9 +34,20 @@ export function MyBookingsScreen() {
     .join('')
     .toUpperCase() ?? '';
 
-  const handleSignContract = (booking: Booking) => {
+  const handleSignContract = useCallback((booking: Booking) => {
     navigation.navigate('Contract', { booking });
-  };
+  }, [navigation]);
+  const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
+  const renderBooking = useCallback(
+    ({ item }: { item: Booking }) => (
+      <BookingCard
+        booking={item}
+        onSignContract={() => handleSignContract(item)}
+        onReview={() => navigation.navigate('Review', { booking: item })}
+      />
+    ),
+    [handleSignContract, navigation],
+  );
 
   const activeBookings = bookings.filter(
     (b) => b.status === 'pending' || b.status === 'confirmed',
@@ -128,14 +139,8 @@ export function MyBookingsScreen() {
               </View>
             }
             data={displayed}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <BookingCard
-                booking={item}
-                onSignContract={() => handleSignContract(item)}
-                onReview={() => navigation.navigate('Review', { booking: item })}
-              />
-            )}
+            keyExtractor={bookingKeyExtractor}
+            renderItem={renderBooking}
             showsVerticalScrollIndicator={false}
           />
         )}

@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { Booking, BookingStatus } from '../types/models';
 import { formatFcfa } from '../utils/currency';
 import { formatDateRange } from '../utils/dates';
+import { toJsDate } from '../utils/firestoreDate';
 
 type BookingCardProps = {
   booking: Booking;
@@ -43,10 +44,6 @@ const PAYMENT_COLORS: Record<string, string> = {
   'Carte bancaire': '#3b82f6',
 };
 
-function toDate(value: Date): Date {
-  return typeof (value as any).toDate === 'function' ? (value as any).toDate() : value;
-}
-
 export function BookingCard({ booking, onSignContract, onReview }: BookingCardProps) {
   const status = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
   const carLabel =
@@ -74,7 +71,7 @@ export function BookingCard({ booking, onSignContract, onReview }: BookingCardPr
           <View className="flex-1">
             <Text className="text-base font-bold text-slate-950">{carLabel}</Text>
             <Text className="mt-0.5 text-xs text-slate-500">
-              {formatDateRange(toDate(booking.startDate), toDate(booking.endDate))}
+              {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
             </Text>
           </View>
           <View className="rounded-full px-3 py-1" style={{ backgroundColor: status.bg }}>

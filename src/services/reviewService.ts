@@ -1,4 +1,4 @@
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
 import type { Review, ReviewTargetType } from '../types/models';
@@ -49,11 +49,11 @@ export async function submitReview(payload: CreateReviewPayload): Promise<void> 
 }
 
 export function markBookingReviewSubmitted(_bookingId: string): Promise<void> {
-  return Promise.resolve();
+  return updateDoc(doc(db, 'bookings', _bookingId), { reviewSubmitted: true });
 }
 
 export function markDriverReviewSubmitted(_bookingId: string): Promise<void> {
-  return Promise.resolve();
+  return updateDoc(doc(db, 'bookings', _bookingId), { driverReviewSubmitted: true });
 }
 
 export function subscribeToCarReviews(

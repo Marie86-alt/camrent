@@ -10,11 +10,15 @@ import { normalizeCameroonPhone } from '../utils/validation';
 
 export type RegisterPayload = {
   city: CameroonCity;
+  documents?: AppUser['documents'];
+  driverProfile?: AppUser['driverProfile'];
   email: string;
   fullName: string;
   password: string;
   phone: string;
   role: UserRole;
+  status?: AppUser['status'];
+  kycStatus?: AppUser['kycStatus'];
 };
 
 export async function loginWithEmail(email: string, password: string) {
@@ -58,14 +62,20 @@ export async function registerWithEmail(payload: RegisterPayload) {
   const credentials = await createUserWithEmailAndPassword(auth, payload.email.trim(), payload.password);
   const normalizedPhone = normalizeCameroonPhone(payload.phone);
 
-  await setDoc(doc(db, 'users', credentials.user.uid), {
+  const userData = {
     fullName: payload.fullName.trim(),
     email: payload.email.trim(),
     phone: normalizedPhone,
     role: payload.role,
     city: payload.city,
     createdAt: serverTimestamp(),
-  });
+    ...(payload.status ? { status: payload.status } : {}),
+    ...(payload.kycStatus ? { kycStatus: payload.kycStatus } : {}),
+    ...(payload.documents ? { documents: payload.documents } : {}),
+    ...(payload.driverProfile ? { driverProfile: payload.driverProfile } : {}),
+  };
+
+  await setDoc(doc(db, 'users', credentials.user.uid), userData);
 
   return {
     id: credentials.user.uid,
@@ -75,6 +85,10 @@ export async function registerWithEmail(payload: RegisterPayload) {
     role: payload.role,
     city: payload.city,
     createdAt: new Date(),
+    ...(payload.status ? { status: payload.status } : {}),
+    ...(payload.kycStatus ? { kycStatus: payload.kycStatus } : {}),
+    ...(payload.documents ? { documents: payload.documents } : {}),
+    ...(payload.driverProfile ? { driverProfile: payload.driverProfile } : {}),
   };
 }
 

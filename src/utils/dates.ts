@@ -1,3 +1,5 @@
+import { toJsDate } from './firestoreDate';
+
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export function getRentalDays(startDate: Date, endDate: Date) {
@@ -10,7 +12,7 @@ export function getRentalDays(startDate: Date, endDate: Date) {
 }
 
 export function formatDate(date: Date) {
-  const normalizedDate = toLocalDate(date);
+  const normalizedDate = toJsDate(date);
   const today = startOfDay(new Date());
   const target = startOfDay(normalizedDate);
   const diffDays = Math.round((target.getTime() - today.getTime()) / DAY_IN_MS);
@@ -31,7 +33,7 @@ export function formatFullDate(date: Date) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(toLocalDate(date));
+  }).format(toJsDate(date));
 }
 
 export function formatDateRange(startDate: Date, endDate: Date) {
@@ -43,7 +45,7 @@ export function formatInputDate(date: Date) {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(toLocalDate(date));
+  }).format(toJsDate(date));
 }
 
 export function parseHumanDate(value: string): Date | null {
@@ -86,13 +88,9 @@ export function parseHumanDate(value: string): Date | null {
 }
 
 function startOfDay(date: Date) {
-  const d = toLocalDate(date);
+  const d = toJsDate(date);
   d.setHours(0, 0, 0, 0);
   return d;
-}
-
-function toLocalDate(value: Date): Date {
-  return typeof (value as any).toDate === 'function' ? (value as any).toDate() : new Date(value);
 }
 
 function buildDate(year: number, month: number, day: number): Date | null {

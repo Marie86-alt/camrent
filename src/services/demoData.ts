@@ -6,7 +6,7 @@ export const demoUsers: AppUser[] = [
   {
     id: 'demo-client',
     fullName: 'Client Demo',
-    email: 'client@camrent.cm',
+    email: 'client@autofixpro.cm',
     phone: '+237699000001',
     role: 'client',
     city: 'Douala',
@@ -15,7 +15,7 @@ export const demoUsers: AppUser[] = [
   {
     id: 'demo-owner',
     fullName: 'Proprietaire Demo',
-    email: 'owner@camrent.cm',
+    email: 'owner@autofixpro.cm',
     phone: '+237699000002',
     role: 'owner',
     city: 'Yaounde',

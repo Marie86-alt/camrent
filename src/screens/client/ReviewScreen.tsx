@@ -5,7 +5,7 @@ import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
-import { markBookingReviewSubmitted, submitReview } from '../../services/reviewService';
+import { markBookingReviewSubmitted, markDriverReviewSubmitted, submitReview } from '../../services/reviewService';
 import { useAuthStore } from '../../store/authStore';
 import type { ReviewScreenProps } from '../../types/navigation';
 
@@ -69,6 +69,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
           comment: driverComment.trim(),
           bookingId: booking.id,
         });
+        await markDriverReviewSubmitted(booking.id);
       }
 
       await markBookingReviewSubmitted(booking.id);

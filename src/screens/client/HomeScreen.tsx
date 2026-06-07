@@ -3,7 +3,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
@@ -14,7 +14,7 @@ import { Screen } from '../../components/Screen';
 import { useBookings } from '../../hooks/useBookings';
 import { useAuthStore } from '../../store/authStore';
 import { useCarsStore } from '../../store/carsStore';
-import type { CameroonCity } from '../../types/models';
+import type { CameroonCity, Car } from '../../types/models';
 import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 
 type HomeNavProp = CompositeNavigationProp<
@@ -58,6 +58,17 @@ export function HomeScreen() {
 
   const activeBooking = bookings.find((booking) => booking.status === 'pending' || booking.status === 'confirmed');
   const displayedCars = selectedCity ? cars.filter((car) => car.city === selectedCity) : cars;
+  const skeletonItems = Array.from({ length: SKELETON_COUNT }, (_, index) => index);
+
+  const renderSkeleton = useCallback(() => <CarCardSkeleton />, []);
+  const skeletonKeyExtractor = useCallback((item: number) => String(item), []);
+  const carKeyExtractor = useCallback((item: Car) => item.id, []);
+  const renderCar = useCallback(
+    ({ item }: { item: Car }) => (
+      <CarCard car={item} onPress={() => navigation.navigate('CarDetail', { car: item })} />
+    ),
+    [navigation],
+  );
 
   const ListHeader = (
     <View className="gap-5 pb-2">
@@ -203,9 +214,9 @@ export function HomeScreen() {
         {loading ? (
           <FlatList
             ListHeaderComponent={ListHeader}
-            data={Array.from({ length: SKELETON_COUNT }, (_, index) => index)}
-            keyExtractor={(item) => String(item)}
-            renderItem={() => <CarCardSkeleton />}
+            data={skeletonItems}
+            keyExtractor={skeletonKeyExtractor}
+            renderItem={renderSkeleton}
             scrollEnabled
             showsVerticalScrollIndicator={false}
           />
@@ -232,10 +243,8 @@ export function HomeScreen() {
               </View>
             }
             data={displayedCars}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <CarCard car={item} onPress={() => navigation.navigate('CarDetail', { car: item })} />
-            )}
+            keyExtractor={carKeyExtractor}
+            renderItem={renderCar}
             showsVerticalScrollIndicator={false}
           />
         )}

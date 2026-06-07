@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import type { Booking, BookingStatus } from '../../types/models';
 import type { DriverStackParamList, DriverTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 import { formatDateRange } from '../../utils/dates';
+import { toJsDate } from '../../utils/firestoreDate';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<DriverTabParamList, 'DriverMissions'>,
@@ -25,10 +26,6 @@ const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: stri
   cancelled: { label: 'Annulée', color: '#b91c1c', bg: '#fef2f2' },
   completed: { label: 'Terminée', color: '#64748b', bg: '#f1f5f9' },
 };
-
-function toDate(v: Date): Date {
-  return typeof (v as any).toDate === 'function' ? (v as any).toDate() : v;
-}
 
 function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewClient?: () => void }) {
   const st = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
@@ -54,7 +51,7 @@ function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewCl
         <View className="flex-1">
           <Text className="font-bold text-slate-950">{carLabel}</Text>
           <Text className="mt-0.5 text-xs text-slate-500">
-            {formatDateRange(toDate(booking.startDate), toDate(booking.endDate))}
+            {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
           </Text>
           <Text className="mt-0.5 text-xs text-slate-400">
             {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''} · {booking.city ?? ''}
@@ -107,6 +104,20 @@ export function DriverMissionsScreen({ navigation }: Props) {
   const totalEarned = bookings
     .filter((b) => b.status === 'completed' && b.driverPricePerDay)
     .reduce((sum, b) => sum + b.totalDays * (b.driverPricePerDay ?? 0), 0);
+  const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
+  const renderHistoryMission = useCallback(
+    ({ item }: { item: Booking }) => (
+      <MissionCard
+        booking={item}
+        onReviewClient={
+          item.status === 'completed' && !item.driverReviewSubmitted
+            ? () => navigation.navigate('DriverReviewClient', { booking: item })
+            : undefined
+        }
+      />
+    ),
+    [navigation],
+  );
 
   return (
     <Screen scroll={false} topSafeArea>
@@ -171,17 +182,8 @@ export function DriverMissionsScreen({ navigation }: Props) {
               ) : null
             }
             data={history}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <MissionCard
-                booking={item}
-                onReviewClient={
-                  item.status === 'completed' && !item.driverReviewSubmitted
-                    ? () => navigation.navigate('DriverReviewClient', { booking: item })
-                    : undefined
-                }
-              />
-            )}
+            keyExtractor={bookingKeyExtractor}
+            renderItem={renderHistoryMission}
             showsVerticalScrollIndicator={false}
           />
         )}

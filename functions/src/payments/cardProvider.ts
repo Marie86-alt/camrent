@@ -24,14 +24,14 @@ export async function requestCardPayment(request: ProviderPaymentRequest): Promi
       amount: request.amount,
       currency: request.currency,
       customer: {
-        email: request.customerEmail ?? 'client@camrent.local',
-        name: request.customerName ?? 'Client CamRent',
+        email: request.customerEmail ?? 'client@autofix-pro.local',
+        name: request.customerName ?? 'Client Autofix Pro',
         phonenumber: request.phone,
       },
       customizations: {
-        description: `Reservation CamRent ${request.bookingId}`,
+        description: `Reservation Autofix Pro ${request.bookingId}`,
         logo: optionalEnv('FLUTTERWAVE_LOGO_URL'),
-        title: 'CamRent',
+        title: 'Autofix Pro',
       },
       meta: {
         bookingId: request.bookingId,

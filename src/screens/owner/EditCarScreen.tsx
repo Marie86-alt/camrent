@@ -41,6 +41,7 @@ export function EditCarScreen({ navigation, route }: Props) {
   const [mileage, setMileage] = useState(String(car.technicalSheet?.mileage ?? ''));
   const [insuranceExpiry, setInsuranceExpiry] = useState(car.technicalSheet?.insuranceExpiry ?? '');
   const [technicalInspectionExpiry, setTechnicalInspectionExpiry] = useState(car.technicalSheet?.technicalInspectionExpiry ?? '');
+  const [allowIndependentDrivers, setAllowIndependentDrivers] = useState(car.allowIndependentDrivers ?? false);
   const [registrationDocumentUri, setRegistrationDocumentUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -99,6 +100,7 @@ export function EditCarScreen({ navigation, route }: Props) {
 
       await updateCar(car.id, {
         adminStatus: 'pending_review',
+        allowIndependentDrivers,
         brand: brand.trim(),
         city,
         documentsVerified: false,
@@ -217,6 +219,28 @@ export function EditCarScreen({ navigation, route }: Props) {
           textAlignVertical="top"
           value={description}
         />
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          className={`flex-row items-center gap-3 rounded-2xl border p-4 ${
+            allowIndependentDrivers ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'
+          }`}
+          onPress={() => setAllowIndependentDrivers((value) => !value)}
+        >
+          <View
+            className={`h-6 w-6 items-center justify-center rounded-full ${
+              allowIndependentDrivers ? 'bg-brand-blue' : 'bg-slate-100'
+            }`}
+          >
+            {allowIndependentDrivers ? <Ionicons color="white" name="checkmark" size={16} /> : null}
+          </View>
+          <View className="flex-1">
+            <Text className="font-bold text-slate-950">Autoriser les chauffeurs ind\u00e9pendants</Text>
+            <Text className="mt-1 text-xs text-slate-500">
+              J'autorise les chauffeurs ind\u00e9pendants v\u00e9rifi\u00e9s \u00e0 conduire ce v\u00e9hicule.
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         {/* ─── Fiche technique ─── */}
         <View className="gap-3 rounded-2xl bg-white p-4" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}>

@@ -1,6 +1,6 @@
-import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import type { Booking, BookingStatus, Car, DriverLicense, PaymentMethod } from '../types/models';
 
 export type CreateBookingPayload = {
@@ -19,48 +19,49 @@ export type CreateBookingPayload = {
   driverPricePerDay?: number;
 };
 
+function getCreateBookingEndpoint() {
+  const explicit = process.env.EXPO_PUBLIC_CREATE_BOOKING_API_URL;
+  if (explicit) return explicit;
+
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+  return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/createBooking` : undefined;
+}
+
 export async function createBooking(payload: CreateBookingPayload) {
-  const driverFields = payload.driverId
-    ? {
-        driverId: payload.driverId,
-        driverName: payload.driverName ?? '',
-        driverPricePerDay: payload.driverPricePerDay ?? 0,
-        ...(payload.driverPhotoUrl ? { driverPhotoUrl: payload.driverPhotoUrl } : {}),
-      }
-    : {};
-
-  const ref = await addDoc(collection(db, 'bookings'), {
-    carId: payload.car.id,
-    carBrand: payload.car.brand,
-    carModel: payload.car.model,
-    ownerId: payload.car.ownerId,
-    clientId: payload.clientId,
-    startDate: Timestamp.fromDate(payload.startDate),
-    endDate: Timestamp.fromDate(payload.endDate),
-    totalDays: payload.totalDays,
-    totalPrice: payload.totalPrice,
-    paymentMethod: payload.paymentMethod,
-    paymentStatus: 'unpaid',
-    driverLicense: payload.driverLicense,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    withDriver: payload.withDriver ?? false,
-    ...driverFields,
-  });
-
-  if (payload.driverId) {
-    import('./notificationService')
-      .then(({ sendPushNotificationToUser }) =>
-        sendPushNotificationToUser(
-          payload.driverId!,
-          'Nouvelle mission 🚗',
-          `Demande pour ${payload.car.brand} ${payload.car.model} — ${payload.totalDays} jour${payload.totalDays > 1 ? 's' : ''}`,
-        ),
-      )
-      .catch(() => {});
+  const endpoint = getCreateBookingEndpoint();
+  if (!endpoint) {
+    throw new Error('Endpoint createBooking manquant.');
   }
 
-  return ref;
+  const token = await auth.currentUser?.getIdToken();
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      carId: payload.car.id,
+      driverId: payload.driverId,
+      driverLicense: payload.driverLicense,
+      endDate: payload.endDate.toISOString(),
+      paymentMethod: payload.paymentMethod,
+      startDate: payload.startDate.toISOString(),
+      withDriver: payload.withDriver ?? false,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || 'Reservation impossible.');
+  }
+
+  const body = (await response.json()) as { bookingId: string; totalPrice: number };
+
+  return {
+    id: body.bookingId,
+    totalPrice: body.totalPrice,
+  };
 }
 
 export function subscribeToDriverBookings(driverId: string, onData: (bookings: Booking[]) => void, onError: () => void) {

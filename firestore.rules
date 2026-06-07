@@ -18,76 +18,51 @@ service cloud.firestore {
       return signedIn() && userRole() == 'admin';
     }
 
-    function validBookingCreate() {
-      return request.resource.data.keys().hasOnly([
-          'carId',
-          'carBrand',
-          'carModel',
-          'ownerId',
-          'clientId',
-          'startDate',
-          'endDate',
-          'totalDays',
-          'totalPrice',
-          'paymentMethod',
-          'paymentStatus',
-          'driverLicense',
-          'status',
-          'withDriver',
-          'driverId',
-          'driverName',
-          'driverPhotoUrl',
-          'driverPricePerDay',
-          'createdAt'
-        ])
-        && request.resource.data.clientId == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && request.resource.data.paymentStatus == 'unpaid'
-        && request.resource.data.paymentMethod in ['MTN MoMo', 'Orange Money', 'Carte bancaire']
-        && request.resource.data.totalDays is int
-        && request.resource.data.totalDays >= 1
-        && request.resource.data.totalPrice is number
-        && request.resource.data.totalPrice > 0
-        && validBookingDriverFields()
-        && validDriverLicense(request.resource.data.driverLicense);
+    function isIndependentDriverCreate(userId) {
+      return signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'driver'
+        && request.resource.data.status == 'pending_validation'
+        && request.resource.data.kycStatus == 'pending'
+        && request.resource.data.driverProfile.isIndependent == true
+        && !request.resource.data.keys().hasAny(['ownerId', 'ratingAverage', 'missionsCount', 'adminRole']);
     }
 
-    function validBookingDriverFields() {
-      return !request.resource.data.keys().hasAny(['withDriver'])
-        || request.resource.data.withDriver == false
-        || (
-          request.resource.data.withDriver == true
-          && request.resource.data.driverId is string
-          && request.resource.data.driverId.size() > 0
-          && request.resource.data.driverName is string
-          && request.resource.data.driverName.size() > 0
-          && request.resource.data.driverPricePerDay is number
-          && request.resource.data.driverPricePerDay >= 0
+    function validSelfUserCreate(userId) {
+      return signedIn()
+        && request.auth.uid == userId
+        && (
+          (
+            request.resource.data.role in ['client', 'owner']
+            && !request.resource.data.keys().hasAny([
+              'adminLastActionReason',
+              'adminRole',
+              'kycStatus',
+              'missionsCount',
+              'ownerId',
+              'ratingAverage',
+              'status'
+            ])
+          )
+          || isIndependentDriverCreate(userId)
         );
     }
 
-    function validDriverLicense(license) {
-      return license is map
-        && license.keys().hasOnly([
-          'fullName',
-          'licenseNumber',
-          'issuingCountry',
-          'issueDate',
-          'expiryDate',
-          'categories'
-        ])
-        && license.fullName is string
-        && license.fullName.size() >= 3
-        && license.licenseNumber is string
-        && license.licenseNumber.size() >= 5
-        && license.issuingCountry is string
-        && license.issuingCountry.size() >= 2
-        && license.issueDate is string
-        && license.issueDate.size() == 10
-        && license.expiryDate is string
-        && license.expiryDate.size() == 10
-        && license.categories is string
-        && license.categories.size() >= 1;
+    function validSelfUserUpdate(userId) {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+
+      return signedIn()
+        && request.auth.uid == userId
+        && !changed.hasAny([
+          'adminLastActionReason',
+          'adminRole',
+          'kycStatus',
+          'missionsCount',
+          'ownerId',
+          'ratingAverage',
+          'role',
+          'status'
+        ]);
     }
 
     function validBookingUpdate() {
@@ -106,6 +81,13 @@ service cloud.firestore {
             && request.resource.data.status == 'cancelled'
           )
           || (
+            request.auth.uid == resource.data.clientId
+            && resource.data.status == 'completed'
+            && changed.hasOnly(['reviewSubmitted', 'driverReviewSubmitted'])
+            && (!changed.hasAny(['reviewSubmitted']) || request.resource.data.reviewSubmitted == true)
+            && (!changed.hasAny(['driverReviewSubmitted']) || request.resource.data.driverReviewSubmitted == true)
+          )
+          || (
             isAdmin()
             && changed.hasOnly(['status', 'disputeStatus', 'refundStatus', 'depositStatus'])
             && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed']
@@ -114,9 +96,20 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || userRole() == 'owner' || isAdmin());
-      allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if signedIn()
+        && (
+          request.auth.uid == userId
+          || userRole() == 'owner'
+          || isAdmin()
+          || (
+            resource.data.role == 'driver'
+            && resource.data.status == 'active'
+            && resource.data.kycStatus == 'approved'
+            && resource.data.driverProfile.isIndependent == true
+          )
+        );
+      allow create: if validSelfUserCreate(userId);
+      allow update: if validSelfUserUpdate(userId) || isAdmin();
       allow delete: if false;
     }
 
@@ -136,7 +129,7 @@ service cloud.firestore {
           || resource.data.driverId == request.auth.uid
           || isAdmin()
         );
-      allow create: if signedIn() && validBookingCreate();
+      allow create: if false;
       allow update: if validBookingUpdate();
       allow delete: if false;
     }
@@ -152,7 +145,7 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if signedIn();
+      allow create: if false;
       allow update, delete: if isAdmin();
     }
 

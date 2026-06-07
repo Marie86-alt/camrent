@@ -1,6 +1,13 @@
 import { onRequest } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 
-import { handleCreateOwnerDriver, handleListAvailableDrivers } from './drivers/ownerDrivers';
+import { handleBookingCreated } from './bookings/bookingNotifications';
+import { handleCreateBooking } from './bookings/createBooking';
+import {
+  handleCreateIndependentDriver,
+  handleCreateOwnerDriver,
+  handleListAvailableDrivers,
+} from './drivers/ownerDrivers';
 import { assertPost, sendJson } from './http';
 import { handleCitySearch } from './locations/geonames';
 import { handleSendAdminNotification } from './notifications/expoPush';
@@ -24,6 +31,21 @@ export const mobileMoneyPayment = onRequest({ cors: true }, async (request, resp
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'Payment request failed',
+    });
+  }
+});
+
+export const createBooking = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleCreateBooking(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Booking creation failed',
     });
   }
 });
@@ -75,10 +97,6 @@ export const flutterwaveWebhook = onRequest(async (request, response) => {
 
 export const campayWebhook = onRequest(async (request, response) => {
   try {
-    if (!assertPost(request, response)) {
-      return;
-    }
-
     await handleCampayWebhook(request, response);
   } catch (error) {
     console.error(error);
@@ -129,6 +147,21 @@ export const createOwnerDriver = onRequest({ cors: true }, async (request, respo
   }
 });
 
+export const createIndependentDriver = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleCreateIndependentDriver(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Independent driver creation failed',
+    });
+  }
+});
+
 export const submitReview = onRequest({ cors: true }, async (request, response) => {
   try {
     if (!assertPost(request, response)) {
@@ -153,4 +186,12 @@ export const listAvailableDrivers = onRequest({ cors: true }, async (request, re
       error: error instanceof Error ? error.message : 'Driver listing failed',
     });
   }
+});
+
+export const bookingCreatedNotification = onDocumentCreated('bookings/{bookingId}', async (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  await handleBookingCreated(event.data);
 });

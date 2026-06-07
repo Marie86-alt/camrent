@@ -70,6 +70,20 @@ function validateWebhookSecret(request: Request, provider: 'mtn-momo' | 'orange-
     return request.header('verif-hash') === expectedSecret;
   }
 
+  if (provider === 'campay') {
+    return (
+      request.header('x-camrent-webhook-secret') === expectedSecret ||
+      request.header('x-campay-webhook-secret') === expectedSecret ||
+      request.header('webhook-key') === expectedSecret ||
+      request.header('webhook_secret') === expectedSecret ||
+      request.query.webhook_key === expectedSecret ||
+      request.query.webhookSecret === expectedSecret ||
+      request.body?.webhook_key === expectedSecret ||
+      request.body?.webhookSecret === expectedSecret ||
+      request.body?.secret === expectedSecret
+    );
+  }
+
   return request.header('x-camrent-webhook-secret') === expectedSecret;
 }
 
@@ -88,6 +102,13 @@ function readCampayReference(body: Record<string, unknown>) {
     data.transaction_reference ??
     data.transactionReference
   );
+}
+
+function mergeCampayPayload(request: Request) {
+  return {
+    ...(request.query ?? {}),
+    ...(request.body ?? {}),
+  } as Record<string, unknown>;
 }
 
 export async function handleMtnMomoWebhook(request: Request, response: Response) {
@@ -171,19 +192,25 @@ export async function handleCampayWebhook(request: Request, response: Response) 
     return;
   }
 
-  const reference = readCampayReference(request.body ?? {});
+  const payload = mergeCampayPayload(request);
+  const reference = readCampayReference(payload);
 
   if (!reference) {
     sendJson(response, 400, { error: 'Missing Campay payment reference' });
     return;
   }
 
-  const data = request.body?.data ?? request.body?.transaction ?? request.body?.payment ?? request.body;
+  const data = payload.data ?? payload.transaction ?? payload.payment ?? payload;
+  const status =
+    (data as Record<string, unknown>)?.status ??
+    payload.status ??
+    (data as Record<string, unknown>)?.status_code ??
+    payload.status_code;
 
   await updatePaymentFromGateway({
-    raw: request.body,
+    raw: payload,
     reference: String(reference),
-    status: normalizeCampayStatus(data?.status ?? request.body?.status),
+    status: normalizeCampayStatus(status),
   });
 
   sendJson(response, 200, { ok: true });

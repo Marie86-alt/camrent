@@ -16,7 +16,8 @@
       "bundleIdentifier": "com.mariemeng.autofixpro",
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Autofix Pro utilise votre galerie pour ajouter des photos de voitures."
+        "NSPhotoLibraryUsageDescription": "Autofix Pro utilise votre galerie pour ajouter des photos de voitures.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -26,7 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": [
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.mariemeng.autofixpro"

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
@@ -7,23 +8,16 @@ import { Screen } from '../../components/Screen';
 import { listAvailableDrivers } from '../../services/driverService';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { AppUser } from '../../types/models';
+import type { ClientStackParamList, DriverListScreenProps, PublicDriverListScreenProps, PublicStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 
-type DriverListScreenProps = {
-  navigation: any;
-  route: {
-    params: {
-      carCity: string;
-      carId: string;
-      startDate?: string;
-      endDate?: string;
-      selectable?: boolean;
-    };
-  };
+type Props = {
+  navigation: NativeStackNavigationProp<ClientStackParamList & PublicStackParamList>;
+  route: DriverListScreenProps['route'] | PublicDriverListScreenProps['route'];
 };
 
-export function DriverListScreen({ navigation, route }: DriverListScreenProps) {
-  const { carCity, startDate, endDate, selectable = true } = route.params;
+export function DriverListScreen({ navigation, route }: Props) {
+  const { carCity, carId, startDate, endDate, selectable = true } = route.params;
   const { setSelectedDriver } = useBookingDraftStore();
   const [drivers, setDrivers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +25,7 @@ export function DriverListScreen({ navigation, route }: DriverListScreenProps) {
   useEffect(() => {
     let mounted = true;
 
-    listAvailableDrivers({ city: carCity, endDate, startDate })
+    listAvailableDrivers({ carId, city: carCity, endDate, startDate })
       .then((available) => {
         if (!mounted) return;
         setDrivers(available);
@@ -44,9 +38,9 @@ export function DriverListScreen({ navigation, route }: DriverListScreenProps) {
     return () => {
       mounted = false;
     };
-  }, [carCity, startDate, endDate]);
+  }, [carCity, carId, startDate, endDate]);
 
-  function selectDriver(driver: AppUser) {
+  const selectDriver = useCallback((driver: AppUser) => {
     if (!selectable) {
       navigation.navigate('DriverDetail', { driver });
       return;
@@ -54,7 +48,18 @@ export function DriverListScreen({ navigation, route }: DriverListScreenProps) {
 
     setSelectedDriver(driver);
     navigation.goBack();
-  }
+  }, [navigation, selectable, setSelectedDriver]);
+  const driverKeyExtractor = useCallback((item: AppUser) => item.id, []);
+  const renderDriver = useCallback(
+    ({ item }: { item: AppUser }) => (
+      <DriverCard
+        driver={item}
+        onSelect={() => selectDriver(item)}
+        selectable={selectable}
+      />
+    ),
+    [selectDriver, selectable],
+  );
 
   return (
     <Screen scroll={false} topSafeArea>
@@ -97,14 +102,8 @@ export function DriverListScreen({ navigation, route }: DriverListScreenProps) {
               </View>
             }
             data={drivers}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <DriverCard
-                driver={item}
-                onSelect={() => selectDriver(item)}
-                selectable={selectable}
-              />
-            )}
+            keyExtractor={driverKeyExtractor}
+            renderItem={renderDriver}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -122,6 +121,7 @@ function DriverCard({ driver, onSelect, selectable }: { driver: AppUser; onSelec
     .join('')
     .toUpperCase();
   const price = driver.driverProfile?.pricePerDay ?? 10000;
+  const isIndependent = driver.driverProfile?.isIndependent === true;
 
   return (
     <TouchableOpacity
@@ -150,6 +150,15 @@ function DriverCard({ driver, onSelect, selectable }: { driver: AppUser; onSelec
 
       <View className="flex-1">
         <Text className="font-bold text-slate-950">{driver.fullName}</Text>
+        <View
+          className={`mt-1 self-start rounded-full px-2 py-0.5 ${
+            isIndependent ? 'bg-blue-50' : 'bg-slate-100'
+          }`}
+        >
+          <Text className={`text-[10px] font-bold ${isIndependent ? 'text-brand-blue' : 'text-slate-600'}`}>
+            {isIndependent ? 'Ind\u00e9pendant' : 'Chauffeur du propri\u00e9taire'}
+          </Text>
+        </View>
         <View className="mt-0.5 flex-row items-center gap-2">
           {driver.ratingAverage ? (
             <View className="flex-row items-center gap-1">
