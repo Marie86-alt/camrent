@@ -216,6 +216,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             />
           </View>
 
+          <CitySearchInput label="Ville" onSelectCity={setCity} value={city} />
+
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-slate-700">Mot de passe</Text>
             <View className="relative">
@@ -271,8 +273,6 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             ))}
           </View>
         </View>
-
-        <CitySearchInput label="Ville" onSelectCity={setCity} value={city} />
 
         {isIndependentDriver ? (
           <View className="gap-4 rounded-2xl bg-white p-4">
