@@ -2,6 +2,7 @@
   "expo": {
     "name": "Autofix Pro",
     "slug": "CamRent",
+    "scheme": "autofixpro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

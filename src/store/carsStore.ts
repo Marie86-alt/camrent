@@ -25,7 +25,11 @@ export const useCarsStore = create<CarsState>((set) => ({
 
     set({ loading: true, error: null });
 
-    const carsQuery = query(collection(db, 'cars'), where('isAvailable', '==', true));
+    const carsQuery = query(
+      collection(db, 'cars'),
+      where('isAvailable', '==', true),
+      where('adminStatus', '==', 'approved'),
+    );
 
     return onSnapshot(
       carsQuery,

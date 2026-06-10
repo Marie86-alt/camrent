@@ -27,11 +27,21 @@ export async function uploadCarDocument(ownerId: string, localUri: string, docum
 }
 
 export async function uploadSignature(userId: string, bookingId: string, base64Data: string) {
-  const response = await fetch(base64Data);
-  const blob = await response.blob();
+  const blob = await dataUrlToBlob(base64Data);
   const signatureRef = ref(storage, `signatures/${userId}/${bookingId}.png`);
   await uploadBytes(signatureRef, blob, { contentType: 'image/png' });
   return getDownloadURL(signatureRef);
+}
+
+function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => resolve(xhr.response as Blob);
+    xhr.onerror = () => reject(new Error('Impossible de préparer la signature pour l\'envoi.'));
+    xhr.responseType = 'blob';
+    xhr.open('GET', dataUrl, true);
+    xhr.send(null);
+  });
 }
 
 export async function uploadUserDocument(userId: string, localUri: string, documentType: string) {

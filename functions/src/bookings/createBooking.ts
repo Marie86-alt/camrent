@@ -136,7 +136,7 @@ export async function handleCreateBooking(request: Request, response: Response) 
       pricePerDay?: number;
     };
 
-    if (!car.isAvailable || car.adminStatus === 'rejected') {
+    if (!car.isAvailable || car.adminStatus !== 'approved') {
       throw new Error('Ce vehicule n est pas disponible.');
     }
 

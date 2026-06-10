@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useCallback, useState } from 'react';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
@@ -11,8 +11,11 @@ import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
+import { cancelBooking } from '../../services/bookingService';
 import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 import type { Booking } from '../../types/models';
+import { formatFcfa } from '../../utils/currency';
+import { toJsDate } from '../../utils/firestoreDate';
 
 type MyBookingsNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<ClientTabParamList, 'MyBookings'>,
@@ -37,16 +40,54 @@ export function MyBookingsScreen() {
   const handleSignContract = useCallback((booking: Booking) => {
     navigation.navigate('Contract', { booking });
   }, [navigation]);
+
+  const getCancellationPreview = useCallback((booking: Booking) => {
+    const startDate = toJsDate(booking.startDate);
+    const hoursBeforeStart = (startDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    const cancellationFee = hoursBeforeStart >= 48 ? 0 : Math.round(booking.totalPrice * 0.1);
+    const refundAmount = Math.max(0, booking.totalPrice - cancellationFee);
+
+    return {
+      cancellationFee,
+      isFree: cancellationFee === 0,
+      refundAmount,
+    };
+  }, []);
+
+  const handleCancelBooking = useCallback((booking: Booking) => {
+    const preview = getCancellationPreview(booking);
+    const message = preview.isFree
+      ? "Vous annulez plus de 48h avant le depart : aucun frais ne sera applique."
+      : `Vous annulez a moins de 48h du depart : des frais de 10% seront appliques (${formatFcfa(preview.cancellationFee)}). Montant remboursable estime : ${formatFcfa(preview.refundAmount)}.`;
+
+    Alert.alert('Annuler cette reservation ?', message, [
+      { text: 'Garder', style: 'cancel' },
+      {
+        text: 'Annuler la reservation',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await cancelBooking(booking.id);
+            Alert.alert('Reservation annulee', preview.isFree ? 'Annulation sans frais.' : 'Annulation avec frais de 10%.');
+          } catch (error) {
+            Alert.alert('Erreur', error instanceof Error ? error.message : 'Annulation impossible.');
+          }
+        },
+      },
+    ]);
+  }, [getCancellationPreview]);
+
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
   const renderBooking = useCallback(
     ({ item }: { item: Booking }) => (
       <BookingCard
         booking={item}
+        onCancel={() => handleCancelBooking(item)}
         onSignContract={() => handleSignContract(item)}
         onReview={() => navigation.navigate('Review', { booking: item })}
       />
     ),
-    [handleSignContract, navigation],
+    [handleCancelBooking, handleSignContract, navigation],
   );
 
   const activeBookings = bookings.filter(

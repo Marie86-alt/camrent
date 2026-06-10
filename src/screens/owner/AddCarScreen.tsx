@@ -52,7 +52,7 @@ function formatDateInput(value: string) {
 async function pickPhoto(): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert('Permission requise', "Autorisez l'acc\u00e8s aux photos.");
+    Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
     return null;
   }
 
@@ -101,7 +101,7 @@ export function AddCarScreen() {
   const pickRegistrationDocument = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorisez l'acc\u00e8s aux photos.");
+      Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
       return;
     }
 
@@ -169,7 +169,7 @@ export function AddCarScreen() {
       setLoading(true);
 
       if (!hasFirebaseConfig) {
-        Alert.alert('Mode d\u00e9mo', 'La voiture est simul\u00e9e. Configurez Firebase pour enregistrer une vraie annonce.');
+        Alert.alert('Mode démo', 'La voiture est simulée. Configurez Firebase pour enregistrer une vraie annonce.');
         resetForm();
         return;
       }
@@ -196,7 +196,7 @@ export function AddCarScreen() {
         seats: numericSeats,
         transmission,
         fuelType,
-        isAvailable: true,
+        isAvailable: false,
         description: description.trim(),
         adminStatus: 'pending_review',
         documentsVerified: false,
@@ -211,7 +211,7 @@ export function AddCarScreen() {
         },
       });
 
-      Alert.alert('Voiture ajout\u00e9e', 'Votre annonce est envoy\u00e9e pour v\u00e9rification admin.');
+      Alert.alert('Voiture ajoutée', 'Votre annonce est envoyée pour vérification admin.');
       resetForm();
     } catch {
       Alert.alert('Erreur', "Impossible d'ajouter la voiture.");
@@ -229,7 +229,7 @@ export function AddCarScreen() {
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold text-slate-950">{'Photos du v\u00e9hicule'}</Text>
+            <Text className="font-bold text-slate-950">Photos du véhicule</Text>
             <Text
               className={`rounded-full px-3 py-1 text-xs font-bold ${
                 filledCount === 6 ? 'bg-blue-50 text-brand-blue' : 'bg-slate-100 text-slate-500'
@@ -292,9 +292,9 @@ export function AddCarScreen() {
         <View className="gap-3">
           <Text className="text-base font-black text-slate-950">Informations principales</Text>
           <CarInput label="Marque" onChangeText={setBrand} placeholder="Ex: Toyota" value={brand} />
-          <CarInput label={'Mod\u00e8le'} onChangeText={setModel} placeholder="Ex: Corolla" value={model} />
+          <CarInput label="Modèle" onChangeText={setModel} placeholder="Ex: Corolla" value={model} />
           <CarInput keyboardType="numeric" label="Annee" onChangeText={setYear} placeholder="Ex: 2021" value={year} />
-          <CitySearchInput label={'Ville du v\u00e9hicule'} onSelectCity={setCity} value={city} />
+          <CitySearchInput label="Ville du véhicule" onSelectCity={setCity} value={city} />
           <CarInput
             keyboardType="numeric"
             label="Prix journalier"
@@ -365,9 +365,9 @@ export function AddCarScreen() {
               {allowIndependentDrivers ? <Ionicons color="white" name="checkmark" size={16} /> : null}
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-slate-950">Autoriser les chauffeurs ind\u00e9pendants</Text>
+              <Text className="font-bold text-slate-950">Autoriser les chauffeurs indépendants</Text>
               <Text className="mt-1 text-xs text-slate-500">
-                J'autorise les chauffeurs ind\u00e9pendants v\u00e9rifi\u00e9s \u00e0 conduire ce v\u00e9hicule.
+                J'autorise les chauffeurs indépendants vérifiés à conduire ce véhicule.
               </Text>
             </View>
           </TouchableOpacity>
@@ -380,12 +380,12 @@ export function AddCarScreen() {
           <Text className="text-base font-black text-slate-950">Fiche technique</Text>
           <CarInput label="Immatriculation" onChangeText={setLicensePlate} placeholder="Ex: LT-123-AB" value={licensePlate} />
           <CarInput
-            label={'Num\u00e9ro de ch\u00e2ssis'}
+            label="Numéro de châssis"
             onChangeText={setChassisNumber}
             placeholder="Ex: JTDBR32E720012345"
             value={chassisNumber}
           />
-          <CarInput keyboardType="numeric" label={'Kilom\u00e9trage'} onChangeText={setMileage} placeholder="Ex: 85000" value={mileage} />
+          <CarInput keyboardType="numeric" label="Kilométrage" onChangeText={setMileage} placeholder="Ex: 85000" value={mileage} />
           <CarInput
             keyboardType="number-pad"
             label="Expiration assurance"
@@ -395,7 +395,7 @@ export function AddCarScreen() {
           />
           <CarInput
             keyboardType="number-pad"
-            label={'Expiration contr\u00f4le technique'}
+            label="Expiration contrôle technique"
             onChangeText={(value) => setTechnicalInspectionExpiry(formatDateInput(value))}
             placeholder="Ex: 03/06/2027"
             value={technicalInspectionExpiry}
@@ -411,7 +411,7 @@ export function AddCarScreen() {
               size={18}
             />
             <Text className={`font-semibold ${registrationDocumentUri ? 'text-brand-blue' : 'text-slate-600'}`}>
-              {registrationDocumentUri ? 'Carte grise ajout\u00e9e' : 'Ajouter carte grise / document v\u00e9hicule'}
+              {registrationDocumentUri ? 'Carte grise ajoutée' : 'Ajouter carte grise / document véhicule'}
             </Text>
           </TouchableOpacity>
         </View>

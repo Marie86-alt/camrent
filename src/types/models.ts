@@ -119,6 +119,10 @@ export type Booking = {
   clientSignatureUrl?: string;
   contractSignedAt?: Date;
   contractRef?: string;
+  cancelledAt?: Date;
+  cancellationFee?: number;
+  cancellationPolicy?: 'free_before_48h' | 'late_10_percent';
+  refundAmount?: number;
   withDriver?: boolean;
   driverId?: string;
   driverName?: string;

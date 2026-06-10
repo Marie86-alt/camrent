@@ -195,6 +195,14 @@ export function ManageCarsScreen({ navigation }: Props) {
   );
 
   const toggleAvailability = useCallback(async (car: Car) => {
+    if (!car.isAvailable && car.adminStatus !== 'approved') {
+      Alert.alert(
+        'Validation requise',
+        "Cette voiture doit d'abord etre validee par l'admin avant d'etre publiee.",
+      );
+      return;
+    }
+
     try {
       await setCarAvailability(car.id, !car.isAvailable);
     } catch {

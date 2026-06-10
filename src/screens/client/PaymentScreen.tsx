@@ -42,8 +42,8 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
       Alert.alert('Paiement initie', `Reference : ${payment.reference}`, [
         { text: 'Terminer', onPress: () => navigation.popToTop() },
       ]);
-    } catch {
-      Alert.alert('Erreur', 'Impossible de lancer le paiement.');
+    } catch (error) {
+      Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de lancer le paiement.');
     } finally {
       setLoading(false);
     }

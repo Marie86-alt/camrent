@@ -10,5 +10,9 @@ service firebase.storage {
     match /users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /signatures/{userId}/{signatureFile} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

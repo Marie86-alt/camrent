@@ -28,7 +28,11 @@ export type UpdateCarPayload = Partial<
 >;
 
 export function subscribeToAvailableCars(onData: (cars: Car[]) => void, onError: () => void) {
-  const carsQuery = query(collection(db, 'cars'), where('isAvailable', '==', true));
+  const carsQuery = query(
+    collection(db, 'cars'),
+    where('isAvailable', '==', true),
+    where('adminStatus', '==', 'approved'),
+  );
 
   return onSnapshot(
     carsQuery,

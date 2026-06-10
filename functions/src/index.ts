@@ -2,6 +2,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 
 import { handleBookingCreated } from './bookings/bookingNotifications';
+import { handleCancelBooking } from './bookings/cancelBooking';
 import { handleCreateBooking } from './bookings/createBooking';
 import {
   handleCreateIndependentDriver,
@@ -46,6 +47,21 @@ export const createBooking = onRequest({ cors: true }, async (request, response)
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'Booking creation failed',
+    });
+  }
+});
+
+export const cancelBooking = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleCancelBooking(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Booking cancellation failed',
     });
   }
 });

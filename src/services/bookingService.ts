@@ -27,20 +27,44 @@ function getCreateBookingEndpoint() {
   return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/createBooking` : undefined;
 }
 
+function getCancelBookingEndpoint() {
+  const explicit = process.env.EXPO_PUBLIC_CANCEL_BOOKING_API_URL;
+  if (explicit) return explicit;
+
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+  return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/cancelBooking` : undefined;
+}
+
+function cleanBookingError(body: string) {
+  try {
+    const parsed = JSON.parse(body) as { error?: unknown };
+    if (typeof parsed.error === 'string') return parsed.error;
+  } catch {
+    // Keep the raw response fallback below.
+  }
+
+  return body;
+}
+
+async function authFetch(endpoint: string, body: unknown) {
+  const token = await auth.currentUser?.getIdToken();
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function createBooking(payload: CreateBookingPayload) {
   const endpoint = getCreateBookingEndpoint();
   if (!endpoint) {
     throw new Error('Endpoint createBooking manquant.');
   }
 
-  const token = await auth.currentUser?.getIdToken();
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const response = await authFetch(endpoint, {
       carId: payload.car.id,
       driverId: payload.driverId,
       driverLicense: payload.driverLicense,
@@ -48,12 +72,11 @@ export async function createBooking(payload: CreateBookingPayload) {
       paymentMethod: payload.paymentMethod,
       startDate: payload.startDate.toISOString(),
       withDriver: payload.withDriver ?? false,
-    }),
   });
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || 'Reservation impossible.');
+    throw new Error(cleanBookingError(message) || 'Réservation impossible.');
   }
 
   const body = (await response.json()) as { bookingId: string; totalPrice: number };
@@ -62,6 +85,26 @@ export async function createBooking(payload: CreateBookingPayload) {
     id: body.bookingId,
     totalPrice: body.totalPrice,
   };
+}
+
+export async function cancelBooking(bookingId: string) {
+  const endpoint = getCancelBookingEndpoint();
+  if (!endpoint) {
+    throw new Error('Endpoint cancelBooking manquant.');
+  }
+
+  const response = await authFetch(endpoint, { bookingId });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(cleanBookingError(message) || 'Annulation impossible.');
+  }
+
+  return response.json() as Promise<{
+    cancellationFee: number;
+    cancellationPolicy: 'free_before_48h' | 'late_10_percent';
+    refundAmount: number;
+  }>;
 }
 
 export function subscribeToDriverBookings(driverId: string, onData: (bookings: Booking[]) => void, onError: () => void) {

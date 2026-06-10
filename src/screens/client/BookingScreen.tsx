@@ -1,11 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
 import { PAYMENT_METHODS } from '../../constants/cameroon';
-import { BackButton } from '../../components/BackButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { createBooking } from '../../services/bookingService';
@@ -99,7 +97,8 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
   }, []);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
-  const [activeDateField, setActiveDateField] = useState<DateField | null>(null);
+  const [startDateInput, setStartDateInput] = useState(formatInputDate(today));
+  const [endDateInput, setEndDateInput] = useState(formatInputDate(today));
   const [driverLicense, setDriverLicense] = useState<DriverLicenseForm>(INITIAL_DRIVER_LICENSE);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN MoMo');
   const [loading, setLoading] = useState(false);
@@ -114,6 +113,33 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
   const updateDriverLicense = (field: keyof DriverLicenseForm, value: string) => {
     setDriverLicense((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateRentalDate = (field: DateField, value: string) => {
+    const formatted = formatLicenseDateInput(value);
+    const parsed = parseHumanDate(formatted);
+
+    if (field === 'start') {
+      setStartDateInput(formatted);
+      if (!parsed) return;
+
+      const nextStart = parsed < today ? today : parsed;
+      setStartDate(nextStart);
+      setStartDateInput(formatInputDate(nextStart));
+
+      if (nextStart > endDate) {
+        setEndDate(nextStart);
+        setEndDateInput(formatInputDate(nextStart));
+      }
+      return;
+    }
+
+    setEndDateInput(formatted);
+    if (!parsed) return;
+
+    const nextEnd = parsed < startDate ? startDate : parsed;
+    setEndDate(nextEnd);
+    setEndDateInput(formatInputDate(nextEnd));
   };
 
   const validateDriverLicense = () => {
@@ -216,26 +242,27 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     }
   };
 
-  const onDateSelected = (date?: Date) => {
-    if (!date || !activeDateField) {
-      setActiveDateField(null);
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
       return;
     }
 
-    if (activeDateField === 'start') {
-      setStartDate(date);
-      if (date > endDate) setEndDate(date);
-    } else {
-      setEndDate(date < startDate ? startDate : date);
-    }
-
-    if (Platform.OS !== 'ios') setActiveDateField(null);
+    navigation.navigate('CarDetail', { car });
   };
 
   return (
     <Screen topSafeArea>
       <View className="gap-6">
-        <BackButton navigation={navigation} />
+        <TouchableOpacity
+          accessibilityLabel="Retour"
+          activeOpacity={0.8}
+          className="self-start rounded-full bg-white p-3"
+          onPress={goBack}
+          style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+        >
+          <Ionicons color="#0f172a" name="arrow-back" size={24} />
+        </TouchableOpacity>
 
         <View>
           <Text className="text-2xl font-black text-slate-950">
@@ -247,31 +274,43 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         <View className="gap-3">
           <Text className="font-semibold text-slate-800">Dates de location</Text>
           <View className="flex-row gap-3">
-            <TouchableOpacity
-              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'start' ? 'border-brand-blue' : 'border-slate-200'}`}
-              onPress={() => setActiveDateField('start')}
-            >
+            <View className="flex-1 rounded-xl border border-slate-200 bg-white p-4">
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
                 <Text className="text-xs text-slate-500">{TEXT.start}</Text>
               </View>
-              <Text className="font-bold text-slate-950">{formatDate(startDate)}</Text>
-            </TouchableOpacity>
+              <TextInput
+                className="p-0 text-base font-bold text-slate-950"
+                keyboardType="number-pad"
+                maxLength={10}
+                onChangeText={(value) => updateRentalDate('start', value)}
+                placeholder="JJ/MM/AAAA"
+                placeholderTextColor="#94a3b8"
+                value={startDateInput}
+              />
+              <Text className="mt-1 text-xs text-slate-400">{formatDate(startDate)}</Text>
+            </View>
 
             <View className="items-center justify-center px-1">
               <Ionicons color="#94a3b8" name="arrow-forward-outline" size={18} />
             </View>
 
-            <TouchableOpacity
-              className={`flex-1 rounded-xl border bg-white p-4 ${activeDateField === 'end' ? 'border-brand-blue' : 'border-slate-200'}`}
-              onPress={() => setActiveDateField('end')}
-            >
+            <View className="flex-1 rounded-xl border border-slate-200 bg-white p-4">
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
                 <Text className="text-xs text-slate-500">Fin</Text>
               </View>
-              <Text className="font-bold text-slate-950">{formatDate(endDate)}</Text>
-            </TouchableOpacity>
+              <TextInput
+                className="p-0 text-base font-bold text-slate-950"
+                keyboardType="number-pad"
+                maxLength={10}
+                onChangeText={(value) => updateRentalDate('end', value)}
+                placeholder="JJ/MM/AAAA"
+                placeholderTextColor="#94a3b8"
+                value={endDateInput}
+              />
+              <Text className="mt-1 text-xs text-slate-400">{formatDate(endDate)}</Text>
+            </View>
           </View>
 
           <View className="flex-row items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2">
@@ -281,16 +320,6 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             </Text>
           </View>
         </View>
-
-        {activeDateField ? (
-          <DateTimePicker
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={activeDateField === 'end' ? startDate : today}
-            mode="date"
-            onChange={(_, date) => onDateSelected(date)}
-            value={activeDateField === 'start' ? startDate : endDate}
-          />
-        ) : null}
 
         {/* ─── Avec / sans chauffeur ─── */}
         <View className="gap-3">

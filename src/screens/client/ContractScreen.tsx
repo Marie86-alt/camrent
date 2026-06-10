@@ -47,8 +47,19 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
         `Votre signature électronique a été enregistrée.\nRéférence : ${contractRef}`,
         [{ text: 'Terminer', onPress: () => navigation.goBack() }],
       );
-    } catch {
-      Alert.alert('Erreur', 'Impossible d\'enregistrer la signature. Réessayez.');
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Impossible d\'enregistrer la signature. Réessayez.';
+
+      console.warn('Contract signature failed', error);
+      Alert.alert(
+        'Erreur',
+        message.toLowerCase().includes('permission')
+          ? 'Autorisation Firebase manquante. Déployez les règles Firestore et Storage, puis réessayez.'
+          : message,
+      );
     } finally {
       setLoading(false);
     }

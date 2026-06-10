@@ -35,5 +35,6 @@ export type BookingDocument = {
   ownerId: string;
   totalPrice: number;
   paymentStatus: 'unpaid' | 'pending' | 'paid' | 'failed';
+  refundStatus?: 'none' | 'requested' | 'approved' | 'rejected';
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 };

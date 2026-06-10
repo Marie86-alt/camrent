@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ScreenProps = {
@@ -26,13 +26,21 @@ export function Screen({ children, scroll = true, topSafeArea = false }: ScreenP
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={edges}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        {content}
-      </KeyboardAvoidingView>
+    <SafeAreaView className="flex-1 bg-slate-50" edges={edges} style={styles.root}>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView behavior="padding" className="flex-1" style={styles.root}>
+          {content}
+        </KeyboardAvoidingView>
+      ) : (
+        content
+      )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    backgroundColor: '#f8fafc',
+    flex: 1,
+  },
+});

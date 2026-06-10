@@ -12,11 +12,17 @@ function buildContractRef(bookingId: string) {
 }
 
 export async function signContract(booking: Booking, signatureBase64: string): Promise<string> {
-  const signatureUrl = await uploadSignature(
-    booking.clientId,
-    booking.id,
-    signatureBase64,
-  );
+  let signatureUrl = signatureBase64;
+
+  try {
+    signatureUrl = await uploadSignature(
+      booking.clientId,
+      booking.id,
+      signatureBase64,
+    );
+  } catch (error) {
+    console.warn('Signature Storage upload failed, saving data URL in booking.', error);
+  }
 
   await updateDoc(doc(db, 'bookings', booking.id), {
     contractStatus: 'client_signed',

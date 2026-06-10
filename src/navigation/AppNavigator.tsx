@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
 
@@ -9,6 +9,17 @@ import { OwnerNavigator } from './OwnerNavigator';
 import { PublicNavigator } from './PublicNavigator';
 import { hasFirebaseConfig } from '../services/firebase';
 import { useAuthStore } from '../store/authStore';
+
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#f8fafc',
+    card: '#ffffff',
+    primary: '#3B63D4',
+    text: '#0f172a',
+  },
+};
 
 export function AppNavigator() {
   const user = useAuthStore((state) => state.user);
@@ -33,7 +44,7 @@ export function AppNavigator() {
   }, [user?.id]);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {!user ? (
         <PublicNavigator />
       ) : user.role === 'admin' ? (

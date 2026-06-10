@@ -8,6 +8,7 @@ import { toJsDate } from '../utils/firestoreDate';
 
 type BookingCardProps = {
   booking: Booking;
+  onCancel?: () => void;
   onSignContract?: () => void;
   onReview?: () => void;
 };
@@ -44,7 +45,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   'Carte bancaire': '#3b82f6',
 };
 
-export function BookingCard({ booking, onSignContract, onReview }: BookingCardProps) {
+export function BookingCard({ booking, onCancel, onSignContract, onReview }: BookingCardProps) {
   const status = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
   const carLabel =
     booking.carBrand && booking.carModel
@@ -52,6 +53,8 @@ export function BookingCard({ booking, onSignContract, onReview }: BookingCardPr
       : TEXT.carFallback;
   const paymentIcon = PAYMENT_ICONS[booking.paymentMethod] ?? 'cash-outline';
   const paymentColor = PAYMENT_COLORS[booking.paymentMethod] ?? '#64748b';
+  const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+  const cancellationFee = booking.cancellationFee ?? 0;
 
   return (
     <View
@@ -120,6 +123,28 @@ export function BookingCard({ booking, onSignContract, onReview }: BookingCardPr
               <Text className="text-xs font-bold text-white">Signer le contrat</Text>
             </TouchableOpacity>
           ) : null)}
+
+        {canCancel && onCancel ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-red-50 py-2.5"
+            style={{ borderWidth: 1, borderColor: '#fecaca' }}
+            onPress={onCancel}
+          >
+            <Ionicons color="#b91c1c" name="close-circle-outline" size={15} />
+            <Text className="text-xs font-bold text-red-700">Annuler la réservation</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {booking.status === 'cancelled' && booking.cancellationPolicy ? (
+          <View className="rounded-xl bg-slate-50 px-3 py-2">
+            <Text className="text-xs font-semibold text-slate-500">
+              {booking.cancellationPolicy === 'free_before_48h'
+                ? 'Annulation sans frais'
+                : `Frais d'annulation : ${formatFcfa(cancellationFee)}`}
+            </Text>
+          </View>
+        ) : null}
 
         {booking.status === 'completed' && !booking.reviewSubmitted && onReview ? (
           <TouchableOpacity

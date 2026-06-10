@@ -68,6 +68,12 @@ function paymentOptions(provider: PaymentProvider) {
   return provider === 'card' ? 'CARD' : 'MOMO';
 }
 
+function formatCampayPhone(phone?: string) {
+  if (!phone) return undefined;
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('237') ? digits : `237${digits.replace(/^0/, '')}`;
+}
+
 async function getCampayToken() {
   const accessToken = optionalEnv('CAMPAY_ACCESS_TOKEN');
 
@@ -98,6 +104,7 @@ async function getCampayToken() {
 export async function requestCampayPayment(request: CampayPaymentRequest): Promise<ProviderPaymentResponse> {
   const token = await getCampayToken();
   const { firstName, lastName } = splitCustomerName(request.customerName);
+  const from = request.provider === 'card' ? undefined : formatCampayPhone(request.phone);
   const response = await fetch(`${campayHost()}/api/get_payment_link/`, {
     body: JSON.stringify({
       amount: String(request.amount),
@@ -107,6 +114,7 @@ export async function requestCampayPayment(request: CampayPaymentRequest): Promi
       external_reference: request.reference,
       failure_redirect_url: optionalEnv('CAMPAY_FAILURE_REDIRECT_URL', optionalEnv('CAMPAY_REDIRECT_URL')),
       first_name: firstName,
+      ...(from ? { from } : {}),
       last_name: lastName,
       payment_options: paymentOptions(request.provider),
       redirect_url: optionalEnv('CAMPAY_REDIRECT_URL', 'https://campay.net'),

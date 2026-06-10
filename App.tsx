@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { auth, db } from './src/services/firebase';
@@ -61,16 +62,34 @@ export default function App() {
 
   if (initializing) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
-        <ActivityIndicator color="#16a34a" size="large" />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator color="#3B63D4" size="large" />
+          <Text style={styles.loadingText}>Chargement d'Autofix Pro...</Text>
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
       <AppNavigator />
-    </>
+    </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingScreen: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+});

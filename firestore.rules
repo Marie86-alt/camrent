@@ -67,6 +67,7 @@ service cloud.firestore {
 
     function validBookingUpdate() {
       let changed = request.resource.data.diff(resource.data).changedKeys();
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
 
       return signedIn()
         && (
@@ -77,20 +78,69 @@ service cloud.firestore {
           )
           || (
             request.auth.uid == resource.data.clientId
-            && changed.hasOnly(['status'])
-            && request.resource.data.status == 'cancelled'
-          )
-          || (
-            request.auth.uid == resource.data.clientId
             && resource.data.status == 'completed'
             && changed.hasOnly(['reviewSubmitted', 'driverReviewSubmitted'])
             && (!changed.hasAny(['reviewSubmitted']) || request.resource.data.reviewSubmitted == true)
             && (!changed.hasAny(['driverReviewSubmitted']) || request.resource.data.driverReviewSubmitted == true)
           )
           || (
+            request.auth.uid == resource.data.clientId
+            && affected.hasOnly(['contractStatus', 'clientSignatureUrl', 'contractSignedAt', 'contractRef'])
+            && request.resource.data.contractStatus == 'client_signed'
+            && request.resource.data.clientSignatureUrl is string
+            && request.resource.data.contractRef is string
+          )
+          || (
             isAdmin()
             && changed.hasOnly(['status', 'disputeStatus', 'refundStatus', 'depositStatus'])
             && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed']
+          )
+        );
+    }
+
+    function validOwnerCarCreate() {
+      return signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && userRole() == 'owner'
+        && request.resource.data.adminStatus == 'pending_review'
+        && request.resource.data.documentsVerified == false
+        && request.resource.data.isAvailable == false;
+    }
+
+    function validOwnerCarUpdate() {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+
+      return isOwner(resource.data.ownerId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (
+          (
+            changed.hasOnly(['isAvailable'])
+            && resource.data.adminStatus == 'approved'
+            && request.resource.data.adminStatus == resource.data.adminStatus
+            && request.resource.data.documentsVerified == resource.data.documentsVerified
+          )
+          || (
+            changed.hasOnly([
+              'adminStatus',
+              'allowIndependentDrivers',
+              'brand',
+              'city',
+              'description',
+              'documentsVerified',
+              'fuelType',
+              'imageUrl',
+              'imageUrls',
+              'isAvailable',
+              'model',
+              'pricePerDay',
+              'seats',
+              'technicalSheet',
+              'transmission',
+              'year'
+            ])
+            && request.resource.data.adminStatus == 'pending_review'
+            && request.resource.data.documentsVerified == false
+            && request.resource.data.isAvailable == false
           )
         );
     }
@@ -115,10 +165,9 @@ service cloud.firestore {
 
     match /cars/{carId} {
       allow read: if true;
-      allow create: if signedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && userRole() == 'owner';
-      allow update, delete: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if validOwnerCarCreate() || isAdmin();
+      allow update: if validOwnerCarUpdate() || isAdmin();
+      allow delete: if isOwner(resource.data.ownerId) || isAdmin();
     }
 
     match /bookings/{bookingId} {
