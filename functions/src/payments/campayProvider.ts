@@ -68,6 +68,14 @@ function paymentOptions(provider: PaymentProvider) {
   return provider === 'card' ? 'CARD' : 'MOMO';
 }
 
+function campayAmount(amount: number) {
+  if (mobileMoneyEnv() === 'production' || mobileMoneyEnv() === 'prod') {
+    return amount;
+  }
+
+  return Math.min(amount, 25);
+}
+
 function formatCampayPhone(phone?: string) {
   if (!phone) return undefined;
   const digits = phone.replace(/\D/g, '');
@@ -107,7 +115,7 @@ export async function requestCampayPayment(request: CampayPaymentRequest): Promi
   const from = request.provider === 'card' ? undefined : formatCampayPhone(request.phone);
   const response = await fetch(`${campayHost()}/api/get_payment_link/`, {
     body: JSON.stringify({
-      amount: String(request.amount),
+      amount: String(campayAmount(request.amount)),
       currency: request.currency,
       description: `Reservation Autofix Pro ${request.bookingId}`,
       email: request.customerEmail ?? '',

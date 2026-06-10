@@ -21,7 +21,7 @@ import {
 } from './payments/webhookHandlers';
 import { handleSubmitReview } from './reviews/reviewSubmit';
 
-export const mobileMoneyPayment = onRequest({ cors: true }, async (request, response) => {
+export const mobileMoneyPayment = onRequest({ cors: true, invoker: 'public' }, async (request, response) => {
   try {
     if (!assertPost(request, response)) {
       return;

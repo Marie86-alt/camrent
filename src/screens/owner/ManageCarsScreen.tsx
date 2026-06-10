@@ -46,6 +46,18 @@ const ADMIN_STATUS_CONFIG = {
 function AdminStatusBanner({ car }: { car: Car }) {
   const key = car.adminStatus ?? 'pending_review';
   const cfg = ADMIN_STATUS_CONFIG[key] ?? ADMIN_STATUS_CONFIG.pending_review;
+  const isVisibleToClients = key === 'approved' && car.isAvailable === true;
+
+  let description = 'Documents en cours de verification';
+  if (key === 'pending_review') {
+    description = "L'admin verifie vos photos et la fiche technique.";
+  } else if (key === 'rejected') {
+    description = 'Corrigez les informations manquantes et resoumettez.';
+  } else if (isVisibleToClients) {
+    description = 'Documents verifies - Visible des clients';
+  } else if (key === 'approved') {
+    description = 'Annonce approuvee mais desactivee';
+  }
 
   return (
     <View
@@ -57,24 +69,12 @@ function AdminStatusBanner({ car }: { car: Car }) {
         <Text className="text-xs font-bold" style={{ color: cfg.color }}>
           {cfg.label}
         </Text>
-        {key === 'pending_review' ? (
-          <Text className="text-xs text-slate-500">
-            L'admin vérifie vos photos et la fiche technique.
-          </Text>
-        ) : key === 'rejected' ? (
-          <Text className="text-xs text-slate-500">
-            Corrigez les informations manquantes et resoumettez.
-          </Text>
-        ) : car.documentsVerified ? (
-          <Text className="text-xs text-slate-500">Documents vérifiés · Visible des clients</Text>
-        ) : (
-          <Text className="text-xs text-slate-500">Documents en cours de vérification</Text>
-        )}
+        <Text className="text-xs text-slate-500">{description}</Text>
       </View>
       {key === 'approved' && (
         <Ionicons
-          color={car.documentsVerified ? '#3B63D4' : '#94a3b8'}
-          name={car.documentsVerified ? 'shield-checkmark' : 'shield-outline'}
+          color={isVisibleToClients ? '#3B63D4' : '#94a3b8'}
+          name={isVisibleToClients ? 'shield-checkmark' : 'shield-outline'}
           size={16}
         />
       )}

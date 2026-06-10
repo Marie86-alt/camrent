@@ -27,14 +27,15 @@ export const useCarsStore = create<CarsState>((set) => ({
 
     const carsQuery = query(
       collection(db, 'cars'),
-      where('isAvailable', '==', true),
       where('adminStatus', '==', 'approved'),
     );
 
     return onSnapshot(
       carsQuery,
       (snapshot) => {
-        const cars = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Car);
+        const cars = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }) as Car)
+          .filter((car) => car.isAvailable !== false);
         set({ cars, loading: false });
       },
       () => set({ error: 'Impossible de charger les voitures.', loading: false }),

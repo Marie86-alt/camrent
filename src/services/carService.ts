@@ -30,13 +30,17 @@ export type UpdateCarPayload = Partial<
 export function subscribeToAvailableCars(onData: (cars: Car[]) => void, onError: () => void) {
   const carsQuery = query(
     collection(db, 'cars'),
-    where('isAvailable', '==', true),
     where('adminStatus', '==', 'approved'),
   );
 
   return onSnapshot(
     carsQuery,
-    (snapshot) => onData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Car)),
+    (snapshot) => {
+      const cars = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }) as Car)
+        .filter((car) => car.isAvailable !== false);
+      onData(cars);
+    },
     onError,
   );
 }

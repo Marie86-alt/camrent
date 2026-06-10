@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
@@ -99,6 +100,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
   const [endDate, setEndDate] = useState(today);
   const [startDateInput, setStartDateInput] = useState(formatInputDate(today));
   const [endDateInput, setEndDateInput] = useState(formatInputDate(today));
+  const [activeDatePicker, setActiveDatePicker] = useState<DateField | null>(null);
   const [driverLicense, setDriverLicense] = useState<DriverLicenseForm>(INITIAL_DRIVER_LICENSE);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN MoMo');
   const [loading, setLoading] = useState(false);
@@ -140,6 +142,40 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     const nextEnd = parsed < startDate ? startDate : parsed;
     setEndDate(nextEnd);
     setEndDateInput(formatInputDate(nextEnd));
+  };
+
+  const updateRentalDateFromPicker = (field: DateField, value: Date) => {
+    const selectedDate = new Date(value);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (field === 'start') {
+      const nextStart = selectedDate < today ? today : selectedDate;
+      setStartDate(nextStart);
+      setStartDateInput(formatInputDate(nextStart));
+
+      if (nextStart > endDate) {
+        setEndDate(nextStart);
+        setEndDateInput(formatInputDate(nextStart));
+      }
+      return;
+    }
+
+    const nextEnd = selectedDate < startDate ? startDate : selectedDate;
+    setEndDate(nextEnd);
+    setEndDateInput(formatInputDate(nextEnd));
+  };
+
+  const onDatePickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setActiveDatePicker(null);
+      return;
+    }
+
+    if (activeDatePicker && selectedDate) {
+      updateRentalDateFromPicker(activeDatePicker, selectedDate);
+    }
+
+    setActiveDatePicker(null);
   };
 
   const validateDriverLicense = () => {
@@ -274,44 +310,66 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         <View className="gap-3">
           <Text className="font-semibold text-slate-800">Dates de location</Text>
           <View className="flex-row gap-3">
-            <View className="flex-1 rounded-xl border border-slate-200 bg-white p-4">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              className="flex-1 rounded-xl border border-slate-200 bg-white p-4"
+              onPress={() => setActiveDatePicker('start')}
+            >
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
                 <Text className="text-xs text-slate-500">{TEXT.start}</Text>
               </View>
               <TextInput
                 className="p-0 text-base font-bold text-slate-950"
+                editable={false}
                 keyboardType="number-pad"
                 maxLength={10}
                 onChangeText={(value) => updateRentalDate('start', value)}
                 placeholder="JJ/MM/AAAA"
                 placeholderTextColor="#94a3b8"
+                pointerEvents="none"
                 value={startDateInput}
               />
               <Text className="mt-1 text-xs text-slate-400">{formatDate(startDate)}</Text>
-            </View>
+            </TouchableOpacity>
 
             <View className="items-center justify-center px-1">
               <Ionicons color="#94a3b8" name="arrow-forward-outline" size={18} />
             </View>
 
-            <View className="flex-1 rounded-xl border border-slate-200 bg-white p-4">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              className="flex-1 rounded-xl border border-slate-200 bg-white p-4"
+              onPress={() => setActiveDatePicker('end')}
+            >
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
                 <Text className="text-xs text-slate-500">Fin</Text>
               </View>
               <TextInput
                 className="p-0 text-base font-bold text-slate-950"
+                editable={false}
                 keyboardType="number-pad"
                 maxLength={10}
                 onChangeText={(value) => updateRentalDate('end', value)}
                 placeholder="JJ/MM/AAAA"
                 placeholderTextColor="#94a3b8"
+                pointerEvents="none"
                 value={endDateInput}
               />
               <Text className="mt-1 text-xs text-slate-400">{formatDate(endDate)}</Text>
-            </View>
+            </TouchableOpacity>
           </View>
+
+          {activeDatePicker ? (
+            <DateTimePicker
+              display="calendar"
+              minimumDate={activeDatePicker === 'start' ? today : startDate}
+              mode="date"
+              onChange={onDatePickerChange}
+              value={activeDatePicker === 'start' ? startDate : endDate}
+            />
+          ) : null}
 
           <View className="flex-row items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2">
             <Ionicons color="#3b82f6" name="information-circle-outline" size={16} />

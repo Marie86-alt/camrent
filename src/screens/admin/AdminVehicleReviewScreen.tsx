@@ -44,6 +44,24 @@ function getCarPhotos(car: Car) {
   return photos.slice(0, 6);
 }
 
+function isCarVisibleToClients(car: Car) {
+  return car.adminStatus === 'approved' && car.isAvailable === true;
+}
+
+function getAdminStatusLabel(car: Car) {
+  if (isCarVisibleToClients(car)) return 'Visible client';
+  if (car.adminStatus === 'approved') return 'Approuvee mais inactive';
+  if (car.adminStatus === 'rejected') return 'Refusee';
+  return 'A verifier';
+}
+
+function getAdminStatusDotClass(car: Car) {
+  if (isCarVisibleToClients(car)) return 'bg-brand-blue';
+  if (car.adminStatus === 'approved') return 'bg-slate-400';
+  if (car.adminStatus === 'rejected') return 'bg-red-500';
+  return 'bg-amber-500';
+}
+
 function PhotoGrid({ car }: { car: Car }) {
   const photos = getCarPhotos(car);
   const slots = Array.from({ length: 6 }, (_, index) => photos[index]);
@@ -89,7 +107,6 @@ function PhotoGrid({ car }: { car: Car }) {
 
 function VehicleCard({ car, selected, onPress }: { car: Car; selected: boolean; onPress: () => void }) {
   const photos = getCarPhotos(car);
-  const statusLabel = car.adminStatus ?? (car.isAvailable ? 'approved' : 'pending_review');
 
   return (
     <TouchableOpacity
@@ -119,9 +136,9 @@ function VehicleCard({ car, selected, onPress }: { car: Car; selected: boolean; 
             {car.city} - {car.year} - {formatFcfa(car.pricePerDay)}/j
           </Text>
           <View className="mt-2 flex-row items-center gap-2">
-            <View className={`h-2 w-2 rounded-full ${car.isAvailable ? 'bg-brand-blue' : 'bg-amber-500'}`} />
+            <View className={`h-2 w-2 rounded-full ${getAdminStatusDotClass(car)}`} />
             <Text className="text-xs font-semibold text-slate-500">
-              {statusLabel === 'approved' ? 'Annonce visible' : statusLabel === 'rejected' ? 'Refusee' : 'A verifier'}
+              {getAdminStatusLabel(car)}
             </Text>
           </View>
         </View>
@@ -305,14 +322,16 @@ export function AdminVehicleReviewScreen() {
                     <Text className="text-lg font-black text-slate-950">Decision admin</Text>
                   </View>
                   <Text className="text-sm leading-5 text-slate-500">
-                    Approuver rend le vehicule visible. Rejeter masque l'annonce jusqu'a correction par le proprietaire.
+                    Approuver publie le vehicule cote client. Rejeter masque l'annonce jusqu'a correction par le proprietaire.
                   </Text>
                   <View className="gap-3">
                     <PrimaryButton
                       loading={reviewActionLoading === 'approve'}
                       onPress={approveSelectedCar}
                     >
-                      Approuver l'annonce
+                      {selectedCar.adminStatus === 'approved' && !selectedCar.isAvailable
+                        ? "Publier l'annonce"
+                        : "Approuver et publier l'annonce"}
                     </PrimaryButton>
                     <TouchableOpacity
                       activeOpacity={0.85}
