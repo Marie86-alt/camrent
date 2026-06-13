@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess } from '../../utils/haptics';
 import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToAllBookings, subscribeToPaymentFlows, updatePlatformFinanceSettings } from '../../services/adminService';
 import type { Booking, PaymentFlow, PaymentMethod } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -56,9 +57,13 @@ export function AdminFinanceScreen() {
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    setLoadingBookings(true);
+    setLoadingPayments(true);
+    setError(null);
     const unsubscribeBookings = subscribeToAllBookings(
       (items) => {
         setBookings(items);
@@ -87,7 +92,7 @@ export function AdminFinanceScreen() {
       unsubscribeBookings();
       unsubscribePayments();
     };
-  }, []);
+  }, [retryToken]);
 
   const paidRevenue = useMemo(
     () => bookings.filter((booking) => booking.paymentStatus === 'paid').reduce((sum, booking) => sum + booking.totalPrice, 0),
@@ -143,9 +148,14 @@ export function AdminFinanceScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : (
           <View className="gap-5">
             <View className="rounded-xl bg-white p-4">

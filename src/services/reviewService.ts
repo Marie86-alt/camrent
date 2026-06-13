@@ -1,6 +1,7 @@
 import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 import type { Review, ReviewTargetType } from '../types/models';
 
 export type CreateReviewPayload = {
@@ -21,6 +22,8 @@ function getReviewEndpoint() {
 }
 
 export async function submitReview(payload: CreateReviewPayload): Promise<void> {
+  await assertOnlineForAction();
+
   const endpoint = getReviewEndpoint();
   if (!endpoint) {
     throw new Error('Endpoint submitReview manquant.');

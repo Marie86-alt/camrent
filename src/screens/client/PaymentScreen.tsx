@@ -7,6 +7,7 @@ import { BackButton } from '../../components/BackButton';
 import { PaymentModal } from '../../components/PaymentModal';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { isOfflineError } from '../../services/networkGuard';
 import { requestMobileMoneyPayment } from '../../services/paymentService';
 import type { PaymentMethod } from '../../types/models';
 import type { PaymentScreenProps } from '../../types/navigation';
@@ -47,6 +48,12 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
       toast.success(`Paiement initié · Réf : ${payment.reference}`);
       navigation.popToTop();
     } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning();
+        toast.warning(error.message);
+        return;
+      }
+
       hapticError();
       toast.error(error instanceof Error ? error.message : 'Impossible de lancer le paiement.');
     } finally {

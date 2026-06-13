@@ -6,6 +6,7 @@ import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useToast } from '../../components/ui';
+import { isOfflineError } from '../../services/networkGuard';
 import { markBookingReviewSubmitted, markDriverReviewSubmitted, submitReview } from '../../services/reviewService';
 import { useAuthStore } from '../../store/authStore';
 import type { ReviewScreenProps } from '../../types/navigation';
@@ -80,7 +81,12 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
       hapticSuccess();
       toast.success('Merci ! Votre avis a bien été enregistré.');
       navigation.goBack();
-    } catch {
+    } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error("L'avis n'a pas pu être enregistré. Réessayez.");
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 import type { AppUser, Booking, CameroonCity, PaymentFlow, PromoBanner, Review } from '../types/models';
 
 function withId<T>(snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }) {
@@ -58,6 +59,8 @@ function getCreateIndependentDriverEndpoint() {
 }
 
 export async function createIndependentDriverByAdmin(payload: CreateIndependentDriverAdminPayload) {
+  await assertOnlineForAction();
+
   const endpoint = getCreateIndependentDriverEndpoint();
   if (!endpoint) {
     throw new Error('EXPO_PUBLIC_CREATE_INDEPENDENT_DRIVER_API_URL manquant.');
@@ -114,6 +117,8 @@ export function createAdminNotification(payload: {
 }
 
 export async function sendAdminNotification(notificationId: string) {
+  await assertOnlineForAction();
+
   const endpoint = process.env.EXPO_PUBLIC_NOTIFICATIONS_API_URL;
 
   if (!endpoint) {

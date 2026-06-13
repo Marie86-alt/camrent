@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
+import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useToast } from '../../components/ui';
@@ -47,6 +48,11 @@ export function EditCarScreen({ navigation, route }: Props) {
   const [registrationDocumentUri, setRegistrationDocumentUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [newPhotoUris, setNewPhotoUris] = useState<(string | null)[]>(Array(6).fill(null));
+  const minDocumentDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   const existingUrls: (string | null)[] = Array(6)
     .fill(null)
@@ -257,8 +263,20 @@ export function EditCarScreen({ navigation, route }: Props) {
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setLicensePlate} placeholder="Immatriculation" value={licensePlate} />
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setChassisNumber} placeholder="Numéro de châssis" value={chassisNumber} />
           <TextInput className="h-12 rounded-xl border border-slate-200 px-4" keyboardType="numeric" onChangeText={setMileage} placeholder="Kilométrage" value={mileage} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setInsuranceExpiry} placeholder="Expiration assurance (ex: 03/06/2027)" value={insuranceExpiry} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setTechnicalInspectionExpiry} placeholder="Expiration contrôle technique (ex: 03/06/2027)" value={technicalInspectionExpiry} />
+          <DatePickerField
+            label="Expiration assurance"
+            minimumDate={minDocumentDate}
+            onChange={setInsuranceExpiry}
+            placeholder="Ex: 03/06/2027"
+            value={insuranceExpiry}
+          />
+          <DatePickerField
+            label="Expiration contrôle technique"
+            minimumDate={minDocumentDate}
+            onChange={setTechnicalInspectionExpiry}
+            placeholder="Ex: 03/06/2027"
+            value={technicalInspectionExpiry}
+          />
           <TouchableOpacity
             activeOpacity={0.8}
             className={`flex-row items-center gap-2 rounded-xl border p-3.5 ${

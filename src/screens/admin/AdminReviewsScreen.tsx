@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess } from '../../utils/haptics';
 import EmptyReviewsIllustration from '../../../assets/illustrations/empty-reviews.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToReviews, updateReviewModeration } from '../../services/adminService';
 import type { Review, ReviewStatus } from '../../types/models';
 
@@ -57,9 +58,12 @@ export function AdminReviewsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToReviews(
       (items) => {
         setReviews(items);
@@ -74,7 +78,7 @@ export function AdminReviewsScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   const visibleReviews = useMemo(
     () => (filter === 'all' ? reviews : reviews.filter((review) => review.status === filter)),
@@ -155,9 +159,14 @@ export function AdminReviewsScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : (
           <View className="gap-5">
             <View>

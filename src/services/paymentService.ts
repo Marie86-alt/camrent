@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 import type { PaymentMethod, PaymentProvider } from '../types/models';
 
 export type PaymentRequest = {
@@ -46,6 +47,8 @@ function cleanPaymentError(body: string) {
 }
 
 export async function requestMobileMoneyPayment(request: PaymentRequest) {
+  await assertOnlineForAction();
+
   const endpoint = getPaymentEndpoint();
 
   if (endpoint) {

@@ -6,6 +6,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToAllUsers, updatePlatformSecuritySettings, updateUserAdminStatus } from '../../services/adminService';
 import type { AdminRole, AppUser } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -27,9 +28,12 @@ export function AdminSecurityScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToAllUsers(
       (items) => {
         const admins = items.filter((user) => user.role === 'admin');
@@ -45,7 +49,7 @@ export function AdminSecurityScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   const selectedAdmin = useMemo(
     () => users.find((user) => user.id === selectedAdminId) ?? users[0],
@@ -119,9 +123,14 @@ export function AdminSecurityScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : (
           <View className="gap-5">
             <View className="rounded-xl bg-white p-4">

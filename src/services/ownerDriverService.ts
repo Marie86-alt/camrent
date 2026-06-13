@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 
 export type CreateOwnerDriverPayload = {
   city: string;
@@ -27,6 +28,8 @@ function getCreateDriverEndpoint() {
 }
 
 export async function createOwnerDriver(payload: CreateOwnerDriverPayload) {
+  await assertOnlineForAction();
+
   const endpoint = getCreateDriverEndpoint();
   if (!endpoint) {
     throw new Error('Endpoint createOwnerDriver manquant.');

@@ -18,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { BrandLogo } from './src/components/BrandLogo';
 import { BottomSheetProvider } from './src/components/ui/BottomSheet';
+import { OfflineBanner } from './src/components/ui/OfflineBanner';
 import { ToastProvider } from './src/components/ui/Toast';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { auth, db } from './src/services/firebase';
@@ -111,6 +112,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <ToastProvider>
+        <OfflineBanner />
         <BottomSheetProvider>
           <AppNavigator />
         </BottomSheetProvider>

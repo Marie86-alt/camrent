@@ -7,6 +7,7 @@ import { BackButton } from '../../components/BackButton';
 import { Screen } from '../../components/Screen';
 import { DriverCardSkeleton, EmptyState } from '../../components/ui';
 import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { subscribeToOwnerDrivers } from '../../services/ownerDriverListService';
 import type { AppUser } from '../../types/models';
@@ -148,10 +149,13 @@ export function OwnerDriversScreen({ navigation }: Props) {
   const [drivers, setDrivers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     if (!user?.id) return undefined;
 
+    setLoading(true);
+    setError('');
     const unsubscribe = subscribeToOwnerDrivers(
       user.id,
       (items) => {
@@ -166,7 +170,7 @@ export function OwnerDriversScreen({ navigation }: Props) {
     );
 
     return unsubscribe;
-  }, [user?.id]);
+  }, [retryToken, user?.id]);
 
   return (
     <Screen>
@@ -197,9 +201,14 @@ export function OwnerDriversScreen({ navigation }: Props) {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-2xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : drivers.length === 0 ? (
           <EmptyState
             ctaLabel="Ajouter un chauffeur"

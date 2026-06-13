@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 240" width="280" height="240" fill="none">
+  <ellipse cx="140" cy="124" rx="110" ry="92" fill="#EEF2FD"/>
+  <circle cx="46" cy="50" r="7" fill="#D8E1FB"/>
+  <circle cx="236" cy="60" r="5" fill="#F59E0B" opacity="0.55"/>
+  <circle cx="238" cy="186" r="8" fill="#D8E1FB"/>
+  <circle cx="44" cy="190" r="5" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- volant -->
+  <circle cx="118" cy="120" r="52" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="118" cy="120" r="17" fill="#D8E1FB" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M118 103 L118 70" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M104 129 L74 148" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M132 129 L162 148" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="118" cy="120" r="6" fill="#3B63D4"/>
+  <!-- carte choix avec/sans -->
+  <rect x="168" y="74" width="64" height="40" rx="10" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="186" cy="94" r="8" fill="#F59E0B"/>
+  <path d="M182 94 l3 3 l6 -7" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="202" y1="90" x2="222" y2="90" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <line x1="202" y1="100" x2="216" y2="100" stroke="#E2E8F0" stroke-width="3" stroke-linecap="round"/>
+  <!-- badge chauffeur -->
+  <circle cx="186" cy="150" r="22" fill="#3B63D4"/>
+  <circle cx="186" cy="143" r="7" fill="#FFFFFF"/>
+  <path d="M173 164 C173 155 179 150 186 150 C193 150 199 155 199 164 Z" fill="#FFFFFF"/>
+
+</svg>

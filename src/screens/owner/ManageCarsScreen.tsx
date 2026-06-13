@@ -13,6 +13,7 @@ import { Screen } from '../../components/Screen';
 import { CarCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import { hapticError } from '../../utils/haptics';
 import EmptyReservationsIllustration from '../../../assets/illustrations/empty-reservations.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useCars } from '../../hooks/useCars';
 import { deleteCar, setCarAvailability } from '../../services/carService';
@@ -197,7 +198,7 @@ function OwnerCarListItem({
 
 export function ManageCarsScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { cars, error, loading } = useCars(user?.id);
+  const { cars, error, loading, retry } = useCars(user?.id);
   const [selectedCity, setSelectedCity] = useState<CameroonCity | null>(null);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
@@ -304,11 +305,15 @@ export function ManageCarsScreen({ navigation }: Props) {
           }
           ListEmptyComponent={
             <EmptyState
-              ctaLabel="Ajouter une voiture"
-              icon="car-outline"
-              illustration={EmptyReservationsIllustration}
-              onCta={() => navigation.navigate('AddCar')}
-              subtitle="Ajoutez votre premiere voiture depuis le tableau de bord."
+              ctaLabel={error ? 'Réessayer' : 'Ajouter une voiture'}
+              icon={error ? 'cloud-offline-outline' : 'car-outline'}
+              illustration={error ? ErrorIllustration : EmptyReservationsIllustration}
+              onCta={error ? retry : () => navigation.navigate('AddCar')}
+              subtitle={
+                error
+                  ? 'Vérifiez votre connexion puis relancez le chargement.'
+                  : 'Ajoutez votre premiere voiture depuis le tableau de bord.'
+              }
               title={error ?? 'Aucune voiture publiee'}
             />
           }

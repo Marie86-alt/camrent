@@ -5,10 +5,12 @@ import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
 import { PAYMENT_METHODS } from '../../constants/cameroon';
+import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { createBooking } from '../../services/bookingService';
 import { hasFirebaseConfig } from '../../services/firebase';
+import { isOfflineError } from '../../services/networkGuard';
 import { useAuthStore } from '../../store/authStore';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { PaymentMethod } from '../../types/models';
@@ -275,6 +277,12 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         paymentMethod,
       });
     } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning();
+        toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error(error instanceof Error ? error.message : TEXT.bookingError);
     } finally {
       setLoading(false);
@@ -517,21 +525,19 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <LicenseInput
-                keyboardType="number-pad"
+              <DatePickerField
                 label={TEXT.issueDate}
-                maxLength={10}
-                onChangeText={(value) => updateDriverLicense('issueDate', formatLicenseDateInput(value))}
+                maximumDate={today}
+                onChange={(value) => updateDriverLicense('issueDate', value)}
                 placeholder="Ex: 03/06/2026"
                 value={driverLicense.issueDate}
               />
             </View>
             <View className="flex-1">
-              <LicenseInput
-                keyboardType="number-pad"
+              <DatePickerField
                 label="Expire le"
-                maxLength={10}
-                onChangeText={(value) => updateDriverLicense('expiryDate', formatLicenseDateInput(value))}
+                minimumDate={today}
+                onChange={(value) => updateDriverLicense('expiryDate', value)}
                 placeholder="Ex: 03/06/2030"
                 value={driverLicense.expiryDate}
               />

@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess } from '../../utils/haptics';
 import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToAllBookings, updateBookingAdminFields } from '../../services/adminService';
 import type { Booking, BookingStatus } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -79,9 +80,12 @@ export function AdminBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToAllBookings(
       (items) => {
         setBookings(items);
@@ -96,7 +100,7 @@ export function AdminBookingsScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   const visibleBookings = useMemo(
     () => (filter === 'all' ? bookings : bookings.filter((booking) => booking.status === filter)),
@@ -171,9 +175,14 @@ export function AdminBookingsScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : (
           <View className="gap-5">
             <View>

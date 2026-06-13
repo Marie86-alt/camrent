@@ -8,6 +8,7 @@ import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
 import { CarCardSkeleton, EmptyState } from '../../components/ui';
 import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useCars } from '../../hooks/useCars';
 import type { CameroonCity, Car } from '../../types/models';
 import type { ClientStackParamList } from '../../types/navigation';
@@ -18,7 +19,7 @@ export function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ClientStackParamList>>();
   const [query, setQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<CameroonCity | null>(null);
-  const { cars, loading } = useCars();
+  const { cars, error, loading, retry } = useCars();
 
   const filteredCars = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -73,15 +74,19 @@ export function SearchScreen() {
           <FlatList
             ListEmptyComponent={
               <EmptyState
-                ctaLabel="Effacer la recherche"
-                icon="search-outline"
-                illustration={EmptyCarsIllustration}
+                ctaLabel={error ? 'Réessayer' : 'Effacer la recherche'}
+                icon={error ? 'cloud-offline-outline' : 'search-outline'}
+                illustration={error ? ErrorIllustration : EmptyCarsIllustration}
                 onCta={() => {
+                  if (error) {
+                    retry();
+                    return;
+                  }
                   setQuery('');
                   setSelectedCity(null);
                 }}
-                subtitle="Essayez une autre ville, une marque ou un modele different."
-                title="Aucun resultat trouve"
+                subtitle={error ? 'Vérifiez votre connexion puis relancez la recherche.' : 'Essayez une autre ville, une marque ou un modele different.'}
+                title={error ?? 'Aucun resultat trouve'}
               />
             }
             data={filteredCars}

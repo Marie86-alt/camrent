@@ -2,22 +2,25 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 import { BookingCard } from '../../components/BookingCard';
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { cancelBooking } from '../../services/bookingService';
+import { isOfflineError } from '../../services/networkGuard';
 import type { Booking } from '../../types/models';
 import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 import { toJsDate } from '../../utils/firestoreDate';
-import { hapticError, hapticSuccess } from '../../utils/haptics';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 
 type MyBookingsNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<ClientTabParamList, 'MyBookings'>,
@@ -31,10 +34,31 @@ const SKELETON_ITEMS = [0, 1, 2];
 export function MyBookingsScreen() {
   const navigation = useNavigation<MyBookingsNavProp>();
   const { user } = useAuth();
-  const { bookings, error, loading } = useBookings(user?.id, 'client');
+  const { bookings, error, loading, retry } = useBookings(user?.id, 'client');
+  const { isOnline } = useNetworkStatus();
   const [filter, setFilter] = useState<Filter>('active');
+  const [refreshing, setRefreshing] = useState(false);
+  const wasOfflineRef = useRef(false);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
+
+  useEffect(() => {
+    if (!loading) {
+      setRefreshing(false);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOfflineRef.current = true;
+      return;
+    }
+
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      retry();
+    }
+  }, [isOnline, retry]);
 
   const initials = user?.fullName
     ?.split(' ')
@@ -80,6 +104,12 @@ export function MyBookingsScreen() {
               hapticSuccess();
               toast.success(preview.isFree ? 'Reservation annulee sans frais.' : 'Reservation annulee : frais de 10% appliques.');
             } catch (error) {
+              if (isOfflineError(error)) {
+                hapticWarning();
+                toast.warning(error.message);
+                return;
+              }
+
               hapticError();
               toast.error(error instanceof Error ? error.message : 'Annulation impossible.');
             }
@@ -110,6 +140,18 @@ export function MyBookingsScreen() {
       />
     ),
     [handleCancelBooking, handleSignContract, navigation],
+  );
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    retry();
+  }, [retry]);
+  const refreshControl = (
+    <RefreshControl
+      colors={['#3B63D4']}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      tintColor="#3B63D4"
+    />
   );
 
   const listHeader = (
@@ -164,6 +206,7 @@ export function MyBookingsScreen() {
           <FlatList
             data={SKELETON_ITEMS}
             keyExtractor={skeletonKeyExtractor}
+            refreshControl={refreshControl}
             renderItem={renderSkeleton}
             showsVerticalScrollIndicator={false}
           />
@@ -171,12 +214,20 @@ export function MyBookingsScreen() {
           <FlatList
             ListEmptyComponent={
               <EmptyState
-                ctaLabel={filter === 'active' ? 'Explorer les voitures' : undefined}
-                icon={filter === 'active' ? 'calendar-outline' : 'time-outline'}
-                illustration={EmptyBookingsIllustration}
-                onCta={filter === 'active' ? () => navigation.navigate('Home') : undefined}
+                ctaLabel={error ? 'Réessayer' : filter === 'active' ? 'Explorer les voitures' : undefined}
+                icon={error ? 'cloud-offline-outline' : filter === 'active' ? 'calendar-outline' : 'time-outline'}
+                illustration={error ? ErrorIllustration : EmptyBookingsIllustration}
+                onCta={
+                  error
+                    ? retry
+                    : filter === 'active'
+                      ? () => navigation.navigate('Home')
+                      : undefined
+                }
                 subtitle={
-                  filter === 'active'
+                  error
+                    ? 'Vérifiez votre connexion puis relancez le chargement.'
+                    : filter === 'active'
                     ? 'Vos reservations actives apparaitront ici.'
                     : 'Vos reservations terminees ou annulees apparaitront ici.'
                 }
@@ -186,6 +237,7 @@ export function MyBookingsScreen() {
             ListHeaderComponent={listHeader}
             data={displayed}
             keyExtractor={bookingKeyExtractor}
+            refreshControl={refreshControl}
             renderItem={renderBooking}
             showsVerticalScrollIndicator={false}
           />

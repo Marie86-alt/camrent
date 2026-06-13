@@ -5,13 +5,16 @@ import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
-import { DriverCardSkeleton, EmptyState } from '../../components/ui';
+import { DriverCardSkeleton, EmptyState, useToast } from '../../components/ui';
 import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { listAvailableDrivers } from '../../services/driverService';
+import { isOfflineError } from '../../services/networkGuard';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { AppUser } from '../../types/models';
 import type { ClientStackParamList, DriverListScreenProps, PublicDriverListScreenProps, PublicStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+import { hapticWarning } from '../../utils/haptics';
 
 const SKELETON_ITEMS = [0, 1, 2];
 
@@ -25,24 +28,36 @@ export function DriverListScreen({ navigation, route }: Props) {
   const { setSelectedDriver } = useBookingDraftStore();
   const [drivers, setDrivers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const toast = useToast();
 
   useEffect(() => {
     let mounted = true;
 
+    setLoading(true);
+    setError(null);
     listAvailableDrivers({ carId, city: carCity, endDate, startDate })
       .then((available) => {
         if (!mounted) return;
         setDrivers(available);
+        setError(null);
         setLoading(false);
       })
-      .catch(() => {
-        if (mounted) setLoading(false);
+      .catch((loadError) => {
+        if (!mounted) return;
+        if (isOfflineError(loadError)) {
+          hapticWarning();
+          toast.warning(loadError.message);
+        }
+        setError('Impossible de charger les chauffeurs disponibles.');
+        setLoading(false);
       });
 
     return () => {
       mounted = false;
     };
-  }, [carCity, carId, startDate, endDate]);
+  }, [carCity, carId, endDate, retryToken, startDate]);
 
   const selectDriver = useCallback((driver: AppUser) => {
     if (!selectable) {
@@ -99,10 +114,16 @@ export function DriverListScreen({ navigation, route }: Props) {
           <FlatList
             ListEmptyComponent={
               <EmptyState
-                icon="people-outline"
-                illustration={EmptyDriversIllustration}
-                subtitle={`Aucun chauffeur certifie n'est disponible a ${carCity} pour le moment.`}
-                title="Aucun chauffeur disponible"
+                ctaLabel={error ? 'Réessayer' : undefined}
+                icon={error ? 'cloud-offline-outline' : 'people-outline'}
+                illustration={error ? ErrorIllustration : EmptyDriversIllustration}
+                onCta={error ? () => setRetryToken((value) => value + 1) : undefined}
+                subtitle={
+                  error
+                    ? 'Vérifiez votre connexion puis relancez la recherche.'
+                    : `Aucun chauffeur certifie n'est disponible a ${carCity} pour le moment.`
+                }
+                title={error ?? 'Aucun chauffeur disponible'}
               />
             }
             data={drivers}

@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BackButton } from '../../components/BackButton';
 import { CitySearchInput } from '../../components/CitySearchInput';
+import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { registerWithEmail, updateUserProfile } from '../../services/authService';
@@ -61,6 +62,11 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [loading, setLoading] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
   const isIndependentDriver = role === 'driver';
+  const minLicenseExpiryDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   const selectDriverDocument = async (key: DriverDocumentKey) => {
     const uri = await pickImage();
@@ -330,11 +336,11 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
               placeholderTextColor="#94a3b8"
               value={licenseCategories}
             />
-            <TextInput
-              className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
-              onChangeText={setLicenseExpiryDate}
+            <DatePickerField
+              label="Expiration permis"
+              minimumDate={minLicenseExpiryDate}
+              onChange={setLicenseExpiryDate}
               placeholder="Expiration permis, ex: 03/06/2027"
-              placeholderTextColor="#94a3b8"
               value={licenseExpiryDate}
             />
             <TextInput

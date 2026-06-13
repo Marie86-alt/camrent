@@ -1,6 +1,7 @@
 import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 import type { Booking, BookingStatus, Car, DriverLicense, PaymentMethod } from '../types/models';
 
 export type CreateBookingPayload = {
@@ -55,6 +56,8 @@ function cleanBookingError(body: string) {
 }
 
 async function authFetch(endpoint: string, body: unknown) {
+  await assertOnlineForAction();
+
   const token = await auth.currentUser?.getIdToken();
   return fetch(endpoint, {
     method: 'POST',
@@ -163,6 +166,7 @@ export function subscribeToOwnerBookings(ownerId: string, onData: (bookings: Boo
   );
 }
 
-export function updateBookingStatus(bookingId: string, status: Extract<BookingStatus, 'confirmed' | 'completed'>) {
+export async function updateBookingStatus(bookingId: string, status: Extract<BookingStatus, 'confirmed' | 'completed'>) {
+  await assertOnlineForAction();
   return updateDoc(doc(db, 'bookings', bookingId), { status });
 }

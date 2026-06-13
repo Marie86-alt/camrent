@@ -3,8 +3,8 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { CarCard } from '../../components/CarCard';
@@ -12,7 +12,9 @@ import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
 import { CarCardSkeleton, EmptyState } from '../../components/ui';
 import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useBookings } from '../../hooks/useBookings';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useAuthStore } from '../../store/authStore';
 import { useCarsStore } from '../../store/carsStore';
 import type { CameroonCity, Car } from '../../types/models';
@@ -44,9 +46,31 @@ export function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { cars, error, loading, subscribeToAvailableCars } = useCarsStore();
   const { bookings } = useBookings(user?.id, 'client');
+  const { isOnline } = useNetworkStatus();
   const [selectedCity, setSelectedCity] = useState<CameroonCity | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const wasOfflineRef = useRef(false);
 
-  useEffect(() => subscribeToAvailableCars(), [subscribeToAvailableCars]);
+  useEffect(() => subscribeToAvailableCars(), [retryToken, subscribeToAvailableCars]);
+
+  useEffect(() => {
+    if (!loading) {
+      setRefreshing(false);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOfflineRef.current = true;
+      return;
+    }
+
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      setRetryToken((value) => value + 1);
+    }
+  }, [isOnline]);
 
   const isGuest = !user;
   const initials =
@@ -69,6 +93,18 @@ export function HomeScreen() {
       <CarCard car={item} onPress={() => navigation.navigate('CarDetail', { car: item })} />
     ),
     [navigation],
+  );
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setRetryToken((value) => value + 1);
+  }, []);
+  const refreshControl = (
+    <RefreshControl
+      colors={['#3B63D4']}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      tintColor="#3B63D4"
+    />
   );
 
   const ListHeader = (
@@ -217,6 +253,7 @@ export function HomeScreen() {
             ListHeaderComponent={ListHeader}
             data={skeletonItems}
             keyExtractor={skeletonKeyExtractor}
+            refreshControl={refreshControl}
             renderItem={renderSkeleton}
             scrollEnabled
             showsVerticalScrollIndicator={false}
@@ -226,12 +263,20 @@ export function HomeScreen() {
             ListHeaderComponent={ListHeader}
             ListEmptyComponent={
               <EmptyState
-                ctaLabel={selectedCity ? 'Voir toutes les villes' : undefined}
-                icon="car-outline"
-                illustration={EmptyCarsIllustration}
-                onCta={selectedCity ? () => setSelectedCity(null) : undefined}
+                ctaLabel={error ? 'Réessayer' : selectedCity ? 'Voir toutes les villes' : undefined}
+                icon={error ? 'cloud-offline-outline' : 'car-outline'}
+                illustration={error ? ErrorIllustration : EmptyCarsIllustration}
+                onCta={
+                  error
+                    ? () => setRetryToken((value) => value + 1)
+                    : selectedCity
+                      ? () => setSelectedCity(null)
+                      : undefined
+                }
                 subtitle={
-                  selectedCity
+                  error
+                    ? 'Vérifiez votre connexion puis relancez le chargement.'
+                    : selectedCity
                     ? 'Essayez une autre ville ou affichez toutes les annonces disponibles.'
                     : 'Revenez plus tard pour voir les nouvelles annonces.'
                 }
@@ -240,6 +285,7 @@ export function HomeScreen() {
             }
             data={displayedCars}
             keyExtractor={carKeyExtractor}
+            refreshControl={refreshControl}
             renderItem={renderCar}
             showsVerticalScrollIndicator={false}
           />

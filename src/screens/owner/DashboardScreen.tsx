@@ -9,10 +9,11 @@ import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
 import { useBottomSheet, useToast } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
-import { hapticError, hapticSuccess } from '../../utils/haptics';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { useBookings } from '../../hooks/useBookings';
 import { useCars } from '../../hooks/useCars';
 import { ownerCancelBooking, updateBookingStatus } from '../../services/bookingService';
+import { isOfflineError } from '../../services/networkGuard';
 import type { Booking, BookingStatus, PaymentMethod } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
@@ -66,7 +67,12 @@ export function DashboardScreen({ navigation }: Props) {
   ) => {
     try {
       await updateBookingStatus(booking.id, status);
-    } catch {
+    } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error(TEXT.updateError);
     }
   }, [toast]);
@@ -84,7 +90,12 @@ export function DashboardScreen({ navigation }: Props) {
             try {
               await ownerCancelBooking(booking.id);
               hapticSuccess(); toast.success('Reservation annulee.');
-            } catch {
+            } catch (error) {
+              if (isOfflineError(error)) {
+                hapticWarning(); toast.warning(error.message);
+                return;
+              }
+
               hapticError(); toast.error("Impossible d'annuler la reservation.");
             }
           },

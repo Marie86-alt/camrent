@@ -7,7 +7,8 @@ import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
-import { hapticError, hapticSuccess } from '../../utils/haptics';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import {
   createAdminNotification,
   createPromoBanner,
@@ -17,6 +18,7 @@ import {
   updatePromoBanner,
 } from '../../services/adminService';
 import { db } from '../../services/firebase';
+import { isOfflineError } from '../../services/networkGuard';
 import type { CameroonCity, PromoBanner } from '../../types/models';
 
 const audiences: Array<{ label: string; value: 'all' | 'clients' | 'owners' | 'drivers' }> = [
@@ -37,9 +39,12 @@ export function AdminContentScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToPromoBanners(
       (items) => {
         setBanners(items);
@@ -53,7 +58,7 @@ export function AdminContentScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'adminSettings', 'coverage'), (snapshot) => {
@@ -80,6 +85,11 @@ export function AdminContentScreen() {
       const result = await sendAdminNotification(notificationRef.id);
       hapticSuccess(); toast.success(`Notification envoyee — ${result.sentCount} destinataire(s), ${result.failedCount} echec(s).`);
     } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error(error instanceof Error ? error.message : "La notification n'a pas pu etre envoyee.");
     } finally {
       setSaving(false);
@@ -177,7 +187,14 @@ export function AdminContentScreen() {
               ))}
             </View>
           ) : error ? (
-            <Text className="mt-4 font-semibold text-red-700">{error}</Text>
+            <EmptyState
+              ctaLabel="Réessayer"
+              icon="cloud-offline-outline"
+              illustration={ErrorIllustration}
+              onCta={() => setRetryToken((value) => value + 1)}
+              subtitle="Vérifiez votre connexion puis relancez le chargement."
+              title={error}
+            />
           ) : banners.length === 0 ? (
             <EmptyState
               icon="megaphone-outline"

@@ -1,15 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import EmptyReservationsIllustration from '../../../assets/illustrations/empty-reservations.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { ownerCancelBooking, updateBookingStatus } from '../../services/bookingService';
+import { isOfflineError } from '../../services/networkGuard';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/models';
-import { hapticError, hapticSuccess } from '../../utils/haptics';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { formatFcfa } from '../../utils/currency';
 import { formatDateRange } from '../../utils/dates';
 import { toJsDate } from '../../utils/firestoreDate';
@@ -34,14 +37,40 @@ const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 
 export function ReservationsScreen() {
   const { user } = useAuth();
-  const { bookings, error, loading } = useBookings(user?.id, 'owner');
+  const { bookings, error, loading, retry } = useBookings(user?.id, 'owner');
+  const { isOnline } = useNetworkStatus();
+  const [refreshing, setRefreshing] = useState(false);
+  const wasOfflineRef = useRef(false);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
+
+  useEffect(() => {
+    if (!loading) {
+      setRefreshing(false);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOfflineRef.current = true;
+      return;
+    }
+
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      retry();
+    }
+  }, [isOnline, retry]);
 
   const setStatus = useCallback(async (booking: Booking, status: Extract<BookingStatus, 'confirmed'>) => {
     try {
       await updateBookingStatus(booking.id, status);
-    } catch {
+    } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error('Impossible de mettre a jour la reservation.');
     }
   }, [toast]);
@@ -59,7 +88,12 @@ export function ReservationsScreen() {
             try {
               await ownerCancelBooking(booking.id);
               hapticSuccess(); toast.success('Reservation annulee — remboursement en cours.');
-            } catch {
+            } catch (error) {
+              if (isOfflineError(error)) {
+                hapticWarning(); toast.warning(error.message);
+                return;
+              }
+
               hapticError(); toast.error("Impossible d'annuler la reservation.");
             }
           },
@@ -69,6 +103,18 @@ export function ReservationsScreen() {
   }, [bottomSheet, toast]);
 
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    retry();
+  }, [retry]);
+  const refreshControl = (
+    <RefreshControl
+      colors={['#3B63D4']}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      tintColor="#3B63D4"
+    />
+  );
 
   const renderBooking = useCallback(
     ({ item }: { item: Booking }) => {
@@ -162,6 +208,7 @@ export function ReservationsScreen() {
             }
             data={SKELETON_ITEMS}
             keyExtractor={(item) => `reservation-skeleton-${item}`}
+            refreshControl={refreshControl}
             renderItem={() => <BookingCardSkeleton />}
             showsVerticalScrollIndicator={false}
           />
@@ -179,14 +226,21 @@ export function ReservationsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              icon="calendar-outline"
-              illustration={EmptyReservationsIllustration}
-              subtitle="Les nouvelles demandes apparaitront ici des qu'un client reserve une voiture."
+              ctaLabel={error ? 'Réessayer' : undefined}
+              icon={error ? 'cloud-offline-outline' : 'calendar-outline'}
+              illustration={error ? ErrorIllustration : EmptyReservationsIllustration}
+              onCta={error ? retry : undefined}
+              subtitle={
+                error
+                  ? 'Vérifiez votre connexion puis relancez le chargement.'
+                  : "Les nouvelles demandes apparaitront ici des qu'un client reserve une voiture."
+              }
               title={error ?? 'Aucune reservation recue'}
             />
           }
           data={bookings}
           keyExtractor={bookingKeyExtractor}
+          refreshControl={refreshControl}
           renderItem={renderBooking}
           showsVerticalScrollIndicator={false}
         />

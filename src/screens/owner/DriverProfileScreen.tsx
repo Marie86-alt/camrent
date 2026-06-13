@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
+import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useToast } from '../../components/ui';
 import { createOwnerDriver } from '../../services/ownerDriverService';
+import { isOfflineError } from '../../services/networkGuard';
 import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { uploadDriverProfilePhoto, uploadUserDocument } from '../../services/storageService';
 import { useAuth } from '../../hooks/useAuth';
@@ -43,17 +45,6 @@ function Field({ keyboardType = 'default', label, onChangeText, placeholder, sec
       />
     </View>
   );
-}
-
-function formatDateInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  const day = digits.slice(0, 2);
-  const month = digits.slice(2, 4);
-  const year = digits.slice(4, 8);
-
-  if (digits.length <= 2) return day;
-  if (digits.length <= 4) return `${day}/${month}`;
-  return `${day}/${month}/${year}`;
 }
 
 function DocumentButton({ label, onPress, selected }: { label: string; onPress: () => void; selected: boolean }) {
@@ -96,6 +87,11 @@ export function DriverProfileScreen({ navigation }: Props) {
   const [nationalIdBackUri, setNationalIdBackUri] = useState('');
   const [driverLicenseUri, setDriverLicenseUri] = useState('');
   const [saving, setSaving] = useState(false);
+  const minLicenseExpiryDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   const canSubmit =
     fullName.trim() &&
@@ -188,6 +184,11 @@ export function DriverProfileScreen({ navigation }: Props) {
 
       hapticSuccess(); toast.success('Chauffeur cree — envoye en validation admin.'); navigation.goBack();
     } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error(error instanceof Error ? error.message : "Le chauffeur n'a pas pu etre cree.");
     } finally {
       setSaving(false);
@@ -240,10 +241,10 @@ export function DriverProfileScreen({ navigation }: Props) {
         <View className="gap-4 rounded-2xl bg-white p-4">
           <Text className="text-lg font-black text-slate-950">Permis et profil</Text>
           <Field label="Numéro de permis" onChangeText={setLicenseNumber} placeholder="Ex: CE123456" value={licenseNumber} />
-          <Field
-            keyboardType="numeric"
+          <DatePickerField
             label="Expiration permis"
-            onChangeText={(value) => setLicenseExpiryDate(formatDateInput(value))}
+            minimumDate={minLicenseExpiryDate}
+            onChange={setLicenseExpiryDate}
             placeholder="Ex: 03/06/2030"
             value={licenseExpiryDate}
           />

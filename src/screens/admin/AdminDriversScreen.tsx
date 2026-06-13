@@ -5,12 +5,15 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { TextInput } from 'react-native';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
+import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { DriverCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { createIndependentDriverByAdmin, subscribeToAllUsers, updateUserAdminStatus } from '../../services/adminService';
+import { isOfflineError } from '../../services/networkGuard';
 import { uploadDriverProfilePhoto, uploadUserDocument } from '../../services/storageService';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppUser, CameroonCity } from '../../types/models';
@@ -109,10 +112,18 @@ export function AdminDriversScreen() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
+  const minLicenseExpiryDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToAllUsers(
       (items) => {
         const driverLikeUsers = items.filter((user) => user.role === 'driver');
@@ -128,7 +139,7 @@ export function AdminDriversScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   const visibleDrivers = useMemo(
     () =>
@@ -226,7 +237,12 @@ export function AdminDriversScreen() {
       hapticSuccess(); toast.success('Chauffeur independant cree — en attente de validation KYC.');
       resetCreateForm();
       setShowCreateForm(false);
-    } catch {
+    } catch (error) {
+      if (isOfflineError(error)) {
+        hapticWarning(); toast.warning(error.message);
+        return;
+      }
+
       hapticError(); toast.error("Impossible d'ajouter le chauffeur independant.");
     } finally {
       setCreating(false);
@@ -400,11 +416,11 @@ export function AdminDriversScreen() {
                 placeholderTextColor="#94a3b8"
                 value={newLicenseCategories}
               />
-              <TextInput
-                className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
-                onChangeText={setNewLicenseExpiryDate}
+              <DatePickerField
+                label="Expiration permis"
+                minimumDate={minLicenseExpiryDate}
+                onChange={setNewLicenseExpiryDate}
                 placeholder="Expiration permis, ex: 03/06/2027"
-                placeholderTextColor="#94a3b8"
                 value={newLicenseExpiryDate}
               />
               <TextInput
@@ -478,9 +494,14 @@ export function AdminDriversScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : (
           <View className="gap-5">
             <View>

@@ -11,6 +11,7 @@ import { Screen } from '../../components/Screen';
 import { CarCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import { hapticError, hapticSuccess } from '../../utils/haptics';
 import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
+import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToAllCars, updateCar } from '../../services/carService';
 import type { Car } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -192,10 +193,13 @@ export function AdminVehicleReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [reviewActionLoading, setReviewActionLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToAllCars(
       (items) => {
         setCars(items);
@@ -210,7 +214,7 @@ export function AdminVehicleReviewScreen() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [retryToken]);
 
   const selectedCar = useMemo(
     () => cars.find((car) => car.id === selectedCarId) ?? cars[0],
@@ -301,9 +305,14 @@ export function AdminVehicleReviewScreen() {
             ))}
           </View>
         ) : error ? (
-          <View className="rounded-xl bg-red-50 p-4">
-            <Text className="font-semibold text-red-700">{error}</Text>
-          </View>
+          <EmptyState
+            ctaLabel="Réessayer"
+            icon="cloud-offline-outline"
+            illustration={ErrorIllustration}
+            onCta={() => setRetryToken((value) => value + 1)}
+            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            title={error}
+          />
         ) : cars.length === 0 ? (
           <EmptyState
             icon="shield-checkmark-outline"

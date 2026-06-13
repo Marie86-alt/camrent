@@ -1,3 +1,4 @@
+import { assertOnlineForAction } from './networkGuard';
 import type { AppUser } from '../types/models';
 
 function getDriversEndpoint() {
@@ -14,6 +15,8 @@ export async function listAvailableDrivers(params: {
   endDate?: string;
   startDate?: string;
 }): Promise<AppUser[]> {
+  await assertOnlineForAction();
+
   const endpoint = getDriversEndpoint();
   if (!endpoint) {
     throw new Error('Endpoint listAvailableDrivers manquant.');
