@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
+import { DriverCardSkeleton, EmptyState } from '../../components/ui';
+import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
 import { listAvailableDrivers } from '../../services/driverService';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { AppUser } from '../../types/models';
 import type { ClientStackParamList, DriverListScreenProps, PublicDriverListScreenProps, PublicStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 type Props = {
   navigation: NativeStackNavigationProp<ClientStackParamList & PublicStackParamList>;
@@ -85,21 +89,21 @@ export function DriverListScreen({ navigation, route }: Props) {
         </View>
 
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#3B63D4" size="large" />
-          </View>
+          <FlatList
+            data={SKELETON_ITEMS}
+            keyExtractor={(item) => `driver-skeleton-${item}`}
+            renderItem={() => <DriverCardSkeleton />}
+            showsVerticalScrollIndicator={false}
+          />
         ) : (
           <FlatList
             ListEmptyComponent={
-              <View className="mt-16 items-center gap-3">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                  <Ionicons color="#94a3b8" name="people-outline" size={32} />
-                </View>
-                <Text className="text-base font-bold text-slate-700">Aucun chauffeur disponible</Text>
-                <Text className="text-center text-sm text-slate-400">
-                  Aucun chauffeur certifié n'est disponible à {carCity} pour le moment.
-                </Text>
-              </View>
+              <EmptyState
+                icon="people-outline"
+                illustration={EmptyDriversIllustration}
+                subtitle={`Aucun chauffeur certifie n'est disponible a ${carCity} pour le moment.`}
+                title="Aucun chauffeur disponible"
+              />
             }
             data={drivers}
             keyExtractor={driverKeyExtractor}

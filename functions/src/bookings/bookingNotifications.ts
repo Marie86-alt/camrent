@@ -12,7 +12,7 @@ type BookingNotificationPayload = {
   totalPrice?: number;
 };
 
-async function sendExpoPush(userId: string, title: string, body: string) {
+export async function sendExpoPush(userId: string, title: string, body: string, data?: Record<string, string>) {
   const userSnapshot = await db.collection('users').doc(userId).get();
   const tokens = (userSnapshot.data()?.expoPushTokens ?? []) as string[];
 
@@ -22,7 +22,7 @@ async function sendExpoPush(userId: string, title: string, body: string) {
 
   const messages = tokens.map((token) => ({
     body,
-    data: { type: 'booking_created' },
+    data: data ?? { type: 'booking_created' },
     sound: 'default',
     title,
     to: token,

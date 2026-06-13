@@ -120,8 +120,9 @@ export type Booking = {
   contractSignedAt?: Date;
   contractRef?: string;
   cancelledAt?: Date;
+  cancelledBy?: 'client' | 'owner' | 'admin';
   cancellationFee?: number;
-  cancellationPolicy?: 'free_before_48h' | 'late_10_percent';
+  cancellationPolicy?: 'free_before_48h' | 'late_10_percent' | 'owner_cancelled';
   refundAmount?: number;
   withDriver?: boolean;
   driverId?: string;

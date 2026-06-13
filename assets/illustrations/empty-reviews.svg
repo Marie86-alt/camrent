@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- bulle -->
+  <path d="M66 60 L174 60 C179 60 183 64 183 69 L183 121 C183 126 179 130 174 130
+           L104 130 L82 150 L82 130 L66 130 C61 130 57 126 57 121 L57 69
+           C57 64 61 60 66 60 Z" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- etoile accent -->
+  <path d="M120 78 L127 92 L143 94 L131 105 L134 121 L120 113 L106 121 L109 105
+           L97 94 L113 92 Z" fill="#F59E0B" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="86" cy="112" r="2.5" fill="#CBD5E1"/>
+  <circle cx="120" cy="112" r="2.5" fill="#CBD5E1"/>
+  <circle cx="154" cy="112" r="2.5" fill="#CBD5E1"/>
+
+</svg>

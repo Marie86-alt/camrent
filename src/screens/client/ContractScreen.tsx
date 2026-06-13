@@ -1,20 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { BackButton } from '../../components/BackButton';
-
 import { SignaturePad } from '../../components/SignaturePad';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
 import { buildContractText, signContract } from '../../services/contractService';
 import { hasFirebaseConfig } from '../../services/firebase';
 import type { ContractScreenProps } from '../../types/navigation';
+import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 
 export function ContractScreen({ navigation, route }: ContractScreenProps) {
   const { booking } = route.params;
   const { user } = useAuth();
+  const toast = useToast();
   const [signatureBase64, setSignatureBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
 
   const handleSign = async () => {
     if (!signatureBase64) {
-      Alert.alert('Signature requise', 'Veuillez apposer votre signature avant de valider.');
+      hapticWarning(); toast.warning('Veuillez apposer votre signature avant de valider.');
       return;
     }
 
@@ -32,32 +34,27 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
       setLoading(true);
 
       if (!hasFirebaseConfig) {
-        Alert.alert(
-          'Contrat signé (démo)',
-          'En mode démo, la signature n\'est pas enregistrée. Configurez Firebase pour activer les contrats.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }],
-        );
+        toast.info('Mode démo — signature non enregistrée. Configurez Firebase pour activer les contrats.');
+        navigation.goBack();
         return;
       }
 
       await signContract(booking, signatureBase64);
 
-      Alert.alert(
-        'Contrat signé',
-        `Votre signature électronique a été enregistrée.\nRéférence : ${contractRef}`,
-        [{ text: 'Terminer', onPress: () => navigation.goBack() }],
-      );
+      hapticSuccess();
+      toast.success(`Contrat signé · Réf : ${contractRef}`);
+      navigation.goBack();
     } catch (error) {
       const message =
         error instanceof Error && error.message
           ? error.message
-          : 'Impossible d\'enregistrer la signature. Réessayez.';
+          : "Impossible d'enregistrer la signature. Réessayez.";
 
       console.warn('Contract signature failed', error);
-      Alert.alert(
-        'Erreur',
+      hapticError();
+      toast.error(
         message.toLowerCase().includes('permission')
-          ? 'Autorisation Firebase manquante. Déployez les règles Firestore et Storage, puis réessayez.'
+          ? 'Autorisation Firebase manquante. Déployez les règles Firestore et Storage.'
           : message,
       );
     } finally {
@@ -144,9 +141,7 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
                   <SignaturePad
                     onSignature={(base64) => setSignatureBase64(base64)}
                     onClear={() => setSignatureBase64(null)}
-                    onEmpty={() =>
-                      Alert.alert('Signature vide', 'Tracez votre signature avant de valider.')
-                    }
+                    onEmpty={() => { hapticWarning(); toast.warning('Tracez votre signature avant de valider.'); }}
                   />
                 </View>
               )}

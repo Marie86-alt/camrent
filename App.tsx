@@ -1,19 +1,38 @@
 import './global.css';
 
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
+import { Sora_700Bold } from '@expo-google-fonts/sora';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { BrandLogo } from './src/components/BrandLogo';
+import { BottomSheetProvider } from './src/components/ui/BottomSheet';
+import { ToastProvider } from './src/components/ui/Toast';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { auth, db } from './src/services/firebase';
 import { useAuthStore } from './src/store/authStore';
 import type { AppUser } from './src/types/models';
 
+// Design system tokens (used in StyleSheet where NativeWind isn't available)
+const DS = {
+  primary600: '#3B63D4',
+  slate50:    '#F8FAFC',
+  slate500:   '#64748B',
+} as const;
+
 const PROFILE_LOAD_TIMEOUT_MS = 8000;
-const AUTH_BOOT_TIMEOUT_MS = 10000;
+const AUTH_BOOT_TIMEOUT_MS    = 10000;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
   return Promise.race([
@@ -27,6 +46,15 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 export default function App() {
   const { initializing, setInitializing, setUser } = useAuthStore();
 
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Sora_700Bold,
+  });
+
   useEffect(() => {
     const bootTimeout = setTimeout(() => {
       setInitializing(false);
@@ -39,7 +67,10 @@ export default function App() {
           return;
         }
 
-        const snapshot = await withTimeout(getDoc(doc(db, 'users', firebaseUser.uid)), PROFILE_LOAD_TIMEOUT_MS);
+        const snapshot = await withTimeout(
+          getDoc(doc(db, 'users', firebaseUser.uid)),
+          PROFILE_LOAD_TIMEOUT_MS,
+        );
         const userProfile = snapshot.exists()
           ? ({ id: snapshot.id, ...snapshot.data() } as AppUser)
           : null;
@@ -60,12 +91,17 @@ export default function App() {
     };
   }, [setInitializing, setUser]);
 
-  if (initializing) {
+  if (initializing || !fontsLoaded) {
     return (
       <SafeAreaProvider>
         <View style={styles.loadingScreen}>
-          <ActivityIndicator color="#3B63D4" size="large" />
-          <Text style={styles.loadingText}>Chargement d'Autofix Pro...</Text>
+          <BrandLogo variant="full" />
+          <ActivityIndicator
+            color={DS.primary600}
+            size="large"
+            style={styles.spinner}
+          />
+          <Text style={styles.loadingText}>Chargement en cours…</Text>
         </View>
       </SafeAreaProvider>
     );
@@ -74,7 +110,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <AppNavigator />
+      <ToastProvider>
+        <BottomSheetProvider>
+          <AppNavigator />
+        </BottomSheetProvider>
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }
@@ -82,14 +122,17 @@ export default function App() {
 const styles = StyleSheet.create({
   loadingScreen: {
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: DS.slate50,
     flex: 1,
     justifyContent: 'center',
   },
+  spinner: {
+    marginTop: 32,
+  },
   loadingText: {
-    color: '#64748b',
+    color: DS.slate500,
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
-    fontWeight: '600',
     marginTop: 12,
   },
 });

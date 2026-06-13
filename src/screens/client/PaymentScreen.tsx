@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Linking, Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 
 import { PAYMENT_PROVIDER_BY_METHOD } from '../../constants/cameroon';
 import { BackButton } from '../../components/BackButton';
@@ -12,15 +12,19 @@ import type { PaymentMethod } from '../../types/models';
 import type { PaymentScreenProps } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 import { isValidCameroonPhone } from '../../utils/validation';
+import { useToast } from '../../components/ui';
+import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 
 export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
   const { amount, bookingId, paymentMethod } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const submit = async (method: PaymentMethod, phone?: string) => {
     if (method !== 'Carte bancaire' && !isValidCameroonPhone(phone ?? '')) {
-      Alert.alert('Numero invalide', 'Utilisez un numero camerounais au format +237XXXXXXXXX.');
+      hapticWarning();
+      toast.warning('Numéro invalide — utilisez le format +237XXXXXXXXX.');
       return;
     }
 
@@ -39,11 +43,12 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
         await Linking.openURL(payment.checkoutUrl);
       }
 
-      Alert.alert('Paiement initie', `Reference : ${payment.reference}`, [
-        { text: 'Terminer', onPress: () => navigation.popToTop() },
-      ]);
+      hapticSuccess();
+      toast.success(`Paiement initié · Réf : ${payment.reference}`);
+      navigation.popToTop();
     } catch (error) {
-      Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de lancer le paiement.');
+      hapticError();
+      toast.error(error instanceof Error ? error.message : 'Impossible de lancer le paiement.');
     } finally {
       setLoading(false);
     }

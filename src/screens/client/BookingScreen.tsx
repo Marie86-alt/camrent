@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
 import { PAYMENT_METHODS } from '../../constants/cameroon';
@@ -13,6 +13,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { PaymentMethod } from '../../types/models';
 import type { BookingScreenProps } from '../../types/navigation';
+import { useToast } from '../../components/ui';
+import { hapticWarning, hapticError } from '../../utils/haptics';
 import { formatFcfa } from '../../utils/currency';
 import { formatDate, formatInputDate, getRentalDays, parseHumanDate } from '../../utils/dates';
 
@@ -89,6 +91,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
   const { car } = route.params;
   const user = useAuthStore((state) => state.user);
   const { selectedDriver, clearDriver } = useBookingDraftStore();
+  const toast = useToast();
   const [withDriver, setWithDriver] = useState(false);
 
   const today = useMemo(() => {
@@ -196,12 +199,12 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       !normalized.expiryDate ||
       !normalized.categories
     ) {
-      Alert.alert('Permis requis', 'Renseignez toutes les informations du permis de conduire.');
+      hapticWarning(); toast.warning('Renseignez toutes les informations du permis de conduire.');
       return null;
     }
 
     if (normalized.licenseNumber.length < 5) {
-      Alert.alert('Permis invalide', 'Le numero du permis doit contenir au moins 5 caracteres.');
+      hapticWarning(); toast.warning('Le numéro du permis doit contenir au moins 5 caractères.');
       return null;
     }
 
@@ -209,7 +212,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     const expiryDate = parseHumanDate(normalized.expiryDate);
 
     if (!issueDate || !expiryDate) {
-      Alert.alert('Dates invalides', 'Utilisez un format comme 03/06/2026 ou 3 juin 2026.');
+      hapticWarning(); toast.warning('Dates invalides — utilisez le format 03/06/2026.');
       return null;
     }
 
@@ -217,7 +220,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     today.setHours(0, 0, 0, 0);
 
     if (expiryDate < today) {
-      Alert.alert('Permis expire', 'La reservation est refusee car le permis de conduire n est plus valide.');
+      hapticWarning(); toast.warning('Permis expiré — réservation refusée.');
       return null;
     }
 
@@ -230,7 +233,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
   const reserve = async () => {
     if (!user) {
-      Alert.alert(TEXT.sessionExpired, 'Reconnectez-vous pour reserver.');
+      hapticWarning(); toast.warning('Session expirée — reconnectez-vous pour réserver.');
       return;
     }
 
@@ -272,7 +275,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         paymentMethod,
       });
     } catch (error) {
-      Alert.alert('Erreur', error instanceof Error ? error.message : TEXT.bookingError);
+      hapticError(); toast.error(error instanceof Error ? error.message : TEXT.bookingError);
     } finally {
       setLoading(false);
     }

@@ -1,21 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { useCallback, useState } from 'react';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback, useState } from 'react';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
 import { BookingCard } from '../../components/BookingCard';
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
+import { BookingCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
+import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
 import { cancelBooking } from '../../services/bookingService';
-import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 import type { Booking } from '../../types/models';
+import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
 import { toJsDate } from '../../utils/firestoreDate';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
 
 type MyBookingsNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<ClientTabParamList, 'MyBookings'>,
@@ -24,11 +26,15 @@ type MyBookingsNavProp = CompositeNavigationProp<
 
 type Filter = 'active' | 'history';
 
+const SKELETON_ITEMS = [0, 1, 2];
+
 export function MyBookingsScreen() {
   const navigation = useNavigation<MyBookingsNavProp>();
   const { user } = useAuth();
   const { bookings, error, loading } = useBookings(user?.id, 'client');
   const [filter, setFilter] = useState<Filter>('active');
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   const initials = user?.fullName
     ?.split(' ')
@@ -56,53 +62,94 @@ export function MyBookingsScreen() {
 
   const handleCancelBooking = useCallback((booking: Booking) => {
     const preview = getCancellationPreview(booking);
-    const message = preview.isFree
-      ? "Vous annulez plus de 48h avant le depart : aucun frais ne sera applique."
-      : `Vous annulez a moins de 48h du depart : des frais de 10% seront appliques (${formatFcfa(preview.cancellationFee)}). Montant remboursable estime : ${formatFcfa(preview.refundAmount)}.`;
+    const subtitle = preview.isFree
+      ? 'Annulation plus de 48h avant le depart : aucun frais.'
+      : `Moins de 48h avant le depart : frais de 10% (${formatFcfa(preview.cancellationFee)}). Remboursement estime : ${formatFcfa(preview.refundAmount)}.`;
 
-    Alert.alert('Annuler cette reservation ?', message, [
-      { text: 'Garder', style: 'cancel' },
-      {
-        text: 'Annuler la reservation',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await cancelBooking(booking.id);
-            Alert.alert('Reservation annulee', preview.isFree ? 'Annulation sans frais.' : 'Annulation avec frais de 10%.');
-          } catch (error) {
-            Alert.alert('Erreur', error instanceof Error ? error.message : 'Annulation impossible.');
-          }
+    bottomSheet.show({
+      title: 'Annuler cette reservation ?',
+      subtitle,
+      actions: [
+        {
+          label: 'Oui, annuler',
+          variant: 'danger',
+          icon: 'close-circle-outline',
+          onPress: async () => {
+            try {
+              await cancelBooking(booking.id);
+              hapticSuccess();
+              toast.success(preview.isFree ? 'Reservation annulee sans frais.' : 'Reservation annulee : frais de 10% appliques.');
+            } catch (error) {
+              hapticError();
+              toast.error(error instanceof Error ? error.message : 'Annulation impossible.');
+            }
+          },
         },
-      },
-    ]);
-  }, [getCancellationPreview]);
+      ],
+    });
+  }, [bottomSheet, getCancellationPreview, toast]);
+
+  const activeBookings = bookings.filter(
+    (booking) => booking.status === 'pending' || booking.status === 'confirmed',
+  );
+  const historyBookings = bookings.filter(
+    (booking) => booking.status === 'completed' || booking.status === 'cancelled',
+  );
+  const displayed = filter === 'active' ? activeBookings : historyBookings;
 
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
+  const skeletonKeyExtractor = useCallback((item: number) => String(item), []);
+  const renderSkeleton = useCallback(() => <BookingCardSkeleton />, []);
   const renderBooking = useCallback(
     ({ item }: { item: Booking }) => (
       <BookingCard
         booking={item}
         onCancel={() => handleCancelBooking(item)}
-        onSignContract={() => handleSignContract(item)}
         onReview={() => navigation.navigate('Review', { booking: item })}
+        onSignContract={() => handleSignContract(item)}
       />
     ),
     [handleCancelBooking, handleSignContract, navigation],
   );
 
-  const activeBookings = bookings.filter(
-    (b) => b.status === 'pending' || b.status === 'confirmed',
+  const listHeader = (
+    <View className="mb-4 gap-4">
+      <View className="flex-row rounded-xl bg-slate-100 p-1">
+        <TouchableOpacity
+          activeOpacity={0.8}
+          className={`flex-1 items-center rounded-lg py-2 ${filter === 'active' ? 'bg-white' : ''}`}
+          onPress={() => setFilter('active')}
+          style={
+            filter === 'active'
+              ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
+              : undefined
+          }
+        >
+          <Text className={`text-sm font-bold ${filter === 'active' ? 'text-slate-950' : 'text-slate-400'}`}>
+            En cours{activeBookings.length > 0 ? ` (${activeBookings.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          className={`flex-1 items-center rounded-lg py-2 ${filter === 'history' ? 'bg-white' : ''}`}
+          onPress={() => setFilter('history')}
+          style={
+            filter === 'history'
+              ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
+              : undefined
+          }
+        >
+          <Text className={`text-sm font-bold ${filter === 'history' ? 'text-slate-950' : 'text-slate-400'}`}>
+            Historique{historyBookings.length > 0 ? ` (${historyBookings.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-  const historyBookings = bookings.filter(
-    (b) => b.status === 'completed' || b.status === 'cancelled',
-  );
-
-  const displayed = filter === 'active' ? activeBookings : historyBookings;
 
   return (
     <Screen scroll={false} topSafeArea>
       <View className="flex-1 px-5 pt-4">
-        {/* ─── Header ─── */}
         <View className="mb-4 gap-3">
           <View className="flex-row items-center justify-between">
             <BrandLogo variant="xs" />
@@ -110,75 +157,33 @@ export function MyBookingsScreen() {
               <Text className="text-sm font-black text-white">{initials}</Text>
             </View>
           </View>
-          <Text className="text-2xl font-black text-slate-950">Mes réservations</Text>
+          <Text className="text-2xl font-black text-slate-950">Mes reservations</Text>
         </View>
 
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#3B63D4" size="large" />
-          </View>
+          <FlatList
+            data={SKELETON_ITEMS}
+            keyExtractor={skeletonKeyExtractor}
+            renderItem={renderSkeleton}
+            showsVerticalScrollIndicator={false}
+          />
         ) : (
           <FlatList
-            ListHeaderComponent={
-              <View className="mb-4 gap-4">
-                {/* ─── Filter tabs ─── */}
-                <View className="flex-row rounded-xl bg-slate-100 p-1">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    className={`flex-1 items-center rounded-lg py-2 ${filter === 'active' ? 'bg-white' : ''}`}
-                    onPress={() => setFilter('active')}
-                    style={
-                      filter === 'active'
-                        ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-sm font-bold ${filter === 'active' ? 'text-slate-950' : 'text-slate-400'}`}
-                    >
-                      En cours
-                      {activeBookings.length > 0 ? ` (${activeBookings.length})` : ''}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    className={`flex-1 items-center rounded-lg py-2 ${filter === 'history' ? 'bg-white' : ''}`}
-                    onPress={() => setFilter('history')}
-                    style={
-                      filter === 'history'
-                        ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-sm font-bold ${filter === 'history' ? 'text-slate-950' : 'text-slate-400'}`}
-                    >
-                      Historique
-                      {historyBookings.length > 0 ? ` (${historyBookings.length})` : ''}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            }
             ListEmptyComponent={
-              <View className="mt-16 items-center gap-3">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                  <Ionicons
-                    color="#94a3b8"
-                    name={filter === 'active' ? 'calendar-outline' : 'time-outline'}
-                    size={32}
-                  />
-                </View>
-                <Text className="text-base font-bold text-slate-700">
-                  {error ?? (filter === 'active' ? 'Aucune réservation en cours' : 'Aucun historique')}
-                </Text>
-                <Text className="text-center text-sm text-slate-400">
-                  {filter === 'active'
-                    ? 'Vos réservations actives apparaîtront ici.'
-                    : 'Vos réservations terminées ou annulées apparaîtront ici.'}
-                </Text>
-              </View>
+              <EmptyState
+                ctaLabel={filter === 'active' ? 'Explorer les voitures' : undefined}
+                icon={filter === 'active' ? 'calendar-outline' : 'time-outline'}
+                illustration={EmptyBookingsIllustration}
+                onCta={filter === 'active' ? () => navigation.navigate('Home') : undefined}
+                subtitle={
+                  filter === 'active'
+                    ? 'Vos reservations actives apparaitront ici.'
+                    : 'Vos reservations terminees ou annulees apparaitront ici.'
+                }
+                title={error ?? (filter === 'active' ? 'Aucune reservation en cours' : 'Aucun historique')}
+              />
             }
+            ListHeaderComponent={listHeader}
             data={displayed}
             keyExtractor={bookingKeyExtractor}
             renderItem={renderBooking}

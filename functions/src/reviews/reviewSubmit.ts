@@ -3,9 +3,7 @@ import type { Request, Response } from 'express';
 
 import { db } from '../firebase';
 import { getAuthenticatedUid, sendJson } from '../http';
-
-const MIN_REVIEWS_FOR_AUTOSUSPEND = 3;
-const AUTO_SUSPEND_THRESHOLD = 2;
+import { computeDriverRatingUpdate } from './reviewLogic';
 
 type SubmitReviewRequest = {
   bookingId?: string;
@@ -39,19 +37,8 @@ async function recalculateDriverRating(driverId: string) {
     .get();
 
   const ratings = snap.docs.map((doc) => Number(doc.data().rating)).filter((rating) => Number.isFinite(rating));
-  if (ratings.length === 0) return;
-
-  const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-  const rounded = Math.round(average * 10) / 10;
-  const update: Record<string, unknown> = {
-    missionsCount: ratings.length,
-    ratingAverage: rounded,
-  };
-
-  if (ratings.length >= MIN_REVIEWS_FOR_AUTOSUSPEND && average <= AUTO_SUSPEND_THRESHOLD) {
-    update.status = 'suspended';
-    update.adminLastActionReason = `Suspension automatique : note moyenne ${rounded}/5 sur ${ratings.length} avis`;
-  }
+  const update = computeDriverRatingUpdate(ratings);
+  if (!update) return;
 
   await db.collection('users').doc(driverId).update(update);
 }

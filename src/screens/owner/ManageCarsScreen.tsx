@@ -1,18 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+
+const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
+import { CarCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
+import { hapticError } from '../../utils/haptics';
+import EmptyReservationsIllustration from '../../../assets/illustrations/empty-reservations.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useCars } from '../../hooks/useCars';
 import { deleteCar, setCarAvailability } from '../../services/carService';
 import type { CameroonCity, Car } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<OwnerTabParamList, 'ManageCars'>,
@@ -105,9 +113,12 @@ function OwnerCarListItem({
       }}
     >
       <Image
-        className="h-44 w-full bg-slate-200"
-        resizeMode="cover"
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        placeholder={{ blurhash: CAR_BLURHASH }}
         source={{ uri: car.imageUrl }}
+        style={{ height: 176, width: '100%' }}
+        transition={200}
       />
 
       <View
@@ -186,8 +197,10 @@ function OwnerCarListItem({
 
 export function ManageCarsScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { cars, error } = useCars(user?.id);
+  const { cars, error, loading } = useCars(user?.id);
   const [selectedCity, setSelectedCity] = useState<CameroonCity | null>(null);
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   const displayedCars = useMemo(
     () => (selectedCity ? cars.filter((car) => car.city === selectedCity) : cars),
@@ -196,40 +209,37 @@ export function ManageCarsScreen({ navigation }: Props) {
 
   const toggleAvailability = useCallback(async (car: Car) => {
     if (!car.isAvailable && car.adminStatus !== 'approved') {
-      Alert.alert(
-        'Validation requise',
-        "Cette voiture doit d'abord etre validee par l'admin avant d'etre publiee.",
-      );
+      toast.info("Cette voiture doit d'abord etre validee par l'admin avant d'etre publiee.");
       return;
     }
 
     try {
       await setCarAvailability(car.id, !car.isAvailable);
     } catch {
-      Alert.alert('Erreur', 'Impossible de modifier la disponibilité.');
+      hapticError(); toast.error('Impossible de modifier la disponibilite.');
     }
-  }, []);
+  }, [toast]);
 
   const confirmDeleteCar = useCallback((car: Car) => {
-    Alert.alert(
-      'Supprimer cette voiture',
-      `${car.brand} ${car.model} sera retirée de votre flotte. Cette action est définitive.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
+    bottomSheet.show({
+      title: 'Supprimer cette voiture ?',
+      subtitle: `${car.brand} ${car.model} sera retiree de votre flotte. Cette action est definitive.`,
+      actions: [
         {
-          text: 'Supprimer',
-          style: 'destructive',
+          label: 'Supprimer la voiture',
+          variant: 'danger',
+          icon: 'trash-outline',
           onPress: async () => {
             try {
               await deleteCar(car.id);
             } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer cette voiture.');
+              hapticError(); toast.error('Impossible de supprimer cette voiture.');
             }
           },
         },
       ],
-    );
-  }, []);
+    });
+  }, [bottomSheet, toast]);
   const carKeyExtractor = useCallback((item: Car) => item.id, []);
   const editCar = useCallback((car: Car) => {
     navigation.navigate('EditCar', { car });
@@ -245,6 +255,32 @@ export function ManageCarsScreen({ navigation }: Props) {
     ),
     [confirmDeleteCar, editCar, toggleAvailability],
   );
+
+  if (loading) {
+    return (
+      <Screen scroll={false}>
+        <View className="flex-1 px-5 pt-4">
+          <FlatList
+            ListHeaderComponent={
+              <View className="mb-4 gap-4">
+                <Text className="text-2xl font-black text-slate-950">Mes voitures</Text>
+                <CitySearchInput
+                  label="Filtrer par ville"
+                  onSelectCity={(city) => setSelectedCity(city || null)}
+                  placeholder="Choisir une ville"
+                  value={selectedCity}
+                />
+              </View>
+            }
+            data={SKELETON_ITEMS}
+            keyExtractor={(item) => `car-skeleton-${item}`}
+            renderItem={() => <CarCardSkeleton />}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll={false}>
@@ -267,17 +303,14 @@ export function ManageCarsScreen({ navigation }: Props) {
             </View>
           }
           ListEmptyComponent={
-            <View className="mt-20 items-center gap-3">
-              <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                <Ionicons color="#94a3b8" name="car-outline" size={32} />
-              </View>
-              <Text className="text-base font-bold text-slate-700">
-                {error ?? 'Aucune voiture publiée'}
-              </Text>
-              <Text className="text-center text-sm text-slate-400">
-                Ajoutez votre première voiture depuis le tableau de bord.
-              </Text>
-            </View>
+            <EmptyState
+              ctaLabel="Ajouter une voiture"
+              icon="car-outline"
+              illustration={EmptyReservationsIllustration}
+              onCta={() => navigation.navigate('AddCar')}
+              subtitle="Ajoutez votre premiere voiture depuis le tableau de bord."
+              title={error ?? 'Aucune voiture publiee'}
+            />
           }
           data={displayedCars}
           keyExtractor={carKeyExtractor}

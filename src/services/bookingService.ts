@@ -35,6 +35,14 @@ function getCancelBookingEndpoint() {
   return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/cancelBooking` : undefined;
 }
 
+function getOwnerCancelBookingEndpoint() {
+  const explicit = process.env.EXPO_PUBLIC_OWNER_CANCEL_BOOKING_API_URL;
+  if (explicit) return explicit;
+
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+  return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/ownerCancelBooking` : undefined;
+}
+
 function cleanBookingError(body: string) {
   try {
     const parsed = JSON.parse(body) as { error?: unknown };
@@ -107,6 +115,25 @@ export async function cancelBooking(bookingId: string) {
   }>;
 }
 
+export async function ownerCancelBooking(bookingId: string) {
+  const endpoint = getOwnerCancelBookingEndpoint();
+  if (!endpoint) {
+    throw new Error('Endpoint ownerCancelBooking manquant.');
+  }
+
+  const response = await authFetch(endpoint, { bookingId });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(cleanBookingError(message) || 'Annulation proprietaire impossible.');
+  }
+
+  return response.json() as Promise<{
+    refundAmount: number;
+    refundStatus: 'none' | 'requested';
+  }>;
+}
+
 export function subscribeToDriverBookings(driverId: string, onData: (bookings: Booking[]) => void, onError: () => void) {
   const q = query(collection(db, 'bookings'), where('driverId', '==', driverId));
   return onSnapshot(
@@ -136,6 +163,6 @@ export function subscribeToOwnerBookings(ownerId: string, onData: (bookings: Boo
   );
 }
 
-export function updateBookingStatus(bookingId: string, status: Extract<BookingStatus, 'cancelled' | 'confirmed'>) {
+export function updateBookingStatus(bookingId: string, status: Extract<BookingStatus, 'confirmed' | 'completed'>) {
   return updateDoc(doc(db, 'bookings', bookingId), { status });
 }

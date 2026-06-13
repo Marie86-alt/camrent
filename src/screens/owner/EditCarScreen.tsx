@@ -2,11 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
 import { CAR_PHOTO_SLOTS } from '../../constants/cameroon';
 import { updateCar } from '../../services/carService';
 import { uploadCarDocument, uploadCarImage } from '../../services/storageService';
@@ -14,12 +16,9 @@ import type { OwnerStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<OwnerStackParamList, 'EditCar'>;
 
-async function pickPhoto(): Promise<string | null> {
+async function pickPhoto(): Promise<{ uri: string | null; permissionDenied: boolean }> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
-    return null;
-  }
+  if (!permission.granted) return { uri: null, permissionDenied: true };
 
   const result = await ImagePicker.launchImageLibraryAsync({
     allowsEditing: true,
@@ -28,11 +27,12 @@ async function pickPhoto(): Promise<string | null> {
     quality: 0.8,
   });
 
-  return result.canceled ? null : result.assets[0].uri;
+  return { uri: result.canceled ? null : result.assets[0].uri, permissionDenied: false };
 }
 
 export function EditCarScreen({ navigation, route }: Props) {
   const { car } = route.params;
+  const toast = useToast();
   const [brand, setBrand] = useState(car.brand);
   const [model, setModel] = useState(car.model);
   const [city, setCity] = useState(car.city);
@@ -57,7 +57,9 @@ export function EditCarScreen({ navigation, route }: Props) {
     });
 
   const handlePickPhoto = async (index: number) => {
-    const uri = await pickPhoto();
+    const result = await pickPhoto();
+    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le vehicule."); return; }
+    const { uri } = result;
     if (!uri) return;
 
     setNewPhotoUris((current) => {
@@ -70,7 +72,7 @@ export function EditCarScreen({ navigation, route }: Props) {
   const pickRegistrationDocument = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
+      toast.info("Autorisez l'acces aux photos pour ajouter la carte grise.");
       return;
     }
 
@@ -126,11 +128,9 @@ export function EditCarScreen({ navigation, route }: Props) {
         },
       });
 
-      Alert.alert('Voiture modifiée', 'Les informations sont envoyées pour vérification admin.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      hapticSuccess(); toast.success('Voiture modifiee — en attente de verification admin.'); navigation.goBack();
     } catch {
-      Alert.alert('Erreur', 'Impossible de modifier la voiture.');
+      hapticError(); toast.error('Impossible de modifier la voiture.');
     } finally {
       setLoading(false);
     }

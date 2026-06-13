@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { TextInput } from 'react-native';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { DriverCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
+import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
 import { createIndependentDriverByAdmin, subscribeToAllUsers, updateUserAdminStatus } from '../../services/adminService';
 import { uploadDriverProfilePhoto, uploadUserDocument } from '../../services/storageService';
 import { useAuth } from '../../hooks/useAuth';
@@ -15,12 +18,11 @@ import type { AppUser, CameroonCity } from '../../types/models';
 type DriverFilter = 'all' | 'independent' | 'owner';
 type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense';
 
-async function pickImage(): Promise<string | null> {
+const SKELETON_ITEMS = [0, 1, 2];
+
+async function pickImage(): Promise<{ uri: string | null; permissionDenied: boolean }> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert('Permission requise', "Autorisez l'acc\u00e8s aux photos.");
-    return null;
-  }
+  if (!permission.granted) return { uri: null, permissionDenied: true };
 
   const result = await ImagePicker.launchImageLibraryAsync({
     allowsEditing: true,
@@ -28,7 +30,7 @@ async function pickImage(): Promise<string | null> {
     quality: 0.8,
   });
 
-  return result.canceled ? null : result.assets[0].uri;
+  return { uri: result.canceled ? null : result.assets[0].uri, permissionDenied: false };
 }
 
 function statusLabel(status?: AppUser['status']) {
@@ -107,6 +109,8 @@ export function AdminDriversScreen() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   useEffect(() => {
     const unsubscribe = subscribeToAllUsers(
@@ -145,7 +149,9 @@ export function AdminDriversScreen() {
   const suspendedCount = drivers.filter((driver) => driver.status === 'suspended' || driver.status === 'banned').length;
 
   async function selectNewDocument(key: DriverDocumentKey) {
-    const uri = await pickImage();
+    const result = await pickImage();
+    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le document."); return; }
+    const { uri } = result;
     if (!uri) return;
     setNewDocuments((current) => ({ ...current, [key]: uri }));
   }
@@ -186,7 +192,7 @@ export function AdminDriversScreen() {
       !newPhone.trim() ||
       !newPricePerDay.trim()
     ) {
-      Alert.alert('Formulaire incomplet', 'Renseignez toutes les informations et ajoutez les documents.');
+      hapticWarning(); toast.warning('Formulaire incomplet — renseignez toutes les informations et ajoutez les documents.');
       return;
     }
 
@@ -217,11 +223,11 @@ export function AdminDriversScreen() {
         profilePhotoUrl,
       });
 
-      Alert.alert('Chauffeur ajoute', 'Le chauffeur independant est cree et attend validation KYC.');
+      hapticSuccess(); toast.success('Chauffeur independant cree — en attente de validation KYC.');
       resetCreateForm();
       setShowCreateForm(false);
     } catch {
-      Alert.alert('Erreur', "Impossible d'ajouter le chauffeur independant.");
+      hapticError(); toast.error("Impossible d'ajouter le chauffeur independant.");
     } finally {
       setCreating(false);
     }
@@ -237,19 +243,16 @@ export function AdminDriversScreen() {
       !selectedDriver.documents?.driverLicenseUrl;
 
     if (payload.kycStatus === 'approved' && missingDriverDocuments) {
-      Alert.alert(
-        'Documents obligatoires',
-        "Ajoutez la photo, la CNI recto/verso et le permis du chauffeur avant de valider le KYC.",
-      );
+      toast.warning("Ajoutez la photo, la CNI recto/verso et le permis du chauffeur avant de valider le KYC.");
       return;
     }
 
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedDriver.id, payload);
-      Alert.alert('Action enregistrée', successMessage);
+      hapticSuccess(); toast.success(successMessage);
     } catch {
-      Alert.alert('Erreur', "L'action admin n'a pas pu être enregistrée.");
+      hapticError(); toast.error("L'action admin n'a pas pu etre enregistree.");
     } finally {
       setSaving(false);
     }
@@ -261,24 +264,25 @@ export function AdminDriversScreen() {
     payload: Partial<AppUser>,
     successMessage: string,
   ) {
-    Alert.alert(title, message, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Confirmer',
-        style: 'destructive',
-        onPress: () => updateSelected(payload, successMessage),
-      },
-    ]);
+    bottomSheet.show({
+      title,
+      subtitle: message,
+      actions: [
+        {
+          label: 'Confirmer',
+          variant: 'danger',
+          icon: 'checkmark-outline',
+          onPress: () => updateSelected(payload, successMessage),
+        },
+      ],
+    });
   }
 
   function confirmKycApproval() {
     if (!selectedDriver) return;
 
     if (!selectedDriver.driverProfile?.profilePhotoUrl) {
-      Alert.alert(
-        'Photo obligatoire',
-        "Ajoutez une photo de profil chauffeur avant de valider le KYC.",
-      );
+      toast.info("Ajoutez une photo de profil chauffeur avant de valider le KYC.");
       return;
     }
 
@@ -468,8 +472,10 @@ export function AdminDriversScreen() {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View>
+            {SKELETON_ITEMS.map((item) => (
+              <DriverCardSkeleton key={`admin-driver-skeleton-${item}`} />
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
@@ -479,14 +485,23 @@ export function AdminDriversScreen() {
           <View className="gap-5">
             <View>
               <Text className="mb-3 text-lg font-black text-slate-950">Liste des chauffeurs</Text>
-              {visibleDrivers.map((driver) => (
-                <DriverRow
-                  driver={driver}
-                  key={driver.id}
-                  onPress={() => setSelectedId(driver.id)}
-                  selected={selectedDriver?.id === driver.id}
+              {visibleDrivers.length === 0 ? (
+                <EmptyState
+                  icon="people-outline"
+                  illustration={EmptyDriversIllustration}
+                  subtitle="Changez le filtre ou ajoutez un chauffeur independant depuis le formulaire."
+                  title="Aucun chauffeur"
                 />
-              ))}
+              ) : (
+                visibleDrivers.map((driver) => (
+                  <DriverRow
+                    driver={driver}
+                    key={driver.id}
+                    onPress={() => setSelectedId(driver.id)}
+                    selected={selectedDriver?.id === driver.id}
+                  />
+                ))
+              )}
             </View>
 
             {selectedDriver ? (
@@ -531,14 +546,7 @@ export function AdminDriversScreen() {
                 <View className="gap-3 pt-2">
                   <PrimaryButton
                     loading={saving}
-                    onPress={() =>
-                      confirmAction(
-                        'Valider le KYC',
-                        `Confirmez-vous la validation du KYC de ${selectedDriver.fullName} ?`,
-                        { kycStatus: 'approved', status: 'active', adminLastActionReason: 'KYC chauffeur validé par admin' },
-                        'Le KYC du chauffeur est validé.',
-                      )
-                    }
+                    onPress={confirmKycApproval}
                   >
                     Valider KYC
                   </PrimaryButton>

@@ -6,6 +6,7 @@
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "npm run build && firebase deploy --only functions",
+    "test": "jest",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -17,7 +18,10 @@
     "uuid": "^11.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
     "typescript": "^5.9.2"
   }
 }

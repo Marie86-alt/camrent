@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+
+const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
 import { BackButton } from '../../components/BackButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -134,9 +137,12 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
         {/* ─── Image ─── */}
         <View className="overflow-hidden rounded-2xl">
           <Image
-            className="h-64 w-full bg-slate-200"
-            resizeMode="cover"
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            placeholder={{ blurhash: CAR_BLURHASH }}
             source={{ uri: car.imageUrl }}
+            style={{ height: 256, width: '100%' }}
+            transition={200}
           />
           {isVerified && (
             <View
@@ -164,9 +170,12 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
               {photos.map((photo, index) => (
                 <Image
                   key={`${photo}-${index}`}
-                  className="h-24 w-32 rounded-2xl bg-slate-200"
-                  resizeMode="cover"
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  placeholder={{ blurhash: CAR_BLURHASH }}
                   source={{ uri: photo }}
+                  style={{ height: 96, width: 128, borderRadius: 16 }}
+                  transition={200}
                 />
               ))}
             </ScrollView>

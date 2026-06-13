@@ -35,6 +35,10 @@ export type BookingDocument = {
   ownerId: string;
   totalPrice: number;
   paymentStatus: 'unpaid' | 'pending' | 'paid' | 'failed';
+  cancelledBy?: 'client' | 'owner' | 'admin';
+  cancellationFee?: number;
+  cancellationPolicy?: 'free_before_48h' | 'late_10_percent' | 'owner_cancelled';
+  refundAmount?: number;
   refundStatus?: 'none' | 'requested' | 'approved' | 'rejected';
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 };

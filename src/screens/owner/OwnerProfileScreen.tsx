@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 import { ProfilePhotoPicker } from '../../components/ProfilePhotoPicker';
 import { Screen } from '../../components/Screen';
+import { useBottomSheet, useToast } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
 import { deleteAccount, logout } from '../../services/authService';
 import type { OwnerTabParamList } from '../../types/navigation';
+import { hapticError } from '../../utils/haptics';
 
 type Props = BottomTabScreenProps<OwnerTabParamList, 'OwnerProfile'>;
 
@@ -42,24 +44,30 @@ function InfoRow({ icon, label, last, value }: InfoRowProps) {
 
 export function OwnerProfileScreen({}: Props) {
   const { user } = useAuth();
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   const confirmDeleteAccount = () => {
     if (!user) return;
-
-    Alert.alert(TEXT.deleteTitle, TEXT.deleteConfirm, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAccount(user.id);
-          } catch {
-            Alert.alert(TEXT.deleteErrorTitle, TEXT.deleteError);
-          }
+    bottomSheet.show({
+      title: TEXT.deleteTitle,
+      subtitle: TEXT.deleteConfirm,
+      actions: [
+        {
+          label: 'Supprimer définitivement',
+          variant: 'danger',
+          icon: 'trash-outline',
+          onPress: async () => {
+            try {
+              await deleteAccount(user.id);
+            } catch {
+              hapticError();
+              toast.error(TEXT.deleteError);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   return (

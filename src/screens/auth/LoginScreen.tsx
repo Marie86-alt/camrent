@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,11 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useToast } from '../../components/ui';
 import { DEMO_PASSWORD } from '../../services/demoData';
 import { loginWithEmail } from '../../services/authService';
 import { hasFirebaseConfig } from '../../services/firebase';
 import { useAuthStore } from '../../store/authStore';
 import type { AppUser } from '../../types/models';
+import { hapticError } from '../../utils/haptics';
 
 const CAR_BG_URI =
   'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=1300&fit=crop&crop=center&q=85';
@@ -59,6 +60,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
+  const toast = useToast();
 
   const login = async () => {
     try {
@@ -66,7 +68,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       const credentials = await loginWithEmail(email, password);
       setUser(credentials.user as AppUser);
     } catch (error) {
-      Alert.alert('Connexion impossible', getLoginErrorMessage(error));
+      hapticError(); toast.error(getLoginErrorMessage(error));
     } finally {
       setLoading(false);
     }

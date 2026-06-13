@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { markDriverReviewSubmitted, submitReview } from '../../services/reviewService';
 import { useAuthStore } from '../../store/authStore';
 import type { DriverReviewClientScreenProps } from '../../types/navigation';
+import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 
 function StarRow({ rating, onRate }: { rating: number; onRate: (r: number) => void }) {
   return (
@@ -28,6 +30,7 @@ function StarRow({ rating, onRate }: { rating: number; onRate: (r: number) => vo
 export function DriverReviewClientScreen({ navigation, route }: DriverReviewClientScreenProps) {
   const { booking } = route.params;
   const user = useAuthStore((state) => state.user);
+  const toast = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +39,7 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
 
   async function submit() {
     if (rating === 0) {
-      Alert.alert('Note requise', 'Veuillez attribuer une note avant de valider.');
+      hapticWarning(); toast.warning('Veuillez attribuer une note avant de valider.');
       return;
     }
     if (!user) return;
@@ -52,11 +55,11 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
         bookingId: booking.id,
       });
       await markDriverReviewSubmitted(booking.id);
-      Alert.alert('Merci !', 'Votre avis sur le client a été enregistré.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      hapticSuccess();
+      toast.success('Merci ! Votre évaluation du client a été enregistrée.');
+      navigation.goBack();
     } catch {
-      Alert.alert('Erreur', "L'avis n'a pas pu être enregistré.");
+      hapticError(); toast.error("L'avis n'a pas pu être enregistré.");
     } finally {
       setLoading(false);
     }

@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { createOwnerDriver } from '../../services/ownerDriverService';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { uploadDriverProfilePhoto, uploadUserDocument } from '../../services/storageService';
 import { useAuth } from '../../hooks/useAuth';
 import type { CameroonCity } from '../../types/models';
@@ -77,6 +79,7 @@ function DocumentButton({ label, onPress, selected }: { label: string; onPress: 
 
 export function DriverProfileScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const toast = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+237');
@@ -106,7 +109,7 @@ export function DriverProfileScreen({ navigation }: Props) {
   async function pickProfilePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorisez l'accès à la galerie pour ajouter la photo du chauffeur.");
+      toast.info("Autorisez l'acces a la galerie pour ajouter la photo du chauffeur.");
       return;
     }
 
@@ -125,7 +128,7 @@ export function DriverProfileScreen({ navigation }: Props) {
   async function pickDocument(setter: (uri: string) => void) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorisez l'accès à la galerie pour ajouter le document.");
+      toast.info("Autorisez l'acces a la galerie pour ajouter le document.");
       return;
     }
 
@@ -142,7 +145,7 @@ export function DriverProfileScreen({ navigation }: Props) {
 
   async function submit() {
     if (!canSubmit) {
-      Alert.alert('Formulaire incomplet', 'Renseignez les informations obligatoires du chauffeur.');
+      hapticWarning(); toast.warning('Renseignez les informations obligatoires du chauffeur.');
       return;
     }
 
@@ -183,11 +186,9 @@ export function DriverProfileScreen({ navigation }: Props) {
         profilePhotoUrl,
       });
 
-      Alert.alert('Chauffeur créé', 'Le compte chauffeur est créé et envoyé en validation admin.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      hapticSuccess(); toast.success('Chauffeur cree — envoye en validation admin.'); navigation.goBack();
     } catch (error) {
-      Alert.alert('Création impossible', error instanceof Error ? error.message : "Le chauffeur n'a pas pu être créé.");
+      hapticError(); toast.error(error instanceof Error ? error.message : "Le chauffeur n'a pas pu etre cree.");
     } finally {
       setSaving(false);
     }

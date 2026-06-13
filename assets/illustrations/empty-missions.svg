@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- route -->
+  <path d="M70 150 C70 120 120 130 120 104 C120 80 168 88 168 60"
+        stroke="#CBD5E1" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M70 150 C70 120 120 130 120 104 C120 80 168 88 168 60"
+        stroke="#FFFFFF" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" fill="none"/>
+  <!-- pin accent -->
+  <path d="M168 36 C156 36 147 45 147 57 C147 72 168 88 168 88 C168 88 189 72 189 57
+           C189 45 180 36 168 36 Z" fill="#3B63D4"/>
+  <circle cx="168" cy="56" r="8" fill="#FFFFFF"/>
+  <!-- point depart -->
+  <circle cx="70" cy="150" r="9" fill="#FFFFFF" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="70" cy="150" r="3" fill="#F59E0B"/>
+
+</svg>

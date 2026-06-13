@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { BookingCardSkeleton, EmptyState, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
+import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
 import { subscribeToAllBookings, subscribeToPaymentFlows, updatePlatformFinanceSettings } from '../../services/adminService';
 import type { Booking, PaymentFlow, PaymentMethod } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
 
 const methods: PaymentMethod[] = ['MTN MoMo', 'Orange Money', 'Carte bancaire'];
+const SKELETON_ITEMS = [0, 1, 2];
 
 function methodTotal(bookings: Booking[], method: PaymentMethod) {
   return bookings
@@ -52,6 +56,7 @@ export function AdminFinanceScreen() {
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const unsubscribeBookings = subscribeToAllBookings(
@@ -99,9 +104,9 @@ export function AdminFinanceScreen() {
     try {
       setSaving(true);
       await updatePlatformFinanceSettings({ commissionRate });
-      Alert.alert('Parametres sauvegardes', `Commission plateforme: ${commissionRate}%.`);
+      hapticSuccess(); toast.success(`Commission plateforme sauvegardee : ${commissionRate}%.`);
     } catch {
-      Alert.alert('Erreur', "Le taux de commission n'a pas pu etre sauvegarde.");
+      hapticError(); toast.error("Le taux de commission n'a pas pu etre sauvegarde.");
     } finally {
       setSaving(false);
     }
@@ -132,8 +137,10 @@ export function AdminFinanceScreen() {
         </View>
 
         {loadingBookings || loadingPayments ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View>
+            {SKELETON_ITEMS.map((item) => (
+              <BookingCardSkeleton key={`finance-skeleton-${item}`} />
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
@@ -190,15 +197,18 @@ export function AdminFinanceScreen() {
                 <Text className="text-lg font-black text-slate-950">Flux financiers</Text>
                 <TouchableOpacity
                   className="rounded-full bg-slate-950 px-4 py-2"
-                  onPress={() => Alert.alert('Export', 'Export CSV / Excel a brancher sur le back-office web.')}
+                  onPress={() => toast.info('Export CSV / Excel a brancher sur le back-office web.')}
                 >
                   <Text className="text-xs font-bold text-white">Export</Text>
                 </TouchableOpacity>
               </View>
               {payments.length === 0 ? (
-                <View className="rounded-xl bg-white p-4">
-                  <Text className="font-semibold text-slate-500">Aucun flux paiement pour le moment.</Text>
-                </View>
+                <EmptyState
+                  icon="cash-outline"
+                  illustration={EmptyBookingsIllustration}
+                  subtitle="Les transactions apparaitront ici apres les premiers paiements."
+                  title="Aucun flux paiement"
+                />
               ) : (
                 payments.map((payment) => <PaymentRow key={payment.id} payment={payment} />)
               )}

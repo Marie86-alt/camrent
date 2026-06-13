@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
+import { BookingCardSkeleton, EmptyState } from '../../components/ui';
+import EmptyMissionsIllustration from '../../../assets/illustrations/empty-missions.svg';
 import { subscribeToDriverBookings } from '../../services/bookingService';
 import { useAuth } from '../../hooks/useAuth';
 import type { Booking, BookingStatus } from '../../types/models';
@@ -26,6 +28,8 @@ const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: stri
   cancelled: { label: 'Annulée', color: '#b91c1c', bg: '#fef2f2' },
   completed: { label: 'Terminée', color: '#64748b', bg: '#f1f5f9' },
 };
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewClient?: () => void }) {
   const st = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
@@ -134,9 +138,12 @@ export function DriverMissionsScreen({ navigation }: Props) {
         </View>
 
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#3B63D4" size="large" />
-          </View>
+          <FlatList
+            data={SKELETON_ITEMS}
+            keyExtractor={(item) => `driver-mission-skeleton-${item}`}
+            renderItem={() => <BookingCardSkeleton />}
+            showsVerticalScrollIndicator={false}
+          />
         ) : (
           <FlatList
             ListHeaderComponent={
@@ -170,15 +177,12 @@ export function DriverMissionsScreen({ navigation }: Props) {
             }
             ListEmptyComponent={
               active.length === 0 ? (
-                <View className="mt-8 items-center gap-3 py-8">
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                    <Ionicons color="#94a3b8" name="car-outline" size={32} />
-                  </View>
-                  <Text className="text-base font-bold text-slate-700">Aucune mission pour l'instant</Text>
-                  <Text className="text-center text-sm text-slate-400">
-                    Vos missions apparaîtront ici une fois assignées.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="car-outline"
+                  illustration={EmptyMissionsIllustration}
+                  subtitle="Vos missions apparaitront ici une fois assignees."
+                  title="Aucune mission pour l'instant"
+                />
               ) : null
             }
             data={history}

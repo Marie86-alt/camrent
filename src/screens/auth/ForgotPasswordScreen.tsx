@@ -1,24 +1,27 @@
 import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BackButton } from '../../components/BackButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { resetPassword } from '../../services/authService';
 import type { ForgotPasswordScreenProps } from '../../types/navigation';
+import { hapticSuccess, hapticError } from '../../utils/haptics';
 
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const submit = async () => {
     try {
       setLoading(true);
       await resetPassword(email);
-      Alert.alert('Email envoyé', 'Consultez votre boîte mail pour réinitialiser votre mot de passe.');
+      hapticSuccess(); toast.success('Email envoyé — consultez votre boîte mail.');
       navigation.goBack();
     } catch {
-      Alert.alert('Erreur', "Impossible d'envoyer le lien de réinitialisation.");
+      hapticError(); toast.error("Impossible d'envoyer le lien de réinitialisation.");
     } finally {
       setLoading(false);
     }

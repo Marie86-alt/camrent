@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { ProfilePhotoPicker } from '../../components/ProfilePhotoPicker';
 import { Screen } from '../../components/Screen';
+import { useBottomSheet, useToast } from '../../components/ui';
 import { deleteAccount, logout } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
+import { hapticError } from '../../utils/haptics';
 
 type InfoRowProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -28,31 +30,31 @@ function InfoRow({ icon, label, value, last }: InfoRowProps) {
 
 export function ProfileScreen() {
   const { user } = useAuth();
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   const confirmDeleteAccount = () => {
     if (!user) return;
 
-    Alert.alert(
-      'Supprimer le compte',
-      'Cette action supprimera votre profil Autofix Pro de façon irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
+    bottomSheet.show({
+      title: 'Supprimer le compte',
+      subtitle: 'Cette action supprimera votre profil Autofix Pro de façon irréversible.',
+      actions: [
         {
-          text: 'Supprimer',
-          style: 'destructive',
+          label: 'Supprimer définitivement',
+          variant: 'danger',
+          icon: 'trash-outline',
           onPress: async () => {
             try {
               await deleteAccount(user.id);
             } catch {
-              Alert.alert(
-                'Suppression impossible',
-                'Reconnectez-vous puis réessayez la suppression du compte.',
-              );
+              hapticError();
+              toast.error('Reconnectez-vous puis réessayez la suppression du compte.');
             }
           },
         },
       ],
-    );
+    });
   };
 
   return (

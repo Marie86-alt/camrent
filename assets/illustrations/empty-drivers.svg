@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- volant -->
+  <circle cx="120" cy="108" r="46" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="120" cy="108" r="15" fill="#D8E1FB" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M120 93 L120 64" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M107 116 L80 132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M133 116 L160 132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="120" cy="108" r="5" fill="#3B63D4"/>
+  <!-- pastille profil accent -->
+  <circle cx="166" cy="66" r="20" fill="#F59E0B"/>
+  <circle cx="166" cy="60" r="6" fill="#FFFFFF"/>
+  <path d="M154 78 C154 70 160 66 166 66 C172 66 178 70 178 78 Z" fill="#FFFFFF"/>
+
+</svg>

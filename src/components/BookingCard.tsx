@@ -5,6 +5,7 @@ import type { Booking, BookingStatus } from '../types/models';
 import { formatFcfa } from '../utils/currency';
 import { formatDateRange } from '../utils/dates';
 import { toJsDate } from '../utils/firestoreDate';
+import { hapticLight } from '../utils/haptics';
 
 type BookingCardProps = {
   booking: Booking;
@@ -117,7 +118,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
             <TouchableOpacity
               activeOpacity={0.85}
               className="flex-row items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5"
-              onPress={onSignContract}
+              onPress={() => { hapticLight(); onSignContract!(); }}
             >
               <Ionicons color="white" name="document-text-outline" size={15} />
               <Text className="text-xs font-bold text-white">Signer le contrat</Text>
@@ -129,7 +130,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
             activeOpacity={0.85}
             className="flex-row items-center justify-center gap-2 rounded-xl bg-red-50 py-2.5"
             style={{ borderWidth: 1, borderColor: '#fecaca' }}
-            onPress={onCancel}
+            onPress={() => { hapticLight(); onCancel!(); }}
           >
             <Ionicons color="#b91c1c" name="close-circle-outline" size={15} />
             <Text className="text-xs font-bold text-red-700">Annuler la réservation</Text>
@@ -151,7 +152,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
             activeOpacity={0.85}
             className="flex-row items-center justify-center gap-2 rounded-xl bg-amber-50 py-2.5"
             style={{ borderWidth: 1, borderColor: '#fde68a' }}
-            onPress={onReview}
+            onPress={() => { hapticLight(); onReview!(); }}
           >
             <Ionicons color="#ca8a04" name="star-outline" size={15} />
             <Text className="text-xs font-bold text-yellow-700">Laisser un avis</Text>

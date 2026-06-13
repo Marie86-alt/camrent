@@ -4,6 +4,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { handleBookingCreated } from './bookings/bookingNotifications';
 import { handleCancelBooking } from './bookings/cancelBooking';
 import { handleCreateBooking } from './bookings/createBooking';
+import { handleOwnerCancelBooking } from './bookings/ownerCancelBooking';
 import {
   handleCreateIndependentDriver,
   handleCreateOwnerDriver,
@@ -66,6 +67,21 @@ export const cancelBooking = onRequest({ cors: true }, async (request, response)
   }
 });
 
+export const ownerCancelBooking = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleOwnerCancelBooking(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Owner booking cancellation failed',
+    });
+  }
+});
+
 export const mtnMomoWebhook = onRequest(async (request, response) => {
   try {
     if (!assertPost(request, response)) {
@@ -111,7 +127,7 @@ export const flutterwaveWebhook = onRequest(async (request, response) => {
   }
 });
 
-export const campayWebhook = onRequest(async (request, response) => {
+export const campayWebhook = onRequest({ invoker: 'public' }, async (request, response) => {
   try {
     await handleCampayWebhook(request, response);
   } catch (error) {

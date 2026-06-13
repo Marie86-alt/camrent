@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { db } from '../firebase';
 import { getAuthenticatedUid, sendJson } from '../http';
 import type { PaymentMethod } from '../types';
+import { assertDriverLicense, calculateTotalPrice, rangesOverlap, rentalDays } from './createBookingLogic';
 
 type DriverLicensePayload = {
   categories?: string;
@@ -45,51 +46,12 @@ function parseDate(value: unknown, field: string) {
   return date;
 }
 
-function rentalDays(startDate: Date, endDate: Date) {
-  const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / msPerDay) + 1);
-}
-
-function rangesOverlap(startA: Date, endA: Date, startB: Date, endB: Date) {
-  return startA <= endB && endA >= startB;
-}
-
 function toDate(value: unknown) {
   return typeof (value as { toDate?: () => Date })?.toDate === 'function'
     ? (value as { toDate: () => Date }).toDate()
     : new Date(String(value));
 }
 
-function assertDriverLicense(value: unknown) {
-  const license = value as DriverLicensePayload | undefined;
-
-  if (!license) {
-    throw new Error('Permis de conduire requis.');
-  }
-
-  const normalized = {
-    categories: assertString(license.categories, 'categories').toUpperCase(),
-    expiryDate: assertString(license.expiryDate, 'expiryDate'),
-    fullName: assertString(license.fullName, 'fullName'),
-    issueDate: assertString(license.issueDate, 'issueDate'),
-    issuingCountry: assertString(license.issuingCountry, 'issuingCountry'),
-    licenseNumber: assertString(license.licenseNumber, 'licenseNumber'),
-  };
-
-  if (normalized.fullName.length < 3 || normalized.licenseNumber.length < 5) {
-    throw new Error('Informations du permis invalides.');
-  }
-
-  const expiryDate = new Date(normalized.expiryDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (Number.isNaN(expiryDate.getTime()) || expiryDate < today) {
-    throw new Error('Permis expire ou invalide.');
-  }
-
-  return normalized;
-}
 
 export async function handleCreateBooking(request: Request, response: Response) {
   const uid = await getAuthenticatedUid(request);
@@ -202,7 +164,7 @@ export async function handleCreateBooking(request: Request, response: Response) 
     }
 
     const pricePerDay = Number(car.pricePerDay ?? 0);
-    const totalPrice = totalDays * pricePerDay + totalDays * driverPricePerDay;
+    const totalPrice = calculateTotalPrice(pricePerDay, driverPricePerDay, totalDays);
 
     if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
       throw new Error('Prix de reservation invalide.');

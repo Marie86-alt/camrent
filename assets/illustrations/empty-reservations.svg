@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- bac inbox -->
+  <path d="M62 92 L78 64 L162 64 L178 92 L178 134 C178 138 175 141 171 141
+           L69 141 C65 141 62 138 62 134 Z" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M62 92 L96 92 L104 106 L136 106 L144 92 L178 92" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="86" y1="78" x2="154" y2="78" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <!-- enveloppe accent qui sort -->
+  <rect x="92" y="44" width="56" height="40" rx="6" fill="#3B63D4" transform="rotate(-6 120 64)"/>
+  <path d="M96 52 L120 68 L146 50" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="rotate(-6 120 64)"/>
+  <circle cx="158" cy="44" r="9" fill="#F59E0B"/>
+  <path d="M154 44 l3 3 l5 -6" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+</svg>

@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { CAR_PHOTO_SLOTS } from '../../constants/cameroon';
 import { useAuth } from '../../hooks/useAuth';
 import { createCar } from '../../services/carService';
@@ -49,12 +51,9 @@ function formatDateInput(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-async function pickPhoto(): Promise<string | null> {
+async function pickPhoto(): Promise<{ uri: string | null; permissionDenied: boolean }> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
-    return null;
-  }
+  if (!permission.granted) return { uri: null, permissionDenied: true };
 
   const result = await ImagePicker.launchImageLibraryAsync({
     allowsEditing: true,
@@ -63,11 +62,12 @@ async function pickPhoto(): Promise<string | null> {
     quality: 0.8,
   });
 
-  return result.canceled ? null : result.assets[0].uri;
+  return { uri: result.canceled ? null : result.assets[0].uri, permissionDenied: false };
 }
 
 export function AddCarScreen() {
   const { user } = useAuth();
+  const toast = useToast();
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
@@ -88,7 +88,9 @@ export function AddCarScreen() {
   const [loading, setLoading] = useState(false);
 
   const handlePickPhoto = async (index: number) => {
-    const uri = await pickPhoto();
+    const result = await pickPhoto();
+    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le vehicule."); return; }
+    const { uri } = result;
     if (!uri) return;
 
     setPhotoUris((prev) => {
@@ -101,7 +103,7 @@ export function AddCarScreen() {
   const pickRegistrationDocument = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
+      toast.info("Autorisez l'acces aux photos pour ajouter la carte grise.");
       return;
     }
 
@@ -137,7 +139,7 @@ export function AddCarScreen() {
     if (!user) return;
 
     if (photoUris.some((uri) => !uri)) {
-      Alert.alert('Photos requises', 'Ajoutez les 6 photos du vehicule avant de publier.');
+      hapticWarning(); toast.warning('Ajoutez les 6 photos du vehicule avant de publier.');
       return;
     }
 
@@ -146,22 +148,22 @@ export function AddCarScreen() {
     const numericPrice = Number(pricePerDay);
 
     if (!brand.trim() || !model.trim() || !description.trim()) {
-      Alert.alert('Informations manquantes', 'Renseignez la marque, le modele et la description.');
+      hapticWarning(); toast.warning('Renseignez la marque, le modele et la description.');
       return;
     }
 
     if (!Number.isInteger(numericYear) || numericYear < 1990 || numericYear > new Date().getFullYear() + 1) {
-      Alert.alert('Annee invalide', 'Renseignez une annee valide pour le vehicule.');
+      hapticWarning(); toast.warning('Renseignez une annee valide pour le vehicule.');
       return;
     }
 
     if (!Number.isInteger(numericSeats) || numericSeats < 2 || numericSeats > 9) {
-      Alert.alert('Places invalides', 'Renseignez un nombre de places entre 2 et 9.');
+      hapticWarning(); toast.warning('Renseignez un nombre de places entre 2 et 9.');
       return;
     }
 
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      Alert.alert('Prix invalide', 'Renseignez un prix journalier valide.');
+      hapticWarning(); toast.warning('Renseignez un prix journalier valide.');
       return;
     }
 
@@ -169,7 +171,7 @@ export function AddCarScreen() {
       setLoading(true);
 
       if (!hasFirebaseConfig) {
-        Alert.alert('Mode démo', 'La voiture est simulée. Configurez Firebase pour enregistrer une vraie annonce.');
+        toast.info('Mode demo — configurez Firebase pour enregistrer une vraie annonce.');
         resetForm();
         return;
       }
@@ -211,10 +213,10 @@ export function AddCarScreen() {
         },
       });
 
-      Alert.alert('Voiture ajoutée', 'Votre annonce est envoyée pour vérification admin.');
+      hapticSuccess(); toast.success('Voiture ajoutee — envoyee pour verification admin.');
       resetForm();
     } catch {
-      Alert.alert('Erreur', "Impossible d'ajouter la voiture.");
+      hapticError(); toast.error("Impossible d'ajouter la voiture.");
     } finally {
       setLoading(false);
     }

@@ -4,9 +4,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { CarCard } from '../../components/CarCard';
-import { CarCardSkeleton } from '../../components/CarCardSkeleton';
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
+import { CarCardSkeleton, EmptyState } from '../../components/ui';
+import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
 import { useCars } from '../../hooks/useCars';
 import type { CameroonCity, Car } from '../../types/models';
 import type { ClientStackParamList } from '../../types/navigation';
@@ -71,7 +72,17 @@ export function SearchScreen() {
         ) : (
           <FlatList
             ListEmptyComponent={
-              <Text className="mt-10 text-center text-slate-500">Aucun résultat trouvé.</Text>
+              <EmptyState
+                ctaLabel="Effacer la recherche"
+                icon="search-outline"
+                illustration={EmptyCarsIllustration}
+                onCta={() => {
+                  setQuery('');
+                  setSelectedCity(null);
+                }}
+                subtitle="Essayez une autre ville, une marque ou un modele different."
+                title="Aucun resultat trouve"
+              />
             }
             data={filteredCars}
             keyExtractor={carKeyExtractor}

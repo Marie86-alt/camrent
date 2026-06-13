@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { subscribeToAllUsers, updatePlatformSecuritySettings, updateUserAdminStatus } from '../../services/adminService';
 import type { AdminRole, AppUser } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
 
 const adminRoles: AdminRole[] = ['super_admin', 'moderator', 'accountant'];
+const SKELETON_ITEMS = [0, 1, 2];
 
 function roleLabel(role?: AdminRole) {
   if (role === 'super_admin') return 'Super admin';
@@ -24,6 +27,7 @@ export function AdminSecurityScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const unsubscribe = subscribeToAllUsers(
@@ -54,9 +58,9 @@ export function AdminSecurityScreen() {
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedAdmin.id, { adminRole } as Partial<AppUser>);
-      Alert.alert('Role admin modifie', `${selectedAdmin.fullName} est maintenant ${roleLabel(adminRole)}.`);
+      hapticSuccess(); toast.success(`${selectedAdmin.fullName} est maintenant ${roleLabel(adminRole)}.`);
     } catch {
-      Alert.alert('Erreur', "Le role admin n'a pas pu etre modifie.");
+      hapticError(); toast.error("Le role admin n'a pas pu etre modifie.");
     } finally {
       setSaving(false);
     }
@@ -68,9 +72,9 @@ export function AdminSecurityScreen() {
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedAdmin.id, { status: 'suspended', adminLastActionReason: 'Compte admin desactive' });
-      Alert.alert('Compte desactive', 'Le compte administrateur est suspendu.');
+      hapticSuccess(); toast.success('Le compte administrateur est suspendu.');
     } catch {
-      Alert.alert('Erreur', "Le compte admin n'a pas pu etre desactive.");
+      hapticError(); toast.error("Le compte admin n'a pas pu etre desactive.");
     } finally {
       setSaving(false);
     }
@@ -81,16 +85,16 @@ export function AdminSecurityScreen() {
     const defaultDepositAmount = Number(deposit);
 
     if (!Number.isFinite(rentalCommissionRate) || !Number.isFinite(defaultDepositAmount)) {
-      Alert.alert('Valeurs invalides', 'Renseignez des montants numeriques.');
+      hapticWarning(); toast.warning('Renseignez des montants numeriques.');
       return;
     }
 
     try {
       setSaving(true);
       await updatePlatformSecuritySettings({ defaultDepositAmount, rentalCommissionRate });
-      Alert.alert('Parametres sauvegardes', 'Les parametres de securite sont mis a jour.');
+      hapticSuccess(); toast.success('Parametres de securite mis a jour.');
     } catch {
-      Alert.alert('Erreur', "Les parametres n'ont pas pu etre sauvegardes.");
+      hapticError(); toast.error("Les parametres n'ont pas pu etre sauvegardes.");
     } finally {
       setSaving(false);
     }
@@ -106,8 +110,13 @@ export function AdminSecurityScreen() {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View className="gap-3">
+            {SKELETON_ITEMS.map((item) => (
+              <View className="rounded-xl bg-white p-4" key={`security-skeleton-${item}`}>
+                <SkeletonLine width="55%" />
+                <SkeletonBlock className="mt-3" height={14} rounded="sm" width="75%" />
+              </View>
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
@@ -132,6 +141,14 @@ export function AdminSecurityScreen() {
                   <Text className="mt-1 text-xs font-bold text-slate-400">{admin.status ?? 'active'}</Text>
                 </TouchableOpacity>
               ))}
+
+              {users.length === 0 ? (
+                <EmptyState
+                  icon="shield-checkmark-outline"
+                  subtitle="Creez ou promouvez un compte admin pour gerer les permissions."
+                  title="Aucun administrateur"
+                />
+              ) : null}
 
               {selectedAdmin ? (
                 <View className="gap-3 pt-2">

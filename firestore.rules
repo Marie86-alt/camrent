@@ -74,7 +74,7 @@ service cloud.firestore {
           (
             request.auth.uid == resource.data.ownerId
             && changed.hasOnly(['status'])
-            && request.resource.data.status in ['confirmed', 'cancelled', 'completed']
+            && request.resource.data.status in ['confirmed', 'completed']
           )
           || (
             request.auth.uid == resource.data.clientId

@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { BackButton } from '../../components/BackButton';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { DriverCardSkeleton, EmptyState } from '../../components/ui';
+import EmptyDriversIllustration from '../../../assets/illustrations/empty-drivers.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { subscribeToOwnerDrivers } from '../../services/ownerDriverListService';
 import type { AppUser } from '../../types/models';
 import type { OwnerStackParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 type Props = {
   navigation: NativeStackNavigationProp<OwnerStackParamList, 'OwnerDrivers'>;
@@ -188,28 +191,24 @@ export function OwnerDriversScreen({ navigation }: Props) {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View>
+            {SKELETON_ITEMS.map((item) => (
+              <DriverCardSkeleton key={`owner-driver-skeleton-${item}`} />
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-2xl bg-red-50 p-4">
             <Text className="font-semibold text-red-700">{error}</Text>
           </View>
         ) : drivers.length === 0 ? (
-          <View className="items-center gap-4 rounded-2xl bg-white p-6">
-            <View className="h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-              <Ionicons color="#3B63D4" name="people-outline" size={30} />
-            </View>
-            <View className="items-center">
-              <Text className="text-lg font-black text-slate-950">Aucun chauffeur ajouté</Text>
-              <Text className="mt-1 text-center text-sm text-slate-500">
-                Créez un chauffeur pour le faire valider par l’admin.
-              </Text>
-            </View>
-            <PrimaryButton onPress={() => navigation.navigate('DriverProfile')}>
-              Ajouter un chauffeur
-            </PrimaryButton>
-          </View>
+          <EmptyState
+            ctaLabel="Ajouter un chauffeur"
+            icon="people-outline"
+            illustration={EmptyDriversIllustration}
+            onCta={() => navigation.navigate('DriverProfile')}
+            subtitle="Creez un chauffeur pour le faire valider par l'admin."
+            title="Aucun chauffeur ajoute"
+          />
         ) : (
           <View>
             <Text className="mb-3 text-sm font-bold text-slate-500">

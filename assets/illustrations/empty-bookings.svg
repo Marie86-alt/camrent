@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- ticket -->
+  <path d="M74 64 L166 64 C170 64 173 67 173 71 L173 96 C168 96 164 100 164 105
+           C164 110 168 114 173 114 L173 138 C173 142 170 145 166 145 L74 145
+           C70 145 67 142 67 138 L67 114 C72 114 76 110 76 105 C76 100 72 96 67 96
+           L67 71 C67 67 70 64 74 64 Z" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="120" y1="68" x2="120" y2="76" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <line x1="120" y1="86" x2="120" y2="94" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <line x1="120" y1="104" x2="120" y2="112" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <line x1="120" y1="122" x2="120" y2="130" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+  <!-- carte calendrier accent -->
+  <rect x="84" y="92" width="44" height="40" rx="7" fill="#3B63D4" />
+  <rect x="84" y="92" width="44" height="13" rx="7" fill="#3B63D4"/>
+  <line x1="84" y1="105" x2="128" y2="105" stroke="#FFFFFF" stroke-width="2" opacity="0.5"/>
+  <line x1="95" y1="88" x2="95" y2="96" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="117" y1="88" x2="117" y2="96" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="106" cy="118" r="8" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  <path d="M102 118 l3 3 l5 -6" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+</svg>

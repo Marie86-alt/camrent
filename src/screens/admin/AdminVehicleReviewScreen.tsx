@@ -1,10 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Text, TouchableOpacity, View } from 'react-native';
+
+const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
 import { CAR_PHOTO_SLOTS } from '../../constants/cameroon';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { CarCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
+import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
 import { subscribeToAllCars, updateCar } from '../../services/carService';
 import type { Car } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -13,6 +19,8 @@ type InfoRowProps = {
   label: string;
   value?: string | number | boolean | null;
 };
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 function normalizeValue(value: InfoRowProps['value']) {
   if (value === true) return 'Oui';
@@ -86,7 +94,7 @@ function PhotoGrid({ car }: { car: Car }) {
             >
               {uri ? (
                 <View>
-                  <Image className="h-24 w-full" resizeMode="cover" source={{ uri }} />
+                  <Image cachePolicy="memory-disk" contentFit="cover" placeholder={{ blurhash: CAR_BLURHASH }} source={{ uri }} style={{ height: 96, width: '100%' }} transition={200} />
                   <View className="items-center py-1">
                     <Text className="text-xs font-bold text-slate-600">{slot.label}</Text>
                   </View>
@@ -119,9 +127,12 @@ function VehicleCard({ car, selected, onPress }: { car: Car; selected: boolean; 
     >
       <View className="flex-row gap-3">
         <Image
-          className="h-20 w-24 rounded-lg bg-slate-200"
-          resizeMode="cover"
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          placeholder={{ blurhash: CAR_BLURHASH }}
           source={{ uri: photos[0] ?? car.imageUrl }}
+          style={{ height: 80, width: 96, borderRadius: 8 }}
+          transition={200}
         />
         <View className="flex-1">
           <View className="flex-row items-start justify-between gap-2">
@@ -181,6 +192,8 @@ export function AdminVehicleReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [reviewActionLoading, setReviewActionLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
 
   useEffect(() => {
     const unsubscribe = subscribeToAllCars(
@@ -216,25 +229,25 @@ export function AdminVehicleReviewScreen() {
         documentsVerified: true,
         isAvailable: true,
       });
-      Alert.alert('Annonce approuvee', 'Le vehicule est maintenant visible par les clients.');
+      hapticSuccess(); toast.success('Annonce approuvee — vehicule visible par les clients.');
     } catch {
-      Alert.alert('Erreur', "L'annonce n'a pas pu etre approuvee.");
+      hapticError(); toast.error("L'annonce n'a pas pu etre approuvee.");
     } finally {
       setReviewActionLoading(null);
     }
   }
 
-  async function rejectSelectedCar() {
+  function rejectSelectedCar() {
     if (!selectedCar) return;
 
-    Alert.alert(
-      'Rejeter cette annonce',
-      'Le vehicule sera masque aux clients. Le proprietaire devra corriger les photos ou la fiche technique.',
-      [
-        { text: 'Annuler', style: 'cancel' },
+    bottomSheet.show({
+      title: 'Rejeter cette annonce ?',
+      subtitle: 'Le vehicule sera masque aux clients. Le proprietaire devra corriger les photos ou la fiche technique.',
+      actions: [
         {
-          text: 'Rejeter',
-          style: 'destructive',
+          label: "Rejeter l'annonce",
+          variant: 'danger',
+          icon: 'close-circle-outline',
           onPress: async () => {
             try {
               setReviewActionLoading('reject');
@@ -243,16 +256,16 @@ export function AdminVehicleReviewScreen() {
                 documentsVerified: false,
                 isAvailable: false,
               });
-              Alert.alert('Annonce rejetee', "L'annonce a ete masquee.");
+              hapticSuccess(); toast.success("Annonce rejetee — l'annonce a ete masquee.");
             } catch {
-              Alert.alert('Erreur', "L'annonce n'a pas pu etre rejetee.");
+              hapticError(); toast.error("L'annonce n'a pas pu etre rejetee.");
             } finally {
               setReviewActionLoading(null);
             }
           },
         },
       ],
-    );
+    });
   }
 
   return (
@@ -282,13 +295,22 @@ export function AdminVehicleReviewScreen() {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View>
+            {SKELETON_ITEMS.map((item) => (
+              <CarCardSkeleton key={`admin-car-skeleton-${item}`} />
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
             <Text className="font-semibold text-red-700">{error}</Text>
           </View>
+        ) : cars.length === 0 ? (
+          <EmptyState
+            icon="shield-checkmark-outline"
+            illustration={EmptyCarsIllustration}
+            subtitle="Les annonces soumises par les proprietaires apparaitront ici."
+            title="Aucun vehicule a valider"
+          />
         ) : (
           <View className="gap-5">
             <View>

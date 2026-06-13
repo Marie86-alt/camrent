@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { logout } from '../../services/authService';
 import { updateUserProfile } from '../../services/authService';
 import { uploadDriverProfilePhoto } from '../../services/storageService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/authStore';
 import type { AppUser } from '../../types/models';
+import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 import { formatFcfa } from '../../utils/currency';
 
 function Field({
@@ -38,6 +40,7 @@ function Field({
 export function DriverOwnProfileScreen() {
   const { user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
+  const toast = useToast();
 
   const [isAvailable, setIsAvailable] = useState(user?.driverProfile?.isAvailable ?? false);
   const [pricePerDay, setPricePerDay] = useState(String(user?.driverProfile?.pricePerDay ?? ''));
@@ -50,7 +53,7 @@ export function DriverOwnProfileScreen() {
     if (!user) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission requise', 'Autorisez la galerie pour changer la photo.');
+      hapticWarning(); toast.warning('Autorisez la galerie pour changer la photo.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -62,7 +65,7 @@ export function DriverOwnProfileScreen() {
       const url = await uploadDriverProfilePhoto(user.id, result.assets[0].uri);
       setPhotoUrl(url);
     } catch {
-      Alert.alert('Erreur', "La photo n'a pas pu être envoyée.");
+      hapticError(); toast.error("La photo n'a pas pu être envoyée.");
     } finally {
       setUploadingPhoto(false);
     }
@@ -71,7 +74,7 @@ export function DriverOwnProfileScreen() {
   async function save() {
     if (!user) return;
     if (pricePerDay && Number(pricePerDay) < 1000) {
-      Alert.alert('Tarif invalide', 'Le tarif minimum est de 1 000 FCFA/jour.');
+      hapticWarning(); toast.warning('Le tarif minimum est de 1 000 FCFA/jour.');
       return;
     }
     const updated: AppUser = {
@@ -88,9 +91,9 @@ export function DriverOwnProfileScreen() {
       setSaving(true);
       await updateUserProfile(user.id, { driverProfile: updated.driverProfile });
       setUser(updated);
-      Alert.alert('Profil mis à jour', 'Vos informations ont été sauvegardées.');
+      hapticSuccess(); toast.success('Profil mis à jour avec succès.');
     } catch {
-      Alert.alert('Erreur', "Le profil n'a pas pu être sauvegardé.");
+      hapticError(); toast.error("Le profil n'a pas pu être sauvegardé.");
     } finally {
       setSaving(false);
     }

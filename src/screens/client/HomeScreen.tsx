@@ -8,9 +8,10 @@ import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { CarCard } from '../../components/CarCard';
-import { CarCardSkeleton } from '../../components/CarCardSkeleton';
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { Screen } from '../../components/Screen';
+import { CarCardSkeleton, EmptyState } from '../../components/ui';
+import EmptyCarsIllustration from '../../../assets/illustrations/empty-cars.svg';
 import { useBookings } from '../../hooks/useBookings';
 import { useAuthStore } from '../../store/authStore';
 import { useCarsStore } from '../../store/carsStore';
@@ -224,23 +225,18 @@ export function HomeScreen() {
           <FlatList
             ListHeaderComponent={ListHeader}
             ListEmptyComponent={
-              <View className="mt-8 items-center gap-3 py-8">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                  <Ionicons color="#94a3b8" name="car-outline" size={32} />
-                </View>
-                <Text className="text-base font-bold text-slate-700">
-                  {error ?? `Aucune voiture disponible${selectedCity ? ` à ${selectedCity}` : ''}`}
-                </Text>
-                {selectedCity ? (
-                  <TouchableOpacity onPress={() => setSelectedCity(null)}>
-                    <Text className="text-sm font-semibold text-brand-blue">Voir toutes les villes</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text className="text-center text-sm text-slate-400">
-                    Revenez plus tard pour voir les nouvelles annonces.
-                  </Text>
-                )}
-              </View>
+              <EmptyState
+                ctaLabel={selectedCity ? 'Voir toutes les villes' : undefined}
+                icon="car-outline"
+                illustration={EmptyCarsIllustration}
+                onCta={selectedCity ? () => setSelectedCity(null) : undefined}
+                subtitle={
+                  selectedCity
+                    ? 'Essayez une autre ville ou affichez toutes les annonces disponibles.'
+                    : 'Revenez plus tard pour voir les nouvelles annonces.'
+                }
+                title={error ?? `Aucune voiture disponible${selectedCity ? ` a ${selectedCity}` : ''}`}
+              />
             }
             data={displayedCars}
             keyExtractor={carKeyExtractor}

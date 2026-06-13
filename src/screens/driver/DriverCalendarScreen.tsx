@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { useToast } from '../../components/ui';
 import { subscribeToDriverBookings } from '../../services/bookingService';
 import { updateUserProfile } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/authStore';
+import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 import type { Booking } from '../../types/models';
 import { toJsDate } from '../../utils/firestoreDate';
 
@@ -30,6 +32,7 @@ function isBetween(date: Date, start: Date, end: Date) {
 export function DriverCalendarScreen() {
   const { user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
+  const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [viewDate, setViewDate] = useState(new Date());
   const [blockedDates, setBlockedDates] = useState<Set<string>>(
@@ -70,7 +73,7 @@ export function DriverCalendarScreen() {
     const key = dateKey(date);
     const missionStatus = getMissionStatus(date);
     if (missionStatus) {
-      Alert.alert('Date non modifiable', 'Cette date est déjà occupée par une mission confirmée.');
+      hapticWarning(); toast.warning('Date occupée par une mission — non modifiable.');
       return;
     }
     setBlockedDates((prev) => {
@@ -92,9 +95,9 @@ export function DriverCalendarScreen() {
       });
       setUser({ ...user, driverProfile: { ...user.driverProfile, blockedDates: newBlockedDates } });
       setDirty(false);
-      Alert.alert('Sauvegardé', 'Vos disponibilités ont été mises à jour.');
+      hapticSuccess(); toast.success('Disponibilités mises à jour.');
     } catch {
-      Alert.alert('Erreur', "La sauvegarde a échoué. Réessayez.");
+      hapticError(); toast.error("La sauvegarde a échoué. Réessayez.");
     } finally {
       setSaving(false);
     }

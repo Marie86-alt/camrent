@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
 import {
   createAdminNotification,
   createPromoBanner,
@@ -24,6 +26,8 @@ const audiences: Array<{ label: string; value: 'all' | 'clients' | 'owners' | 'd
   { label: 'Chauffeurs', value: 'drivers' },
 ];
 
+const SKELETON_ITEMS = [0, 1, 2];
+
 export function AdminContentScreen() {
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [title, setTitle] = useState('Promotion Autofix Pro');
@@ -33,6 +37,7 @@ export function AdminContentScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const unsubscribe = subscribeToPromoBanners(
@@ -73,15 +78,9 @@ export function AdminContentScreen() {
       setSaving(true);
       const notificationRef = await createAdminNotification({ audience, message, title });
       const result = await sendAdminNotification(notificationRef.id);
-      Alert.alert(
-        'Notification envoyee',
-        `${result.sentCount} destinataire(s), ${result.failedCount} echec(s).`,
-      );
+      hapticSuccess(); toast.success(`Notification envoyee — ${result.sentCount} destinataire(s), ${result.failedCount} echec(s).`);
     } catch (error) {
-      Alert.alert(
-        'Erreur',
-        error instanceof Error ? error.message : "La notification n'a pas pu etre envoyee.",
-      );
+      hapticError(); toast.error(error instanceof Error ? error.message : "La notification n'a pas pu etre envoyee.");
     } finally {
       setSaving(false);
     }
@@ -91,9 +90,9 @@ export function AdminContentScreen() {
     try {
       setSaving(true);
       await createPromoBanner({ title, message, isActive: true });
-      Alert.alert('Banniere creee', "La banniere promotionnelle est ajoutee a l'administration.");
+      hapticSuccess(); toast.success("Banniere creee et ajoutee a l'administration.");
     } catch {
-      Alert.alert('Erreur', "La banniere n'a pas pu etre creee.");
+      hapticError(); toast.error("La banniere n'a pas pu etre creee.");
     } finally {
       setSaving(false);
     }
@@ -103,9 +102,9 @@ export function AdminContentScreen() {
     try {
       setSaving(true);
       await updateCoveredCities(selectedCities);
-      Alert.alert('Villes sauvegardees', 'La couverture de la plateforme est mise a jour.');
+      hapticSuccess(); toast.success('Couverture mise a jour — villes sauvegardees.');
     } catch {
-      Alert.alert('Erreur', "Les villes couvertes n'ont pas pu etre sauvegardees.");
+      hapticError(); toast.error("Les villes couvertes n'ont pas pu etre sauvegardees.");
     } finally {
       setSaving(false);
     }
@@ -169,11 +168,22 @@ export function AdminContentScreen() {
           </PrimaryButton>
 
           {loading ? (
-            <View className="items-center py-8">
-              <ActivityIndicator color="#3B63D4" />
+            <View className="mt-4 gap-3">
+              {SKELETON_ITEMS.map((item) => (
+                <View className="rounded-lg border border-slate-100 p-3" key={`banner-skeleton-${item}`}>
+                  <SkeletonLine width="45%" />
+                  <SkeletonBlock className="mt-3" height={14} rounded="sm" width="80%" />
+                </View>
+              ))}
             </View>
           ) : error ? (
             <Text className="mt-4 font-semibold text-red-700">{error}</Text>
+          ) : banners.length === 0 ? (
+            <EmptyState
+              icon="megaphone-outline"
+              subtitle="Ajoutez une banniere active pour l'afficher sur l'accueil."
+              title="Aucune banniere"
+            />
           ) : (
             <View className="mt-4 gap-3">
               {banners.map((banner) => (

@@ -1,7 +1,12 @@
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Text, TouchableOpacity, View } from 'react-native';
 
+import { hapticLight } from '../utils/haptics';
 import { formatFcfa } from '../utils/currency';
 import type { Car } from '../types/models';
+
+// Generic blurhash placeholder for car photos (slate-blue gradient)
+const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
 type CarCardProps = {
   car: Car;
@@ -13,7 +18,7 @@ export function CarCard({ car, onPress }: CarCardProps) {
     <TouchableOpacity
       activeOpacity={0.9}
       className="mb-4 overflow-hidden rounded-xl bg-white"
-      onPress={onPress}
+      onPress={() => { hapticLight(); onPress(); }}
       style={{
         shadowColor: '#000',
         shadowOpacity: 0.08,
@@ -22,7 +27,14 @@ export function CarCard({ car, onPress }: CarCardProps) {
         elevation: 3,
       }}
     >
-      <Image className="h-44 w-full bg-slate-200" resizeMode="cover" source={{ uri: car.imageUrl }} />
+      <Image
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        placeholder={{ blurhash: CAR_BLURHASH }}
+        source={{ uri: car.imageUrl }}
+        style={{ height: 176, width: '100%' }}
+        transition={200}
+      />
       <View className="gap-2 p-4">
         <View className="flex-row items-start justify-between gap-3">
           <View className="flex-1">

@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { BookingCardSkeleton, EmptyState, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
+import EmptyBookingsIllustration from '../../../assets/illustrations/empty-bookings.svg';
 import { subscribeToAllBookings, updateBookingAdminFields } from '../../services/adminService';
 import type { Booking, BookingStatus } from '../../types/models';
 import { formatFcfa } from '../../utils/currency';
@@ -17,6 +20,8 @@ const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
   { label: 'Annulees', value: 'cancelled' },
   { label: 'Terminees', value: 'completed' },
 ];
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 function toReadableDate(value: Booking['startDate']) {
   if (!value) return 'Non renseigne';
@@ -74,6 +79,7 @@ export function AdminBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const unsubscribe = subscribeToAllBookings(
@@ -108,9 +114,9 @@ export function AdminBookingsScreen() {
     try {
       setSaving(true);
       await updateBookingAdminFields(selectedBooking.id, payload);
-      Alert.alert('Action enregistree', successMessage);
+      hapticSuccess(); toast.success(successMessage);
     } catch {
-      Alert.alert('Erreur', "L'action admin n'a pas pu etre enregistree.");
+      hapticError(); toast.error("L'action admin n'a pas pu etre enregistree.");
     } finally {
       setSaving(false);
     }
@@ -159,8 +165,10 @@ export function AdminBookingsScreen() {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View>
+            {SKELETON_ITEMS.map((item) => (
+              <BookingCardSkeleton key={`admin-booking-skeleton-${item}`} />
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
@@ -170,14 +178,23 @@ export function AdminBookingsScreen() {
           <View className="gap-5">
             <View>
               <Text className="mb-3 text-lg font-black text-slate-950">Tableau des reservations</Text>
-              {visibleBookings.map((booking) => (
-                <BookingRow
-                  booking={booking}
-                  key={booking.id}
-                  onPress={() => setSelectedId(booking.id)}
-                  selected={selectedBooking?.id === booking.id}
+              {visibleBookings.length === 0 ? (
+                <EmptyState
+                  icon="receipt-outline"
+                  illustration={EmptyBookingsIllustration}
+                  subtitle="Changez le filtre ou attendez une nouvelle reservation."
+                  title="Aucune reservation"
                 />
-              ))}
+              ) : (
+                visibleBookings.map((booking) => (
+                  <BookingRow
+                    booking={booking}
+                    key={booking.id}
+                    onPress={() => setSelectedId(booking.id)}
+                    selected={selectedBooking?.id === booking.id}
+                  />
+                ))
+              )}
             </View>
 
             {selectedBooking ? (

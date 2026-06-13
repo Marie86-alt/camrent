@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { EmptyState, SkeletonBlock, SkeletonLine, useToast } from '../../components/ui';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
+import EmptyReviewsIllustration from '../../../assets/illustrations/empty-reviews.svg';
 import { subscribeToReviews, updateReviewModeration } from '../../services/adminService';
 import type { Review, ReviewStatus } from '../../types/models';
 
@@ -13,6 +16,8 @@ const filters: Array<{ label: string; value: 'all' | ReviewStatus }> = [
   { label: 'Signales', value: 'flagged' },
   { label: 'Supprimes', value: 'removed' },
 ];
+
+const SKELETON_ITEMS = [0, 1, 2];
 
 function statusLabel(status: ReviewStatus) {
   if (status === 'flagged') return 'Signale';
@@ -52,6 +57,7 @@ export function AdminReviewsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const unsubscribe = subscribeToReviews(
@@ -89,9 +95,9 @@ export function AdminReviewsScreen() {
     try {
       setSaving(true);
       await updateReviewModeration(selectedReview.id, payload);
-      Alert.alert('Moderation enregistree', message);
+      hapticSuccess(); toast.success(message);
     } catch {
-      Alert.alert('Erreur', "L'avis n'a pas pu etre modere.");
+      hapticError(); toast.error("L'avis n'a pas pu etre modere.");
     } finally {
       setSaving(false);
     }
@@ -140,8 +146,13 @@ export function AdminReviewsScreen() {
         </View>
 
         {loading ? (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator color="#3B63D4" size="large" />
+          <View className="gap-3">
+            {SKELETON_ITEMS.map((item) => (
+              <View className="rounded-xl border border-slate-100 bg-white p-4" key={`review-skeleton-${item}`}>
+                <SkeletonLine width="50%" />
+                <SkeletonBlock className="mt-3" height={14} rounded="sm" width="80%" />
+              </View>
+            ))}
           </View>
         ) : error ? (
           <View className="rounded-xl bg-red-50 p-4">
@@ -152,9 +163,12 @@ export function AdminReviewsScreen() {
             <View>
               <Text className="mb-3 text-lg font-black text-slate-950">Liste des avis</Text>
               {visibleReviews.length === 0 ? (
-                <View className="rounded-xl bg-white p-4">
-                  <Text className="font-semibold text-slate-500">Aucun avis dans ce filtre.</Text>
-                </View>
+                <EmptyState
+                  icon="star-outline"
+                  illustration={EmptyReviewsIllustration}
+                  subtitle="Changez le filtre ou attendez les prochains avis."
+                  title="Aucun avis"
+                />
               ) : (
                 visibleReviews.map((review) => (
                   <ReviewRow

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200" fill="none">
+  <ellipse cx="120" cy="104" rx="92" ry="78" fill="#EEF2FD"/>
+  <circle cx="44" cy="46" r="6" fill="#D8E1FB"/>
+  <circle cx="198" cy="54" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="196" cy="150" r="7" fill="#D8E1FB"/>
+  <circle cx="40" cy="150" r="4" fill="#F59E0B" opacity="0.45"/>
+
+  <!-- voiture en panne -->
+  <path d="M64 122 L72 100 C75 92 82 88 90 88 L140 88 C147 88 153 92 157 98 L166 116"
+        stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="#FFFFFF"/>
+  <path d="M58 122 L176 122 C181 122 184 126 184 130 L184 134 C184 137 182 139 179 139
+           L62 139 C59 139 56 137 56 134 L56 130 C56 126 54 122 58 122 Z"
+        fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M90 91 L134 91 C140 91 145 94 149 99 L155 108 L96 108 C92 108 90 106 90 103 Z"
+        fill="#E2E8F0" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="86" cy="139" r="12" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="154" cy="139" r="12" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- bulle d'alerte accent -->
+  <circle cx="156" cy="64" r="22" fill="#F59E0B"/>
+  <line x1="156" y1="54" x2="156" y2="68" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="156" cy="76" r="2.6" fill="#FFFFFF"/>
+
+</svg>

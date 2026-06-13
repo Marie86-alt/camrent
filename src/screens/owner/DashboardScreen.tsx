@@ -1,15 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
+import { useBottomSheet, useToast } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
 import { useBookings } from '../../hooks/useBookings';
 import { useCars } from '../../hooks/useCars';
-import { updateBookingStatus } from '../../services/bookingService';
+import { ownerCancelBooking, updateBookingStatus } from '../../services/bookingService';
 import type { Booking, BookingStatus, PaymentMethod } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
@@ -50,21 +53,45 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; color: string }[] = 
   { key: 'Carte bancaire', label: 'Carte bancaire', color: '#3b82f6' },
 ];
 
-async function handleStatusUpdate(
-  booking: Booking,
-  status: Extract<BookingStatus, 'cancelled' | 'confirmed'>,
-) {
-  try {
-    await updateBookingStatus(booking.id, status);
-  } catch {
-    Alert.alert('Erreur', TEXT.updateError);
-  }
-}
-
 export function DashboardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { cars } = useCars(user?.id);
   const { bookings } = useBookings(user?.id, 'owner');
+  const toast = useToast();
+  const bottomSheet = useBottomSheet();
+
+  const handleStatusUpdate = useCallback(async (
+    booking: Booking,
+    status: Extract<BookingStatus, 'confirmed'>,
+  ) => {
+    try {
+      await updateBookingStatus(booking.id, status);
+    } catch {
+      hapticError(); toast.error(TEXT.updateError);
+    }
+  }, [toast]);
+
+  const confirmOwnerCancellation = useCallback((booking: Booking) => {
+    bottomSheet.show({
+      title: 'Annuler cette reservation ?',
+      subtitle: "Le client sera rembourse integralement s'il a deja paye.",
+      actions: [
+        {
+          label: 'Annuler la reservation',
+          variant: 'danger',
+          icon: 'close-circle-outline',
+          onPress: async () => {
+            try {
+              await ownerCancelBooking(booking.id);
+              hapticSuccess(); toast.success('Reservation annulee.');
+            } catch {
+              hapticError(); toast.error("Impossible d'annuler la reservation.");
+            }
+          },
+        },
+      ],
+    });
+  }, [bottomSheet, toast]);
 
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const recentBookings = bookings.filter((b) => b.status !== 'pending').slice(0, 3);
@@ -271,7 +298,7 @@ export function DashboardScreen({ navigation }: Props) {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5"
-                        onPress={() => handleStatusUpdate(booking, 'cancelled')}
+                        onPress={() => confirmOwnerCancellation(booking)}
                       >
                         <Ionicons color="#b91c1c" name="close-outline" size={16} />
                         <Text className="font-semibold text-brand-danger">Refuser</Text>
