@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -48,6 +49,7 @@ function Field({ keyboardType = 'default', label, onChangeText, placeholder, sec
 }
 
 function DocumentButton({ label, onPress, selected }: { label: string; onPress: () => void; selected: boolean }) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -62,13 +64,14 @@ function DocumentButton({ label, onPress, selected }: { label: string; onPress: 
         size={20}
       />
       <Text className={`flex-1 font-semibold ${selected ? 'text-brand-blue' : 'text-slate-600'}`}>
-        {selected ? `${label} ajouté` : `Ajouter ${label}`}
+        {selected ? t('owner.doc_added', { label }) : t('owner.doc_add', { label })}
       </Text>
     </TouchableOpacity>
   );
 }
 
 export function DriverProfileScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [fullName, setFullName] = useState('');
@@ -105,7 +108,7 @@ export function DriverProfileScreen({ navigation }: Props) {
   async function pickProfilePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      toast.info("Autorisez l'acces a la galerie pour ajouter la photo du chauffeur.");
+      toast.info(t('owner.photo_permission'));
       return;
     }
 
@@ -124,7 +127,7 @@ export function DriverProfileScreen({ navigation }: Props) {
   async function pickDocument(setter: (uri: string) => void) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      toast.info("Autorisez l'acces a la galerie pour ajouter le document.");
+      toast.info(t('owner.doc_permission'));
       return;
     }
 
@@ -141,7 +144,7 @@ export function DriverProfileScreen({ navigation }: Props) {
 
   async function submit() {
     if (!canSubmit) {
-      hapticWarning(); toast.warning('Renseignez les informations obligatoires du chauffeur.');
+      hapticWarning(); toast.warning(t('owner.driver_required_fields'));
       return;
     }
 
@@ -182,14 +185,14 @@ export function DriverProfileScreen({ navigation }: Props) {
         profilePhotoUrl,
       });
 
-      hapticSuccess(); toast.success('Chauffeur cree — envoye en validation admin.'); navigation.goBack();
+      hapticSuccess(); toast.success(t('owner.driver_created_success')); navigation.goBack();
     } catch (error) {
       if (isOfflineError(error)) {
         hapticWarning(); toast.warning(error.message);
         return;
       }
 
-      hapticError(); toast.error(error instanceof Error ? error.message : "Le chauffeur n'a pas pu etre cree.");
+      hapticError(); toast.error(error instanceof Error ? error.message : t('owner.driver_create_error'));
     } finally {
       setSaving(false);
     }
@@ -199,11 +202,9 @@ export function DriverProfileScreen({ navigation }: Props) {
     <Screen topSafeArea>
       <View className="gap-5 px-5 pt-4">
         <View>
-          <Text className="text-xs font-bold uppercase text-brand-blue">Espace propriétaire</Text>
-          <Text className="text-3xl font-black text-slate-950">Ajouter un chauffeur</Text>
-          <Text className="mt-1 text-sm text-slate-500">
-            Créez un compte chauffeur séparé. Le chauffeur pourra ensuite se connecter à son propre espace.
-          </Text>
+          <Text className="text-xs font-bold uppercase text-brand-blue">{t('owner.space_label')}</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('owner.add_driver_screen_subtitle')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('owner.add_driver_subtitle')}</Text>
         </View>
 
         <View className="gap-4">
@@ -225,59 +226,55 @@ export function DriverProfileScreen({ navigation }: Props) {
               </View>
             </TouchableOpacity>
             <View className="items-center">
-              <Text className="text-base font-black text-slate-950">Photo du chauffeur</Text>
-              <Text className="mt-1 text-center text-xs text-slate-500">
-                Recommandée pour la validation admin et la confiance côté client.
-              </Text>
+              <Text className="text-base font-black text-slate-950">{t('owner.driver_photo_title')}</Text>
+              <Text className="mt-1 text-center text-xs text-slate-500">{t('owner.driver_photo_subtitle')}</Text>
             </View>
           </View>
-          <Field label="Nom complet" onChangeText={setFullName} placeholder="Ex: Jean Kamga" value={fullName} />
-          <Field keyboardType="email-address" label="Email chauffeur" onChangeText={setEmail} placeholder="chauffeur@email.com" value={email} />
-          <Field keyboardType="phone-pad" label="Téléphone" onChangeText={setPhone} placeholder="+237 6XX XXX XXX" value={phone} />
-          <Field label="Mot de passe temporaire" onChangeText={setPassword} placeholder="Minimum 6 caractères" secureTextEntry value={password} />
-          <CitySearchInput label="Ville du chauffeur" onSelectCity={setCity} value={city} />
+          <Field label={t('auth.full_name')} onChangeText={setFullName} placeholder="Ex: Jean Kamga" value={fullName} />
+          <Field keyboardType="email-address" label={t('auth.email')} onChangeText={setEmail} placeholder="chauffeur@email.com" value={email} />
+          <Field keyboardType="phone-pad" label={t('auth.phone')} onChangeText={setPhone} placeholder="+237 6XX XXX XXX" value={phone} />
+          <Field label={t('auth.password_temp')} onChangeText={setPassword} placeholder={t('auth.password_min')} secureTextEntry value={password} />
+          <CitySearchInput label={t('common.city_driver')} onSelectCity={setCity} value={city} />
         </View>
 
         <View className="gap-4 rounded-2xl bg-white p-4">
-          <Text className="text-lg font-black text-slate-950">Permis et profil</Text>
-          <Field label="Numéro de permis" onChangeText={setLicenseNumber} placeholder="Ex: CE123456" value={licenseNumber} />
+          <Text className="text-lg font-black text-slate-950">{t('owner.license_profile_section')}</Text>
+          <Field label={t('auth.license_number')} onChangeText={setLicenseNumber} placeholder="Ex: CE123456" value={licenseNumber} />
           <DatePickerField
-            label="Expiration permis"
+            label={t('auth.license_expiry')}
             minimumDate={minLicenseExpiryDate}
             onChange={setLicenseExpiryDate}
             placeholder="Ex: 03/06/2030"
             value={licenseExpiryDate}
           />
-          <Field label="Catégories permis" onChangeText={setLicenseCategories} placeholder="Ex: B, C" value={licenseCategories} />
-          <Field label="Numéro CNI" onChangeText={setNationalIdNumber} placeholder="Numéro CNI" value={nationalIdNumber} />
-          <Field keyboardType="numeric" label="Années d'expérience" onChangeText={setExperienceYears} placeholder="Ex: 5" value={experienceYears} />
-          <Field keyboardType="numeric" label="Prix chauffeur par jour" onChangeText={setPricePerDay} placeholder="Ex: 10000" value={pricePerDay} />
+          <Field label={t('auth.license_categories')} onChangeText={setLicenseCategories} placeholder="Ex: B, C" value={licenseCategories} />
+          <Field label={t('auth.national_id')} onChangeText={setNationalIdNumber} placeholder={t('auth.national_id')} value={nationalIdNumber} />
+          <Field keyboardType="numeric" label={t('driver.experience_label')} onChangeText={setExperienceYears} placeholder="Ex: 5" value={experienceYears} />
+          <Field keyboardType="numeric" label={t('driver.daily_rate_label')} onChangeText={setPricePerDay} placeholder="Ex: 10000" value={pricePerDay} />
         </View>
 
         <View className="gap-3 rounded-2xl bg-white p-4">
-          <Text className="text-lg font-black text-slate-950">Documents du chauffeur</Text>
-          <Text className="text-xs text-slate-500">
-            Ajoutez la CNI et le permis pour faciliter la validation admin.
-          </Text>
+          <Text className="text-lg font-black text-slate-950">{t('owner.driver_docs_section')}</Text>
+          <Text className="text-xs text-slate-500">{t('owner.driver_docs_subtitle')}</Text>
           <DocumentButton
-            label="CNI recto"
+            label={t('admin.doc_cni_front')}
             selected={Boolean(nationalIdUri)}
             onPress={() => pickDocument(setNationalIdUri)}
           />
           <DocumentButton
-            label="CNI verso"
+            label={t('admin.doc_cni_back')}
             selected={Boolean(nationalIdBackUri)}
             onPress={() => pickDocument(setNationalIdBackUri)}
           />
           <DocumentButton
-            label="Permis de conduire"
+            label={t('owner.field_license')}
             selected={Boolean(driverLicenseUri)}
             onPress={() => pickDocument(setDriverLicenseUri)}
           />
         </View>
 
         <PrimaryButton disabled={!canSubmit} loading={saving} onPress={submit}>
-          Créer le chauffeur
+          {t('owner.create_driver_cta')}
         </PrimaryButton>
       </View>
     </Screen>

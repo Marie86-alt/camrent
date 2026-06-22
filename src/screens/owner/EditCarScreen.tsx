@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -32,6 +33,7 @@ async function pickPhoto(): Promise<{ uri: string | null; permissionDenied: bool
 }
 
 export function EditCarScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { car } = route.params;
   const toast = useToast();
   const [brand, setBrand] = useState(car.brand);
@@ -64,7 +66,7 @@ export function EditCarScreen({ navigation, route }: Props) {
 
   const handlePickPhoto = async (index: number) => {
     const result = await pickPhoto();
-    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le vehicule."); return; }
+    if (result.permissionDenied) { toast.info(t('car.photo_permission')); return; }
     const { uri } = result;
     if (!uri) return;
 
@@ -78,7 +80,7 @@ export function EditCarScreen({ navigation, route }: Props) {
   const pickRegistrationDocument = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      toast.info("Autorisez l'acces aux photos pour ajouter la carte grise.");
+      toast.info(t('car.reg_doc_permission'));
       return;
     }
 
@@ -134,9 +136,9 @@ export function EditCarScreen({ navigation, route }: Props) {
         },
       });
 
-      hapticSuccess(); toast.success('Voiture modifiee — en attente de verification admin.'); navigation.goBack();
+      hapticSuccess(); toast.success(t('car.edit_success')); navigation.goBack();
     } catch {
-      hapticError(); toast.error('Impossible de modifier la voiture.');
+      hapticError(); toast.error(t('car.edit_error'));
     } finally {
       setLoading(false);
     }
@@ -149,11 +151,11 @@ export function EditCarScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <View className="gap-5 pt-4">
-        <Text className="text-2xl font-black text-slate-950">Modifier la voiture</Text>
+        <Text className="text-2xl font-black text-slate-950">{t('car.edit_title')}</Text>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold text-slate-950">Photos du véhicule</Text>
+            <Text className="font-bold text-slate-950">{t('car.photos_section')}</Text>
             <Text
               className={`rounded-full px-3 py-1 text-xs font-bold ${
                 filledCount === 6 ? 'bg-blue-50 text-brand-blue' : 'bg-slate-100 text-slate-500'
@@ -206,11 +208,11 @@ export function EditCarScreen({ navigation, route }: Props) {
                         {slot.label}
                       </Text>
                       {localUri ? (
-                        <Text className="text-xs font-semibold text-white">Modifiée</Text>
+                        <Text className="text-xs font-semibold text-white">{t('car.modified_badge')}</Text>
                       ) : displayUri ? (
                         <Ionicons color="white" name="checkmark-circle" size={14} />
                       ) : isRequired ? (
-                        <Text className="text-xs font-semibold text-amber-600">Requis</Text>
+                        <Text className="text-xs font-semibold text-amber-600">{t('common.required')}</Text>
                       ) : null}
                     </View>
                   </View>
@@ -220,15 +222,15 @@ export function EditCarScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" onChangeText={setBrand} placeholder="Marque" value={brand} />
-        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" onChangeText={setModel} placeholder="Modèle" value={model} />
-        <CitySearchInput label="Ville du véhicule" onSelectCity={setCity} value={city} />
-        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" keyboardType="numeric" onChangeText={setPricePerDay} placeholder="Prix par jour en FCFA" value={pricePerDay} />
+        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" onChangeText={setBrand} placeholder={t('car.brand')} value={brand} />
+        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" onChangeText={setModel} placeholder={t('car.model')} value={model} />
+        <CitySearchInput label={t('car.city_label')} onSelectCity={setCity} value={city} />
+        <TextInput className="h-12 rounded-xl border border-slate-200 bg-white px-4" keyboardType="numeric" onChangeText={setPricePerDay} placeholder={t('car.price_placeholder')} value={pricePerDay} />
         <TextInput
           className="min-h-28 rounded-xl border border-slate-200 bg-white px-4 py-3"
           multiline
           onChangeText={setDescription}
-          placeholder="Description"
+          placeholder={t('car.description_placeholder')}
           textAlignVertical="top"
           value={description}
         />
@@ -248,10 +250,8 @@ export function EditCarScreen({ navigation, route }: Props) {
             {allowIndependentDrivers ? <Ionicons color="white" name="checkmark" size={16} /> : null}
           </View>
           <View className="flex-1">
-            <Text className="font-bold text-slate-950">Autoriser les chauffeurs indépendants</Text>
-            <Text className="mt-1 text-xs text-slate-500">
-              J'autorise les chauffeurs indépendants vérifiés à conduire ce véhicule.
-            </Text>
+            <Text className="font-bold text-slate-950">{t('car.allow_independent_drivers')}</Text>
+            <Text className="mt-1 text-xs text-slate-500">{t('car.allow_independent_drivers_desc')}</Text>
           </View>
         </TouchableOpacity>
 
@@ -259,19 +259,19 @@ export function EditCarScreen({ navigation, route }: Props) {
           className="gap-3 rounded-2xl bg-white p-4"
           style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
         >
-          <Text className="text-base font-black text-slate-950">Fiche technique</Text>
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setLicensePlate} placeholder="Immatriculation" value={licensePlate} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setChassisNumber} placeholder="Numéro de châssis" value={chassisNumber} />
-          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" keyboardType="numeric" onChangeText={setMileage} placeholder="Kilométrage" value={mileage} />
+          <Text className="text-base font-black text-slate-950">{t('car.technical_sheet')}</Text>
+          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setLicensePlate} placeholder={t('car.plate_label')} value={licensePlate} />
+          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" onChangeText={setChassisNumber} placeholder={t('car.chassis_label')} value={chassisNumber} />
+          <TextInput className="h-12 rounded-xl border border-slate-200 px-4" keyboardType="numeric" onChangeText={setMileage} placeholder={t('car.mileage_label')} value={mileage} />
           <DatePickerField
-            label="Expiration assurance"
+            label={t('car.insurance_expiry_label')}
             minimumDate={minDocumentDate}
             onChange={setInsuranceExpiry}
             placeholder="Ex: 03/06/2027"
             value={insuranceExpiry}
           />
           <DatePickerField
-            label="Expiration contrôle technique"
+            label={t('car.inspection_expiry_label')}
             minimumDate={minDocumentDate}
             onChange={setTechnicalInspectionExpiry}
             placeholder="Ex: 03/06/2027"
@@ -293,16 +293,16 @@ export function EditCarScreen({ navigation, route }: Props) {
             />
             <Text className={`font-semibold ${registrationDocumentUri || car.technicalSheet?.registrationDocumentUrl ? 'text-brand-blue' : 'text-slate-600'}`}>
               {registrationDocumentUri
-                ? 'Nouveau document sélectionné'
+                ? t('car.new_doc_selected')
                 : car.technicalSheet?.registrationDocumentUrl
-                  ? 'Carte grise déjà fournie (appuyer pour remplacer)'
-                  : 'Ajouter carte grise / document véhicule'}
+                  ? t('car.reg_doc_replace')
+                  : t('car.reg_doc_add')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <PrimaryButton disabled={!brand || !model || !pricePerDay} loading={loading} onPress={save}>
-          Enregistrer les modifications
+          {t('car.edit_cta')}
         </PrimaryButton>
       </View>
     </Screen>

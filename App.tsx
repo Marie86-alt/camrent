@@ -1,5 +1,8 @@
 import './global.css';
+import './src/i18n';
+import { loadSavedLanguage } from './src/i18n';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -12,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -21,6 +24,7 @@ import { BottomSheetProvider } from './src/components/ui/BottomSheet';
 import { OfflineBanner } from './src/components/ui/OfflineBanner';
 import { ToastProvider } from './src/components/ui/Toast';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import { auth, db } from './src/services/firebase';
 import { useAuthStore } from './src/store/authStore';
 import type { AppUser } from './src/types/models';
@@ -34,6 +38,7 @@ const DS = {
 
 const PROFILE_LOAD_TIMEOUT_MS = 8000;
 const AUTH_BOOT_TIMEOUT_MS    = 10000;
+const ONBOARDING_SEEN_KEY = 'onboarding_seen';
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
   return Promise.race([
@@ -46,6 +51,9 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 
 export default function App() {
   const { initializing, setInitializing, setUser } = useAuthStore();
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [onboardingSeen, setOnboardingSeen] = useState(true);
+  const [languageReady, setLanguageReady] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -92,7 +100,39 @@ export default function App() {
     };
   }, [setInitializing, setUser]);
 
-  if (initializing || !fontsLoaded) {
+  useEffect(() => {
+    loadSavedLanguage().finally(() => setLanguageReady(true));
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AsyncStorage.getItem(ONBOARDING_SEEN_KEY)
+      .then((value) => {
+        if (!mounted) return;
+        setOnboardingSeen(value === 'true');
+      })
+      .catch((error) => {
+        console.warn("Impossible de lire l'etat de l'onboarding.", error);
+        if (mounted) setOnboardingSeen(true);
+      })
+      .finally(() => {
+        if (mounted) setOnboardingReady(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const finishOnboarding = useCallback(() => {
+    setOnboardingSeen(true);
+    AsyncStorage.setItem(ONBOARDING_SEEN_KEY, 'true').catch((error) => {
+      console.warn("Impossible d'enregistrer l'etat de l'onboarding.", error);
+    });
+  }, []);
+
+  if (initializing || !fontsLoaded || !onboardingReady || !languageReady) {
     return (
       <SafeAreaProvider>
         <View style={styles.loadingScreen}>
@@ -104,6 +144,15 @@ export default function App() {
           />
           <Text style={styles.loadingText}>Chargement en cours…</Text>
         </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!onboardingSeen) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <OnboardingScreen onDone={finishOnboarding} />
       </SafeAreaProvider>
     );
   }

@@ -2,59 +2,43 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Screen } from '../../components/Screen';
 import type { AdminStackParamList } from '../../types/navigation';
 
 type MoreNavProp = NativeStackNavigationProp<AdminStackParamList>;
 
+type ScreenKey = keyof Pick<
+  AdminStackParamList,
+  'AdminFinanceDetail' | 'AdminReviewsDetail' | 'AdminContentDetail' | 'AdminSecurityDetail'
+>;
+
 type Module = {
   description: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
-  screen: keyof Pick<
-    AdminStackParamList,
-    'AdminFinanceDetail' | 'AdminReviewsDetail' | 'AdminContentDetail' | 'AdminSecurityDetail'
-  >;
+  screen: ScreenKey;
 };
 
-const modules: Module[] = [
-  {
-    description: 'Encaissements, flux de paiement et commission plateforme.',
-    icon: 'wallet-outline',
-    label: 'Finances',
-    screen: 'AdminFinanceDetail',
-  },
-  {
-    description: 'Avis, signalements et distribution des étoiles.',
-    icon: 'star-outline',
-    label: 'Avis & modération',
-    screen: 'AdminReviewsDetail',
-  },
-  {
-    description: 'Notifications groupées, bannières et villes couvertes.',
-    icon: 'megaphone-outline',
-    label: 'Communication',
-    screen: 'AdminContentDetail',
-  },
-  {
-    description: 'Comptes admin, rôles, commissions et caution par défaut.',
-    icon: 'shield-checkmark-outline',
-    label: 'Sécurité',
-    screen: 'AdminSecurityDetail',
-  },
-];
-
 export function AdminMoreScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<MoreNavProp>();
+
+  const modules: Module[] = [
+    { description: t('admin.module_finance_desc'), icon: 'wallet-outline', label: t('admin.module_finance'), screen: 'AdminFinanceDetail' },
+    { description: t('admin.module_reviews_desc'), icon: 'star-outline', label: t('admin.module_reviews'), screen: 'AdminReviewsDetail' },
+    { description: t('admin.module_communication_desc'), icon: 'megaphone-outline', label: t('admin.module_communication'), screen: 'AdminContentDetail' },
+    { description: t('admin.module_security_desc'), icon: 'shield-checkmark-outline', label: t('admin.module_security'), screen: 'AdminSecurityDetail' },
+  ];
 
   return (
     <Screen topSafeArea>
       <View className="gap-5">
         <View>
-          <Text className="text-xs font-bold uppercase text-brand-blue">Administration</Text>
-          <Text className="text-3xl font-black text-slate-950">Plus</Text>
-          <Text className="mt-1 text-sm text-slate-500">Modules secondaires du panel admin.</Text>
+          <Text className="text-xs font-bold uppercase text-brand-blue">{t('admin.dashboard')}</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.more_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.more_subtitle')}</Text>
         </View>
 
         <View className="gap-3">

@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { CarCard } from '../../components/CarCard';
@@ -25,13 +26,6 @@ type HomeNavProp = CompositeNavigationProp<
   NativeStackNavigationProp<ClientStackParamList>
 >;
 
-const BOOKING_STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  confirmed: 'Confirmée',
-  cancelled: 'Annulée',
-  completed: 'Terminée',
-};
-
 const BOOKING_STATUS_COLORS: Record<string, string> = {
   pending: '#ca8a04',
   confirmed: '#3B63D4',
@@ -42,6 +36,7 @@ const BOOKING_STATUS_COLORS: Record<string, string> = {
 const SKELETON_COUNT = 3;
 
 export function HomeScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<HomeNavProp>();
   const user = useAuthStore((state) => state.user);
   const { cars, error, loading, subscribeToAvailableCars } = useCarsStore();
@@ -55,9 +50,7 @@ export function HomeScreen() {
   useEffect(() => subscribeToAvailableCars(), [retryToken, subscribeToAvailableCars]);
 
   useEffect(() => {
-    if (!loading) {
-      setRefreshing(false);
-    }
+    if (!loading) setRefreshing(false);
   }, [loading]);
 
   useEffect(() => {
@@ -65,10 +58,9 @@ export function HomeScreen() {
       wasOfflineRef.current = true;
       return;
     }
-
     if (wasOfflineRef.current) {
       wasOfflineRef.current = false;
-      setRetryToken((value) => value + 1);
+      setRetryToken((v) => v + 1);
     }
   }, [isOnline]);
 
@@ -76,14 +68,21 @@ export function HomeScreen() {
   const initials =
     user?.fullName
       ?.split(' ')
-      .map((name) => name[0])
+      .map((n) => n[0])
       .slice(0, 2)
       .join('')
       .toUpperCase() ?? '';
 
-  const activeBooking = bookings.find((booking) => booking.status === 'pending' || booking.status === 'confirmed');
-  const displayedCars = selectedCity ? cars.filter((car) => car.city === selectedCity) : cars;
-  const skeletonItems = Array.from({ length: SKELETON_COUNT }, (_, index) => index);
+  const BOOKING_STATUS_LABELS: Record<string, string> = {
+    pending: t('booking.status_pending'),
+    confirmed: t('booking.status_confirmed'),
+    cancelled: t('booking.status_cancelled'),
+    completed: t('booking.status_completed'),
+  };
+
+  const activeBooking = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed');
+  const displayedCars = selectedCity ? cars.filter((c) => c.city === selectedCity) : cars;
+  const skeletonItems = Array.from({ length: SKELETON_COUNT }, (_, i) => i);
 
   const renderSkeleton = useCallback(() => <CarCardSkeleton />, []);
   const skeletonKeyExtractor = useCallback((item: number) => String(item), []);
@@ -96,15 +95,10 @@ export function HomeScreen() {
   );
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setRetryToken((value) => value + 1);
+    setRetryToken((v) => v + 1);
   }, []);
   const refreshControl = (
-    <RefreshControl
-      colors={['#3B63D4']}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      tintColor="#3B63D4"
-    />
+    <RefreshControl colors={['#3B63D4']} onRefresh={onRefresh} refreshing={refreshing} tintColor="#3B63D4" />
   );
 
   const ListHeader = (
@@ -117,18 +111,10 @@ export function HomeScreen() {
               <TouchableOpacity
                 className="flex-row items-center gap-1.5 rounded-full bg-white px-3.5 py-2"
                 onPress={() => (navigation as any).navigate('Login')}
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.07,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                }}
+                style={{ shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: '#e2e8f0' }}
               >
                 <Ionicons color="#3B63D4" name="person-outline" size={15} />
-                <Text className="text-sm font-semibold text-slate-700">Se connecter</Text>
+                <Text className="text-sm font-semibold text-slate-700">{t('auth.sign_in_link')}</Text>
               </TouchableOpacity>
             ) : (
               <>
@@ -150,11 +136,11 @@ export function HomeScreen() {
 
         <View>
           <Text className="text-2xl font-black text-slate-950">
-            {isGuest ? 'Bienvenue sur Autofix Pro' : `Bonjour, ${user?.fullName?.split(' ')[0]} 👋`}
+            {isGuest
+              ? t('home.welcome_guest')
+              : t('home.greeting_name', { name: user?.fullName?.split(' ')[0] })}
           </Text>
-          <Text className="mt-0.5 text-sm text-slate-500">
-            Trouvez votre voiture idéale au Cameroun
-          </Text>
+          <Text className="mt-0.5 text-sm text-slate-500">{t('home.subtitle')}</Text>
         </View>
       </View>
 
@@ -162,18 +148,10 @@ export function HomeScreen() {
         activeOpacity={0.8}
         className="flex-row items-center gap-3 rounded-2xl bg-white px-4 py-3.5"
         onPress={() => navigation.navigate('Search')}
-        style={{
-          shadowColor: '#3B63D4',
-          shadowOpacity: 0.12,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 3,
-          borderWidth: 1.5,
-          borderColor: '#dbeafe',
-        }}
+        style={{ shadowColor: '#3B63D4', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, borderWidth: 1.5, borderColor: '#dbeafe' }}
       >
         <Ionicons color="#3B63D4" name="search-outline" size={20} />
-        <Text className="flex-1 text-slate-400">Rechercher marque, modèle ou ville...</Text>
+        <Text className="flex-1 text-slate-400">{t('home.search_placeholder')}</Text>
         <View className="rounded-lg bg-brand-blue px-2 py-1">
           <Ionicons color="white" name="arrow-forward" size={14} />
         </View>
@@ -181,14 +159,14 @@ export function HomeScreen() {
 
       <View className="rounded-2xl bg-white p-4">
         <CitySearchInput
-          label="Filtrer par ville"
+          label={t('home.filter_city')}
           onSelectCity={(city) => setSelectedCity(city || null)}
-          placeholder="Rechercher Yaounde, Douala, Kribi..."
+          placeholder={t('home.search_city_placeholder')}
           value={selectedCity}
         />
         {selectedCity ? (
           <TouchableOpacity className="mt-3 self-start" onPress={() => setSelectedCity(null)}>
-            <Text className="text-sm font-semibold text-brand-blue">Voir toutes les villes</Text>
+            <Text className="text-sm font-semibold text-brand-blue">{t('common.see_all_cities')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -198,15 +176,7 @@ export function HomeScreen() {
           activeOpacity={0.85}
           className="flex-row items-center gap-3 overflow-hidden rounded-2xl bg-white p-4"
           onPress={() => navigation.navigate('MyBookings')}
-          style={{
-            shadowColor: '#000',
-            shadowOpacity: 0.07,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
-            borderLeftWidth: 4,
-            borderLeftColor: BOOKING_STATUS_COLORS[activeBooking.status],
-          }}
+          style={{ shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2, borderLeftWidth: 4, borderLeftColor: BOOKING_STATUS_COLORS[activeBooking.status] }}
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-full"
@@ -215,11 +185,11 @@ export function HomeScreen() {
             <Ionicons color={BOOKING_STATUS_COLORS[activeBooking.status]} name="car-outline" size={20} />
           </View>
           <View className="flex-1">
-            <Text className="text-xs font-semibold text-slate-400">Réservation active</Text>
+            <Text className="text-xs font-semibold text-slate-400">{t('home.active_booking')}</Text>
             <Text className="mt-0.5 font-bold text-slate-950">
               {activeBooking.carBrand && activeBooking.carModel
                 ? `${activeBooking.carBrand} ${activeBooking.carModel}`
-                : 'Véhicule réservé'}
+                : t('home.vehicle_booked')}
             </Text>
             <Text className="mt-0.5 text-xs font-semibold" style={{ color: BOOKING_STATUS_COLORS[activeBooking.status] }}>
               {BOOKING_STATUS_LABELS[activeBooking.status]}
@@ -231,14 +201,14 @@ export function HomeScreen() {
 
       <View className="flex-row items-center justify-between">
         <Text className="text-lg font-bold text-slate-950">
-          {selectedCity ? `Voitures à ${selectedCity}` : 'Voitures disponibles'}
+          {selectedCity ? t('home.cars_in_city', { city: selectedCity }) : t('home.available_cars')}
           {!loading && displayedCars.length > 0 ? (
             <Text className="text-base font-semibold text-slate-400"> ({displayedCars.length})</Text>
           ) : null}
         </Text>
         {selectedCity ? (
           <TouchableOpacity onPress={() => setSelectedCity(null)}>
-            <Text className="text-sm font-semibold text-brand-blue">Tout voir</Text>
+            <Text className="text-sm font-semibold text-brand-blue">{t('common.see_all')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -263,24 +233,27 @@ export function HomeScreen() {
             ListHeaderComponent={ListHeader}
             ListEmptyComponent={
               <EmptyState
-                ctaLabel={error ? 'Réessayer' : selectedCity ? 'Voir toutes les villes' : undefined}
+                ctaLabel={error ? t('common.retry') : selectedCity ? t('common.see_all_cities') : undefined}
                 icon={error ? 'cloud-offline-outline' : 'car-outline'}
                 illustration={error ? ErrorIllustration : EmptyCarsIllustration}
                 onCta={
                   error
-                    ? () => setRetryToken((value) => value + 1)
+                    ? () => setRetryToken((v) => v + 1)
                     : selectedCity
                       ? () => setSelectedCity(null)
                       : undefined
                 }
                 subtitle={
                   error
-                    ? 'Vérifiez votre connexion puis relancez le chargement.'
+                    ? t('home.error_subtitle')
                     : selectedCity
-                    ? 'Essayez une autre ville ou affichez toutes les annonces disponibles.'
-                    : 'Revenez plus tard pour voir les nouvelles annonces.'
+                    ? t('home.no_cars_city_subtitle')
+                    : t('home.no_cars_subtitle')
                 }
-                title={error ?? `Aucune voiture disponible${selectedCity ? ` a ${selectedCity}` : ''}`}
+                title={
+                  error ??
+                  (selectedCity ? t('home.no_cars_city', { city: selectedCity }) : t('home.no_cars'))
+                }
               />
             }
             data={displayedCars}

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function DriverListScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { carCity, carId, startDate, endDate, selectable = true } = route.params;
   const { setSelectedDriver } = useBookingDraftStore();
   const [drivers, setDrivers] = useState<AppUser[]>([]);
@@ -50,14 +52,14 @@ export function DriverListScreen({ navigation, route }: Props) {
           hapticWarning();
           toast.warning(loadError.message);
         }
-        setError('Impossible de charger les chauffeurs disponibles.');
+        setError(t('driver.load_error'));
         setLoading(false);
       });
 
     return () => {
       mounted = false;
     };
-  }, [carCity, carId, endDate, retryToken, startDate]);
+  }, [carCity, carId, endDate, retryToken, startDate, t, toast]);
 
   const selectDriver = useCallback((driver: AppUser) => {
     if (!selectable) {
@@ -96,9 +98,11 @@ export function DriverListScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
           <View>
-            <Text className="text-xs font-medium text-slate-400">Disponibles à {carCity}</Text>
+            <Text className="text-xs font-medium text-slate-400">
+              {t('driver.available_in_city', { city: carCity })}
+            </Text>
             <Text className="mt-0.5 text-2xl font-black text-slate-950">
-              {selectable ? 'Choisir un chauffeur' : 'Chauffeurs disponibles'}
+              {selectable ? t('driver.choose_title') : t('driver.available_title')}
             </Text>
           </View>
         </View>
@@ -114,16 +118,16 @@ export function DriverListScreen({ navigation, route }: Props) {
           <FlatList
             ListEmptyComponent={
               <EmptyState
-                ctaLabel={error ? 'Réessayer' : undefined}
+                ctaLabel={error ? t('common.retry') : undefined}
                 icon={error ? 'cloud-offline-outline' : 'people-outline'}
                 illustration={error ? ErrorIllustration : EmptyDriversIllustration}
                 onCta={error ? () => setRetryToken((value) => value + 1) : undefined}
                 subtitle={
                   error
-                    ? 'Vérifiez votre connexion puis relancez la recherche.'
-                    : `Aucun chauffeur certifie n'est disponible a ${carCity} pour le moment.`
+                    ? t('driver.connection_retry')
+                    : t('driver.empty_subtitle', { city: carCity })
                 }
-                title={error ?? 'Aucun chauffeur disponible'}
+                title={error ?? t('driver.empty_title')}
               />
             }
             data={drivers}
@@ -138,6 +142,7 @@ export function DriverListScreen({ navigation, route }: Props) {
 }
 
 function DriverCard({ driver, onSelect, selectable }: { driver: AppUser; onSelect: () => void; selectable: boolean }) {
+  const { t } = useTranslation();
   const photoUrl = driver.driverProfile?.profilePhotoUrl ?? driver.photoUrl;
   const initials = driver.fullName
     .split(' ')
@@ -181,7 +186,7 @@ function DriverCard({ driver, onSelect, selectable }: { driver: AppUser; onSelec
           }`}
         >
           <Text className={`text-[10px] font-bold ${isIndependent ? 'text-brand-blue' : 'text-slate-600'}`}>
-            {isIndependent ? 'Ind\u00e9pendant' : 'Chauffeur du propri\u00e9taire'}
+            {isIndependent ? t('driver.independent_short') : t('driver.owner_driver')}
           </Text>
         </View>
         <View className="mt-0.5 flex-row items-center gap-2">
@@ -190,25 +195,29 @@ function DriverCard({ driver, onSelect, selectable }: { driver: AppUser; onSelec
               <Ionicons color="#ca8a04" name="star" size={12} />
               <Text className="text-xs font-semibold text-slate-600">{driver.ratingAverage}/5</Text>
               {driver.missionsCount ? (
-                <Text className="text-xs text-slate-400">({driver.missionsCount} missions)</Text>
+                <Text className="text-xs text-slate-400">
+                  {t('driver.missions_badge', { count: driver.missionsCount })}
+                </Text>
               ) : null}
             </View>
           ) : (
-            <Text className="text-xs text-slate-400">Nouveau chauffeur</Text>
+            <Text className="text-xs text-slate-400">{t('driver.new_driver')}</Text>
           )}
         </View>
         {driver.driverProfile?.experienceYears ? (
           <Text className="mt-0.5 text-xs text-slate-400">
-            {driver.driverProfile.experienceYears} ans d'expérience
+            {t('driver.experience_years', { count: driver.driverProfile.experienceYears })}
           </Text>
         ) : null}
       </View>
 
       <View className="items-end gap-1">
         <Text className="text-sm font-black text-brand-blue">{formatFcfa(price)}</Text>
-        <Text className="text-xs text-slate-400">par jour</Text>
+        <Text className="text-xs text-slate-400">{t('common.per_day')}</Text>
         <View className="rounded-full bg-blue-50 px-2 py-0.5">
-          <Text className="text-xs font-bold text-brand-blue">{selectable ? 'Choisir' : 'Voir'}</Text>
+          <Text className="text-xs font-bold text-brand-blue">
+            {selectable ? t('driver.choose_action') : t('driver.see_action')}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>

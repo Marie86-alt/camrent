@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { HomeScreen } from '../screens/client/HomeScreen';
 import { MyBookingsScreen } from '../screens/client/MyBookingsScreen';
@@ -25,6 +26,7 @@ function useActiveBookingCount() {
 }
 
 export function ClientTabNavigator() {
+  const { t } = useTranslation();
   const activeCount = useActiveBookingCount();
 
   return (
@@ -62,19 +64,19 @@ export function ClientTabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Accueil', headerShown: false }} />
-      <Tab.Screen name="Search" component={SearchScreen} options={{ title: 'Rechercher' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('tabs.home'), headerShown: false }} />
+      <Tab.Screen name="Search" component={SearchScreen} options={{ title: t('tabs.search') }} />
       <Tab.Screen
         name="MyBookings"
         component={MyBookingsScreen}
         options={{
-          title: 'Réservations',
+          title: t('tabs.bookings'),
           headerShown: false,
           tabBarBadge: activeCount > 0 ? activeCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#3B63D4', fontSize: 10 },
         }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil', headerShown: false }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile'), headerShown: false }} />
     </Tab.Navigator>
   );
 }

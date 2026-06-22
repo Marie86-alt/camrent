@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { formatInputDate, parseHumanDate } from '../utils/dates';
 
@@ -19,9 +20,10 @@ export function DatePickerField({
   maximumDate,
   minimumDate,
   onChange,
-  placeholder = 'JJ/MM/AAAA',
+  placeholder,
   value,
 }: DatePickerFieldProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const pickerValue = useMemo(() => {
@@ -53,7 +55,7 @@ export function DatePickerField({
         onPress={() => setOpen(true)}
       >
         <Text className={`text-base ${value ? 'text-slate-950' : 'text-slate-400'}`}>
-          {value || placeholder}
+          {value || placeholder || t('common.date_placeholder')}
         </Text>
         <Ionicons color="#94a3b8" name="calendar-outline" size={20} />
       </TouchableOpacity>

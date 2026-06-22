@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -21,19 +22,13 @@ import { db } from '../../services/firebase';
 import { isOfflineError } from '../../services/networkGuard';
 import type { CameroonCity, PromoBanner } from '../../types/models';
 
-const audiences: Array<{ label: string; value: 'all' | 'clients' | 'owners' | 'drivers' }> = [
-  { label: 'Tous', value: 'all' },
-  { label: 'Clients', value: 'clients' },
-  { label: 'Proprietaires', value: 'owners' },
-  { label: 'Chauffeurs', value: 'drivers' },
-];
-
 const SKELETON_ITEMS = [0, 1, 2];
 
 export function AdminContentScreen() {
+  const { t } = useTranslation();
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [title, setTitle] = useState('Promotion Autofix Pro');
-  const [message, setMessage] = useState('Nouvelle offre disponible pour vos locations.');
+  const [message, setMessage] = useState('');
   const [audience, setAudience] = useState<'all' | 'clients' | 'owners' | 'drivers'>('all');
   const [selectedCities, setSelectedCities] = useState<CameroonCity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +36,13 @@ export function AdminContentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
+
+  const audiences: Array<{ label: string; value: 'all' | 'clients' | 'owners' | 'drivers' }> = [
+    { label: t('admin.audience_all'), value: 'all' },
+    { label: t('admin.audience_clients'), value: 'clients' },
+    { label: t('admin.audience_owners'), value: 'owners' },
+    { label: t('admin.audience_drivers'), value: 'drivers' },
+  ];
 
   useEffect(() => {
     setLoading(true);
@@ -52,13 +54,13 @@ export function AdminContentScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les bannieres.');
+        setError(t('admin.load_banners_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'adminSettings', 'coverage'), (snapshot) => {
@@ -72,25 +74,19 @@ export function AdminContentScreen() {
     return unsubscribe;
   }, []);
 
-  function toggleCity(city: CameroonCity) {
-    setSelectedCities((current) =>
-      current.includes(city) ? current.filter((item) => item !== city) : [...current, city],
-    );
-  }
-
   async function sendNotification() {
     try {
       setSaving(true);
       const notificationRef = await createAdminNotification({ audience, message, title });
       const result = await sendAdminNotification(notificationRef.id);
-      hapticSuccess(); toast.success(`Notification envoyee — ${result.sentCount} destinataire(s), ${result.failedCount} echec(s).`);
-    } catch (error) {
-      if (isOfflineError(error)) {
-        hapticWarning(); toast.warning(error.message);
+      hapticSuccess(); toast.success(t('admin.send_success', { sent: result.sentCount, failed: result.failedCount }));
+    } catch (err) {
+      if (isOfflineError(err)) {
+        hapticWarning(); toast.warning((err as Error).message);
         return;
       }
 
-      hapticError(); toast.error(error instanceof Error ? error.message : "La notification n'a pas pu etre envoyee.");
+      hapticError(); toast.error(t('admin.send_error'));
     } finally {
       setSaving(false);
     }
@@ -100,9 +96,9 @@ export function AdminContentScreen() {
     try {
       setSaving(true);
       await createPromoBanner({ title, message, isActive: true });
-      hapticSuccess(); toast.success("Banniere creee et ajoutee a l'administration.");
+      hapticSuccess(); toast.success(t('admin.banner_created'));
     } catch {
-      hapticError(); toast.error("La banniere n'a pas pu etre creee.");
+      hapticError(); toast.error(t('admin.banner_create_error'));
     } finally {
       setSaving(false);
     }
@@ -112,9 +108,9 @@ export function AdminContentScreen() {
     try {
       setSaving(true);
       await updateCoveredCities(selectedCities);
-      hapticSuccess(); toast.success('Couverture mise a jour — villes sauvegardees.');
+      hapticSuccess(); toast.success(t('admin.cities_saved'));
     } catch {
-      hapticError(); toast.error("Les villes couvertes n'ont pas pu etre sauvegardees.");
+      hapticError(); toast.error(t('admin.cities_save_error'));
     } finally {
       setSaving(false);
     }
@@ -125,28 +121,30 @@ export function AdminContentScreen() {
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 8</Text>
-          <Text className="text-3xl font-black text-slate-950">Contenu & communication</Text>
-          <Text className="mt-1 text-sm text-slate-500">Notifications, bannieres et villes couvertes.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.content_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.content_subtitle')}</Text>
         </View>
 
         <View className="rounded-xl bg-white p-4">
           <View className="mb-4 flex-row items-center gap-2">
             <Ionicons color="#3B63D4" name="notifications-outline" size={22} />
-            <Text className="text-lg font-black text-slate-950">Notification groupee</Text>
+            <Text className="text-lg font-black text-slate-950">{t('admin.notification_group')}</Text>
           </View>
 
           <View className="gap-3">
             <TextInput
               className="h-12 rounded-lg border border-slate-200 px-4 text-slate-950"
               onChangeText={setTitle}
-              placeholder="Titre"
+              placeholder={t('admin.content_title')}
+              placeholderTextColor="#94a3b8"
               value={title}
             />
             <TextInput
               className="min-h-20 rounded-lg border border-slate-200 px-4 py-3 text-slate-950"
               multiline
               onChangeText={setMessage}
-              placeholder="Message"
+              placeholder={t('admin.notification_group')}
+              placeholderTextColor="#94a3b8"
               value={message}
             />
             <View className="flex-row flex-wrap gap-2">
@@ -163,7 +161,7 @@ export function AdminContentScreen() {
               ))}
             </View>
             <PrimaryButton loading={saving} onPress={sendNotification}>
-              Envoyer la notification
+              {t('admin.send_notification_cta')}
             </PrimaryButton>
           </View>
         </View>
@@ -171,10 +169,10 @@ export function AdminContentScreen() {
         <View className="rounded-xl bg-white p-4">
           <View className="mb-4 flex-row items-center gap-2">
             <Ionicons color="#3B63D4" name="megaphone-outline" size={22} />
-            <Text className="text-lg font-black text-slate-950">Bannieres promotionnelles</Text>
+            <Text className="text-lg font-black text-slate-950">{t('admin.banners_title')}</Text>
           </View>
           <PrimaryButton loading={saving} onPress={saveBanner}>
-            Ajouter une banniere active
+            {t('admin.add_banner_cta')}
           </PrimaryButton>
 
           {loading ? (
@@ -188,18 +186,18 @@ export function AdminContentScreen() {
             </View>
           ) : error ? (
             <EmptyState
-              ctaLabel="Réessayer"
+              ctaLabel={t('common.retry')}
               icon="cloud-offline-outline"
               illustration={ErrorIllustration}
               onCta={() => setRetryToken((value) => value + 1)}
-              subtitle="Vérifiez votre connexion puis relancez le chargement."
+              subtitle={t('errors.connection_retry')}
               title={error}
             />
           ) : banners.length === 0 ? (
             <EmptyState
               icon="megaphone-outline"
-              subtitle="Ajoutez une banniere active pour l'afficher sur l'accueil."
-              title="Aucune banniere"
+              subtitle={t('admin.empty_banners_subtitle')}
+              title={t('admin.empty_banners')}
             />
           ) : (
             <View className="mt-4 gap-3">
@@ -215,7 +213,7 @@ export function AdminContentScreen() {
                       onPress={() => updatePromoBanner(banner.id, { isActive: !banner.isActive })}
                     >
                       <Text className={`text-xs font-bold ${banner.isActive ? 'text-blue-700' : 'text-slate-500'}`}>
-                        {banner.isActive ? 'Active' : 'Inactive'}
+                        {banner.isActive ? t('admin.banner_active') : t('admin.banner_inactive')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -226,30 +224,30 @@ export function AdminContentScreen() {
         </View>
 
         <View className="rounded-xl bg-white p-4">
-          <Text className="mb-3 text-lg font-black text-slate-950">Villes couvertes</Text>
+          <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.cities_title')}</Text>
           <CitySearchInput
-            label="Ajouter une ville couverte"
+            label={t('admin.cities_add_label')}
             onSelectCity={(city) => {
               if (city && !selectedCities.includes(city)) {
                 setSelectedCities((current) => [...current, city]);
               }
             }}
-            placeholder="Rechercher une ville"
+            placeholder={t('admin.cities_search_placeholder')}
             value={null}
           />
           <View className="mt-3 flex-row items-center justify-between gap-3">
             <Text className="flex-1 text-sm font-semibold text-slate-500">
-              {selectedCities.length} ville(s) selectionnee(s)
+              {t('admin.cities_count', { count: selectedCities.length })}
             </Text>
             {selectedCities.length > 0 ? (
               <TouchableOpacity onPress={() => setSelectedCities([])}>
-                <Text className="text-sm font-bold text-red-600">Tout supprimer</Text>
+                <Text className="text-sm font-bold text-red-600">{t('admin.cities_clear')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
           <View className="mt-4">
             <PrimaryButton loading={saving} onPress={saveCities}>
-              Sauvegarder les villes
+              {t('admin.cities_save_cta')}
             </PrimaryButton>
           </View>
         </View>

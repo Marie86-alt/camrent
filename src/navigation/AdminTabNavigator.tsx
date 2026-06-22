@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AdminBookingsScreen } from '../screens/admin/AdminBookingsScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
@@ -49,6 +50,7 @@ function useAdminBadgeCounts() {
 }
 
 export function AdminTabNavigator() {
+  const { t } = useTranslation();
   const { openDisputes, pendingKyc, pendingVehicles } = useAdminBadgeCounts();
 
   return (
@@ -76,7 +78,7 @@ export function AdminTabNavigator() {
         name="AdminHome"
         component={AdminDashboardScreen}
         options={{
-          title: 'Accueil',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) => <Ionicons color={color} name="home-outline" size={22} />,
         }}
       />
@@ -84,7 +86,7 @@ export function AdminTabNavigator() {
         name="AdminVehicles"
         component={AdminVehicleReviewScreen}
         options={{
-          title: 'Véhicules',
+          title: t('tabs.vehicles'),
           tabBarBadge: pendingVehicles > 0 ? pendingVehicles : undefined,
           tabBarBadgeStyle: { backgroundColor: '#ca8a04', fontSize: 10 },
           tabBarIcon: ({ color }) => <Ionicons color={color} name="car-sport-outline" size={22} />,
@@ -94,7 +96,7 @@ export function AdminTabNavigator() {
         name="AdminDrivers"
         component={AdminDriversScreen}
         options={{
-          title: 'Utilisateurs',
+          title: t('tabs.users'),
           tabBarBadge: pendingKyc > 0 ? pendingKyc : undefined,
           tabBarBadgeStyle: { backgroundColor: '#2563eb', fontSize: 10 },
           tabBarIcon: ({ color }) => <Ionicons color={color} name="people-outline" size={22} />,
@@ -104,7 +106,7 @@ export function AdminTabNavigator() {
         name="AdminBookings"
         component={AdminBookingsScreen}
         options={{
-          title: 'Réservations',
+          title: t('tabs.bookings'),
           tabBarBadge: openDisputes > 0 ? openDisputes : undefined,
           tabBarBadgeStyle: { backgroundColor: '#b91c1c', fontSize: 10 },
           tabBarIcon: ({ color }) => <Ionicons color={color} name="receipt-outline" size={22} />,
@@ -114,7 +116,7 @@ export function AdminTabNavigator() {
         name="AdminMore"
         component={AdminMoreScreen}
         options={{
-          title: 'Plus',
+          title: t('tabs.more'),
           tabBarIcon: ({ color }) => (
             <Ionicons color={color} name="ellipsis-horizontal-outline" size={22} />
           ),

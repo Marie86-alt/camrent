@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
@@ -21,21 +22,8 @@ type StatusStyle = { label: string; textColor: string; bgColor: string };
 
 const SKELETON_ITEMS = [0, 1, 2];
 
-const STATUS_MAP: Record<BookingStatus, StatusStyle> = {
-  pending: { label: 'En attente', textColor: 'text-yellow-700', bgColor: 'bg-yellow-50' },
-  confirmed: { label: 'Confirmee', textColor: 'text-blue-700', bgColor: 'bg-blue-50' },
-  cancelled: { label: 'Annulee', textColor: 'text-red-700', bgColor: 'bg-red-50' },
-  completed: { label: 'Terminee', textColor: 'text-slate-600', bgColor: 'bg-slate-100' },
-};
-
-const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  unpaid: 'Non paye',
-  pending: 'En attente',
-  paid: 'Paye',
-  failed: 'Echoue',
-};
-
 export function ReservationsScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { bookings, error, loading, retry } = useBookings(user?.id, 'owner');
   const { isOnline } = useNetworkStatus();
@@ -43,6 +31,20 @@ export function ReservationsScreen() {
   const wasOfflineRef = useRef(false);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
+
+  const STATUS_MAP: Record<BookingStatus, StatusStyle> = {
+    pending: { label: t('booking.status_pending'), textColor: 'text-yellow-700', bgColor: 'bg-yellow-50' },
+    confirmed: { label: t('booking.status_confirmed'), textColor: 'text-blue-700', bgColor: 'bg-blue-50' },
+    cancelled: { label: t('booking.status_cancelled'), textColor: 'text-red-700', bgColor: 'bg-red-50' },
+    completed: { label: t('booking.status_completed'), textColor: 'text-slate-600', bgColor: 'bg-slate-100' },
+  };
+
+  const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+    unpaid: t('owner.payment_unpaid'),
+    pending: t('booking.status_pending'),
+    paid: t('owner.payment_paid'),
+    failed: t('owner.payment_failed'),
+  };
 
   useEffect(() => {
     if (!loading) {
@@ -71,36 +73,36 @@ export function ReservationsScreen() {
         return;
       }
 
-      hapticError(); toast.error('Impossible de mettre a jour la reservation.');
+      hapticError(); toast.error(t('owner.update_error'));
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const cancelOwnerReservation = useCallback((booking: Booking) => {
     bottomSheet.show({
-      title: 'Annuler cette reservation ?',
-      subtitle: "Le client sera rembourse integralement s'il a deja paye.",
+      title: t('owner.cancel_title'),
+      subtitle: t('owner.cancel_subtitle'),
       actions: [
         {
-          label: 'Annuler la reservation',
+          label: t('owner.cancel_action'),
           variant: 'danger',
           icon: 'close-circle-outline',
           onPress: async () => {
             try {
               await ownerCancelBooking(booking.id);
-              hapticSuccess(); toast.success('Reservation annulee — remboursement en cours.');
+              hapticSuccess(); toast.success(t('owner.cancel_success'));
             } catch (error) {
               if (isOfflineError(error)) {
                 hapticWarning(); toast.warning(error.message);
                 return;
               }
 
-              hapticError(); toast.error("Impossible d'annuler la reservation.");
+              hapticError(); toast.error(t('owner.cancel_error'));
             }
           },
         },
       ],
     });
-  }, [bottomSheet, toast]);
+  }, [bottomSheet, toast, t]);
 
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
   const onRefresh = useCallback(() => {
@@ -123,7 +125,7 @@ export function ReservationsScreen() {
       const carLabel =
         item.carBrand && item.carModel
           ? `${item.carBrand} ${item.carModel}`
-          : `Reservation #${item.id.slice(0, 6)}`;
+          : t('owner.reservation_no', { id: item.id.slice(0, 6) });
 
       return (
         <View
@@ -149,7 +151,9 @@ export function ReservationsScreen() {
 
           <View className="mt-1 flex-row items-center justify-between">
             <Text className="text-sm text-slate-500">
-              {item.totalDays} jour{item.totalDays > 1 ? 's' : ''} - {PAYMENT_STATUS_LABELS[item.paymentStatus]}
+              {item.totalDays > 1
+                ? t('common.days_other', { count: item.totalDays })
+                : t('common.days_one', { count: item.totalDays })} - {PAYMENT_STATUS_LABELS[item.paymentStatus]}
             </Text>
             <Text className="text-lg font-black text-brand-blue">{formatFcfa(item.totalPrice)}</Text>
           </View>
@@ -158,7 +162,7 @@ export function ReservationsScreen() {
             <View className="mt-4 rounded-xl bg-slate-50 p-3">
               <View className="mb-2 flex-row items-center gap-2">
                 <Ionicons color="#334155" name="id-card-outline" size={17} />
-                <Text className="font-bold text-slate-800">Permis de conduire</Text>
+                <Text className="font-bold text-slate-800">{t('owner.license_section')}</Text>
               </View>
               <Text className="text-sm text-slate-600">
                 {item.driverLicense.fullName} - {item.driverLicense.licenseNumber}
@@ -167,7 +171,7 @@ export function ReservationsScreen() {
                 Cat. {item.driverLicense.categories} - {item.driverLicense.issuingCountry}
               </Text>
               <Text className="mt-1 text-xs text-slate-500">
-                Delivre le {item.driverLicense.issueDate} - Expire le {item.driverLicense.expiryDate}
+                {t('owner.issued_on')} {item.driverLicense.issueDate} - {t('owner.expires_on')} {item.driverLicense.expiryDate}
               </Text>
             </View>
           ) : null}
@@ -180,7 +184,7 @@ export function ReservationsScreen() {
                 onPress={() => setStatus(item, 'confirmed')}
               >
                 <Ionicons color="white" name="checkmark-outline" size={16} />
-                <Text className="font-semibold text-white">Accepter</Text>
+                <Text className="font-semibold text-white">{t('owner.accept')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -188,14 +192,19 @@ export function ReservationsScreen() {
                 onPress={() => cancelOwnerReservation(item)}
               >
                 <Ionicons color="white" name="close-outline" size={16} />
-                <Text className="font-semibold text-white">Refuser</Text>
+                <Text className="font-semibold text-white">{t('owner.reject_booking')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
         </View>
       );
     },
-    [cancelOwnerReservation, setStatus],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cancelOwnerReservation, setStatus, t],
+  );
+
+  const header = (
+    <Text className="mb-4 text-2xl font-black text-slate-950">{t('owner.reservations_title')}</Text>
   );
 
   if (loading) {
@@ -203,9 +212,7 @@ export function ReservationsScreen() {
       <Screen scroll={false}>
         <View className="flex-1 px-5 pt-4">
           <FlatList
-            ListHeaderComponent={
-              <Text className="mb-4 text-2xl font-black text-slate-950">Reservations recues</Text>
-            }
+            ListHeaderComponent={header}
             data={SKELETON_ITEMS}
             keyExtractor={(item) => `reservation-skeleton-${item}`}
             refreshControl={refreshControl}
@@ -221,21 +228,19 @@ export function ReservationsScreen() {
     <Screen scroll={false}>
       <View className="flex-1 px-5 pt-4">
         <FlatList
-          ListHeaderComponent={
-            <Text className="mb-4 text-2xl font-black text-slate-950">Reservations recues</Text>
-          }
+          ListHeaderComponent={header}
           ListEmptyComponent={
             <EmptyState
-              ctaLabel={error ? 'Réessayer' : undefined}
+              ctaLabel={error ? t('common.retry') : undefined}
               icon={error ? 'cloud-offline-outline' : 'calendar-outline'}
               illustration={error ? ErrorIllustration : EmptyReservationsIllustration}
               onCta={error ? retry : undefined}
               subtitle={
                 error
-                  ? 'Vérifiez votre connexion puis relancez le chargement.'
-                  : "Les nouvelles demandes apparaitront ici des qu'un client reserve une voiture."
+                  ? t('errors.connection_retry')
+                  : t('owner.no_reservations_subtitle')
               }
-              title={error ?? 'Aucune reservation recue'}
+              title={error ?? t('owner.reservations_title')}
             />
           }
           data={bookings}

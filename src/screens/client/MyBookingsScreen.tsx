@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BookingCard } from '../../components/BookingCard';
 import { BrandLogo } from '../../components/BrandLogo';
@@ -32,6 +33,7 @@ type Filter = 'active' | 'history';
 const SKELETON_ITEMS = [0, 1, 2];
 
 export function MyBookingsScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<MyBookingsNavProp>();
   const { user } = useAuth();
   const { bookings, error, loading, retry } = useBookings(user?.id, 'client');
@@ -43,9 +45,7 @@ export function MyBookingsScreen() {
   const bottomSheet = useBottomSheet();
 
   useEffect(() => {
-    if (!loading) {
-      setRefreshing(false);
-    }
+    if (!loading) setRefreshing(false);
   }, [loading]);
 
   useEffect(() => {
@@ -53,7 +53,6 @@ export function MyBookingsScreen() {
       wasOfflineRef.current = true;
       return;
     }
-
     if (wasOfflineRef.current) {
       wasOfflineRef.current = false;
       retry();
@@ -76,55 +75,48 @@ export function MyBookingsScreen() {
     const hoursBeforeStart = (startDate.getTime() - Date.now()) / (1000 * 60 * 60);
     const cancellationFee = hoursBeforeStart >= 48 ? 0 : Math.round(booking.totalPrice * 0.1);
     const refundAmount = Math.max(0, booking.totalPrice - cancellationFee);
-
-    return {
-      cancellationFee,
-      isFree: cancellationFee === 0,
-      refundAmount,
-    };
+    return { cancellationFee, isFree: cancellationFee === 0, refundAmount };
   }, []);
 
   const handleCancelBooking = useCallback((booking: Booking) => {
     const preview = getCancellationPreview(booking);
     const subtitle = preview.isFree
-      ? 'Annulation plus de 48h avant le depart : aucun frais.'
-      : `Moins de 48h avant le depart : frais de 10% (${formatFcfa(preview.cancellationFee)}). Remboursement estime : ${formatFcfa(preview.refundAmount)}.`;
+      ? t('booking.cancel_free_msg')
+      : t('booking.cancel_fee_msg', {
+          fee: formatFcfa(preview.cancellationFee),
+          refund: formatFcfa(preview.refundAmount),
+        });
 
     bottomSheet.show({
-      title: 'Annuler cette reservation ?',
+      title: t('booking.cancel_confirm_title'),
       subtitle,
       actions: [
         {
-          label: 'Oui, annuler',
+          label: t('booking.cancel_action'),
           variant: 'danger',
           icon: 'close-circle-outline',
           onPress: async () => {
             try {
               await cancelBooking(booking.id);
               hapticSuccess();
-              toast.success(preview.isFree ? 'Reservation annulee sans frais.' : 'Reservation annulee : frais de 10% appliques.');
+              toast.success(preview.isFree ? t('booking.cancel_success_free') : t('booking.cancel_success_fee'));
             } catch (error) {
               if (isOfflineError(error)) {
                 hapticWarning();
                 toast.warning(error.message);
                 return;
               }
-
               hapticError();
-              toast.error(error instanceof Error ? error.message : 'Annulation impossible.');
+              toast.error(error instanceof Error ? error.message : t('booking.cancel_error'));
             }
           },
         },
       ],
     });
-  }, [bottomSheet, getCancellationPreview, toast]);
+  }, [bottomSheet, getCancellationPreview, t, toast]);
 
-  const activeBookings = bookings.filter(
-    (booking) => booking.status === 'pending' || booking.status === 'confirmed',
-  );
-  const historyBookings = bookings.filter(
-    (booking) => booking.status === 'completed' || booking.status === 'cancelled',
-  );
+  const activeBookings = bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed');
+  const historyBookings = bookings.filter((b) => b.status === 'completed' || b.status === 'cancelled');
   const displayed = filter === 'active' ? activeBookings : historyBookings;
 
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
@@ -146,12 +138,7 @@ export function MyBookingsScreen() {
     retry();
   }, [retry]);
   const refreshControl = (
-    <RefreshControl
-      colors={['#3B63D4']}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      tintColor="#3B63D4"
-    />
+    <RefreshControl colors={['#3B63D4']} onRefresh={onRefresh} refreshing={refreshing} tintColor="#3B63D4" />
   );
 
   const listHeader = (
@@ -161,28 +148,20 @@ export function MyBookingsScreen() {
           activeOpacity={0.8}
           className={`flex-1 items-center rounded-lg py-2 ${filter === 'active' ? 'bg-white' : ''}`}
           onPress={() => setFilter('active')}
-          style={
-            filter === 'active'
-              ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
-              : undefined
-          }
+          style={filter === 'active' ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 } : undefined}
         >
           <Text className={`text-sm font-bold ${filter === 'active' ? 'text-slate-950' : 'text-slate-400'}`}>
-            En cours{activeBookings.length > 0 ? ` (${activeBookings.length})` : ''}
+            {t('booking.filter_active')}{activeBookings.length > 0 ? ` (${activeBookings.length})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
           className={`flex-1 items-center rounded-lg py-2 ${filter === 'history' ? 'bg-white' : ''}`}
           onPress={() => setFilter('history')}
-          style={
-            filter === 'history'
-              ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }
-              : undefined
-          }
+          style={filter === 'history' ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 } : undefined}
         >
           <Text className={`text-sm font-bold ${filter === 'history' ? 'text-slate-950' : 'text-slate-400'}`}>
-            Historique{historyBookings.length > 0 ? ` (${historyBookings.length})` : ''}
+            {t('booking.filter_history')}{historyBookings.length > 0 ? ` (${historyBookings.length})` : ''}
           </Text>
         </TouchableOpacity>
       </View>
@@ -199,7 +178,7 @@ export function MyBookingsScreen() {
               <Text className="text-sm font-black text-white">{initials}</Text>
             </View>
           </View>
-          <Text className="text-2xl font-black text-slate-950">Mes reservations</Text>
+          <Text className="text-2xl font-black text-slate-950">{t('booking.my_bookings')}</Text>
         </View>
 
         {loading ? (
@@ -214,24 +193,21 @@ export function MyBookingsScreen() {
           <FlatList
             ListEmptyComponent={
               <EmptyState
-                ctaLabel={error ? 'Réessayer' : filter === 'active' ? 'Explorer les voitures' : undefined}
+                ctaLabel={error ? t('common.retry') : filter === 'active' ? t('home.explore') : undefined}
                 icon={error ? 'cloud-offline-outline' : filter === 'active' ? 'calendar-outline' : 'time-outline'}
                 illustration={error ? ErrorIllustration : EmptyBookingsIllustration}
-                onCta={
-                  error
-                    ? retry
-                    : filter === 'active'
-                      ? () => navigation.navigate('Home')
-                      : undefined
-                }
+                onCta={error ? retry : filter === 'active' ? () => navigation.navigate('Home') : undefined}
                 subtitle={
                   error
-                    ? 'Vérifiez votre connexion puis relancez le chargement.'
+                    ? t('errors.connection_retry')
                     : filter === 'active'
-                    ? 'Vos reservations actives apparaitront ici.'
-                    : 'Vos reservations terminees ou annulees apparaitront ici.'
+                    ? t('booking.active_empty_subtitle')
+                    : t('booking.history_empty_subtitle')
                 }
-                title={error ?? (filter === 'active' ? 'Aucune reservation en cours' : 'Aucun historique')}
+                title={
+                  error ??
+                  (filter === 'active' ? t('booking.active_empty_title') : t('booking.history_empty_title'))
+                }
               />
             }
             ListHeaderComponent={listHeader}

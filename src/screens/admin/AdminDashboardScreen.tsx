@@ -3,6 +3,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
@@ -17,22 +18,6 @@ import { formatFcfa } from '../../utils/currency';
 
 type DashNavProp = BottomTabNavigationProp<AdminTabParamList, 'AdminHome'>;
 
-const TEXT = {
-  approvedVehicles: 'V\u00e9hicules approuv\u00e9s',
-  cancelledBookings: 'R\u00e9servations annul\u00e9es',
-  confirmedBookings: 'R\u00e9servations confirm\u00e9es',
-  failedPayments: 'Paiements \u00e9chou\u00e9s',
-  kycApproved: 'KYC valid\u00e9s',
-  pendingVehicles: 'V\u00e9hicules \u00e0 valider',
-  platformSummary: 'R\u00e9sum\u00e9 plateforme',
-  rejectedVehicles: 'V\u00e9hicules rejet\u00e9s',
-  reservations: 'R\u00e9servations',
-  totalRevenue: 'Volume total encaiss\u00e9',
-  users: 'Utilisateurs',
-  vehicles: 'V\u00e9hicules',
-  view: 'Voir ->',
-};
-
 type AlertCardProps = {
   bg: string;
   border: string;
@@ -44,6 +29,7 @@ type AlertCardProps = {
 };
 
 function AlertCard({ bg, border, count, icon, iconColor, label, onPress }: AlertCardProps) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.8 : 1}
@@ -84,7 +70,7 @@ function AlertCard({ bg, border, count, icon, iconColor, label, onPress }: Alert
         {label}
       </Text>
       {onPress ? (
-        <Text style={{ marginTop: 6, fontSize: 10, fontWeight: '700', color: iconColor }}>{TEXT.view}</Text>
+        <Text style={{ marginTop: 6, fontSize: 10, fontWeight: '700', color: iconColor }}>{t('admin.view_arrow')}</Text>
       ) : null}
     </TouchableOpacity>
   );
@@ -102,6 +88,7 @@ function SummaryRow({ label, value, danger }: { label: string; value: number; da
 }
 
 export function AdminDashboardScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<DashNavProp>();
   const { user } = useAuth();
   const [cars, setCars] = useState<Car[]>([]);
@@ -136,7 +123,6 @@ export function AdminDashboardScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-5 px-5 pb-8 pt-4">
           <View className="gap-3">
-            {/* Top bar: logo left · logout right */}
             <View className="flex-row items-center justify-between">
               <BrandLogo variant="xs" />
               <TouchableOpacity
@@ -156,14 +142,14 @@ export function AdminDashboardScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Greeting */}
             <View>
-              <Text className="text-xs font-medium text-slate-400">Panel d'administration</Text>
+              <Text className="text-xs font-medium text-slate-400">{t('admin.panel_label')}</Text>
               <Text className="mt-0.5 text-2xl font-black text-slate-950">
-                Bonjour, {user?.fullName?.split(' ')[0]} 👋
+                {t('home.greeting_name', { name: user?.fullName?.split(' ')[0] })}
               </Text>
             </View>
           </View>
+
           <View
             className="rounded-2xl bg-slate-950 p-5"
             style={{
@@ -174,29 +160,30 @@ export function AdminDashboardScreen() {
               elevation: 5,
             }}
           >
-            <Text className="text-xs font-semibold text-slate-400">{TEXT.totalRevenue}</Text>
+            <Text className="text-xs font-semibold text-slate-400">{t('admin.total_volume')}</Text>
             <Text className="mt-1 text-3xl font-black text-white">
               {formatFcfa(totalRevenue)}
             </Text>
             <View className="mt-4 flex-row gap-6">
               <View>
                 <Text className="text-xl font-black text-brand-blue">{cars.length}</Text>
-                <Text className="text-xs text-slate-400">{TEXT.vehicles}</Text>
+                <Text className="text-xs text-slate-400">{t('admin.vehicles')}</Text>
               </View>
               <View>
                 <Text className="text-xl font-black text-white">
                   {users.filter((u) => u.role !== 'admin').length}
                 </Text>
-                <Text className="text-xs text-slate-400">{TEXT.users}</Text>
+                <Text className="text-xs text-slate-400">{t('admin.total_users')}</Text>
               </View>
               <View>
                 <Text className="text-xl font-black text-white">{bookings.length}</Text>
-                <Text className="text-xs text-slate-400">{TEXT.reservations}</Text>
+                <Text className="text-xs text-slate-400">{t('admin.bookings')}</Text>
               </View>
             </View>
           </View>
+
           <View>
-            <Text className="mb-3 font-bold text-slate-950">Alertes en attente</Text>
+            <Text className="mb-3 font-bold text-slate-950">{t('admin.pending_alerts')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <AlertCard
                 bg="#fffbeb"
@@ -204,7 +191,7 @@ export function AdminDashboardScreen() {
                 count={pendingVehicles}
                 icon="car-sport-outline"
                 iconColor="#ca8a04"
-                label={TEXT.pendingVehicles}
+                label={t('admin.vehicles_title')}
                 onPress={() => navigation.navigate('AdminVehicles')}
               />
               <AlertCard
@@ -213,7 +200,7 @@ export function AdminDashboardScreen() {
                 count={pendingKyc}
                 icon="person-outline"
                 iconColor="#2563eb"
-                label="KYC en attente"
+                label={t('admin.kyc_pending_label')}
                 onPress={() => navigation.navigate('AdminDrivers')}
               />
               <AlertCard
@@ -222,7 +209,7 @@ export function AdminDashboardScreen() {
                 count={openDisputes}
                 icon="warning-outline"
                 iconColor="#b91c1c"
-                label="Litiges ouverts"
+                label={t('admin.disputes_open')}
                 onPress={() => navigation.navigate('AdminBookings')}
               />
               <AlertCard
@@ -231,11 +218,12 @@ export function AdminDashboardScreen() {
                 count={failedPayments}
                 icon="close-circle-outline"
                 iconColor="#b91c1c"
-                label={TEXT.failedPayments}
+                label={t('admin.failed_payments_label')}
                 onPress={() => navigation.navigate('AdminMore')}
               />
             </View>
           </View>
+
           <View
             className="rounded-2xl bg-white p-4"
             style={{
@@ -246,38 +234,37 @@ export function AdminDashboardScreen() {
               elevation: 1,
             }}
           >
-            <Text className="mb-1 text-base font-black text-slate-950">{TEXT.platformSummary}</Text>
+            <Text className="mb-1 text-base font-black text-slate-950">{t('admin.platform_summary')}</Text>
             <SummaryRow
-              label={TEXT.approvedVehicles}
+              label={t('admin.approved_vehicles')}
               value={cars.filter((c) => c.adminStatus === 'approved').length}
             />
             <SummaryRow
-              label={TEXT.rejectedVehicles}
+              label={t('admin.rejected_vehicles')}
               value={cars.filter((c) => c.adminStatus === 'rejected').length}
               danger
             />
             <SummaryRow
-              label={TEXT.kycApproved}
+              label={t('admin.kyc_approved_label')}
               value={users.filter((u) => u.kycStatus === 'approved').length}
             />
             <SummaryRow
-              label={TEXT.confirmedBookings}
+              label={t('admin.confirmed_bookings')}
               value={bookings.filter((b) => b.status === 'confirmed').length}
             />
             <SummaryRow
-              label={TEXT.cancelledBookings}
+              label={t('admin.cancelled_bookings')}
               value={bookings.filter((b) => b.status === 'cancelled').length}
               danger
             />
             <SummaryRow
-              label="Comptes suspendus/bannis"
+              label={t('admin.suspended_banned')}
               value={
                 users.filter((u) => u.status === 'suspended' || u.status === 'banned').length
               }
               danger
             />
           </View>
-
         </View>
       </ScrollView>
     </Screen>

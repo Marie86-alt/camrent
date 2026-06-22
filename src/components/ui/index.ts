@@ -15,6 +15,8 @@ export { BottomSheetProvider, useBottomSheet } from './BottomSheet';
 export type { SheetAction } from './BottomSheet';
 
 export { EmptyState } from './EmptyState';
+export { SuccessCheck } from './SuccessCheck';
+export { SuccessOverlay } from './SuccessOverlay';
 
 export {
   SkeletonBlock,

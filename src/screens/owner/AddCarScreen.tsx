@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -56,6 +57,7 @@ async function pickPhoto(): Promise<{ uri: string | null; permissionDenied: bool
 }
 
 export function AddCarScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [brand, setBrand] = useState('');
@@ -82,9 +84,21 @@ export function AddCarScreen() {
     return date;
   }, []);
 
+  const transmissionLabels: Record<'Automatique' | 'Manuelle', string> = {
+    Automatique: t('car.transmission_auto'),
+    Manuelle: t('car.transmission_manual'),
+  };
+
+  const fuelLabels: Record<'Essence' | 'Diesel' | 'Hybride' | 'Electrique', string> = {
+    Essence: t('car.fuel_essence'),
+    Diesel: t('car.fuel_diesel'),
+    Hybride: t('car.fuel_hybrid'),
+    Electrique: t('car.fuel_electric'),
+  };
+
   const handlePickPhoto = async (index: number) => {
     const result = await pickPhoto();
-    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le vehicule."); return; }
+    if (result.permissionDenied) { toast.info(t('car.photo_permission')); return; }
     const { uri } = result;
     if (!uri) return;
 
@@ -98,7 +112,7 @@ export function AddCarScreen() {
   const pickRegistrationDocument = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      toast.info("Autorisez l'acces aux photos pour ajouter la carte grise.");
+      toast.info(t('car.reg_doc_permission'));
       return;
     }
 
@@ -134,7 +148,7 @@ export function AddCarScreen() {
     if (!user) return;
 
     if (photoUris.some((uri) => !uri)) {
-      hapticWarning(); toast.warning('Ajoutez les 6 photos du vehicule avant de publier.');
+      hapticWarning(); toast.warning(t('car.photos_all_required'));
       return;
     }
 
@@ -143,22 +157,22 @@ export function AddCarScreen() {
     const numericPrice = Number(pricePerDay);
 
     if (!brand.trim() || !model.trim() || !description.trim()) {
-      hapticWarning(); toast.warning('Renseignez la marque, le modele et la description.');
+      hapticWarning(); toast.warning(t('car.brand_model_required'));
       return;
     }
 
     if (!Number.isInteger(numericYear) || numericYear < 1990 || numericYear > new Date().getFullYear() + 1) {
-      hapticWarning(); toast.warning('Renseignez une annee valide pour le vehicule.');
+      hapticWarning(); toast.warning(t('car.year_invalid'));
       return;
     }
 
     if (!Number.isInteger(numericSeats) || numericSeats < 2 || numericSeats > 9) {
-      hapticWarning(); toast.warning('Renseignez un nombre de places entre 2 et 9.');
+      hapticWarning(); toast.warning(t('car.seats_invalid'));
       return;
     }
 
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      hapticWarning(); toast.warning('Renseignez un prix journalier valide.');
+      hapticWarning(); toast.warning(t('car.price_invalid'));
       return;
     }
 
@@ -166,7 +180,7 @@ export function AddCarScreen() {
       setLoading(true);
 
       if (!hasFirebaseConfig) {
-        toast.info('Mode demo — configurez Firebase pour enregistrer une vraie annonce.');
+        toast.info(t('car.demo_notice'));
         resetForm();
         return;
       }
@@ -208,10 +222,10 @@ export function AddCarScreen() {
         },
       });
 
-      hapticSuccess(); toast.success('Voiture ajoutee — envoyee pour verification admin.');
+      hapticSuccess(); toast.success(t('car.add_success'));
       resetForm();
     } catch {
-      hapticError(); toast.error("Impossible d'ajouter la voiture.");
+      hapticError(); toast.error(t('car.add_error'));
     } finally {
       setLoading(false);
     }
@@ -222,11 +236,11 @@ export function AddCarScreen() {
   return (
     <Screen>
       <View className="gap-5 pt-4">
-        <Text className="text-2xl font-black text-slate-950">Ajouter une voiture</Text>
+        <Text className="text-2xl font-black text-slate-950">{t('car.add_title')}</Text>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold text-slate-950">Photos du véhicule</Text>
+            <Text className="font-bold text-slate-950">{t('car.photos_section')}</Text>
             <Text
               className={`rounded-full px-3 py-1 text-xs font-bold ${
                 filledCount === 6 ? 'bg-blue-50 text-brand-blue' : 'bg-slate-100 text-slate-500'
@@ -235,9 +249,7 @@ export function AddCarScreen() {
               {filledCount}/6
             </Text>
           </View>
-          <Text className="text-xs text-slate-400">
-            Les 6 angles sont obligatoires pour permettre la validation admin.
-          </Text>
+          <Text className="text-xs text-slate-400">{t('car.photos_warning')}</Text>
 
           <View className="flex-row flex-wrap gap-3">
             {CAR_PHOTO_SLOTS.map((slot, index) => {
@@ -276,7 +288,7 @@ export function AddCarScreen() {
                       >
                         {slot.label}
                       </Text>
-                      {isRequired && !uri ? <Text className="text-xs font-semibold text-amber-600">Requis</Text> : null}
+                      {isRequired && !uri ? <Text className="text-xs font-semibold text-amber-600">{t('common.required')}</Text> : null}
                       {uri ? <Ionicons color="white" name="checkmark-circle" size={14} /> : null}
                     </View>
                   </View>
@@ -287,22 +299,22 @@ export function AddCarScreen() {
         </View>
 
         <View className="gap-3">
-          <Text className="text-base font-black text-slate-950">Informations principales</Text>
-          <CarInput label="Marque" onChangeText={setBrand} placeholder="Ex: Toyota" value={brand} />
-          <CarInput label="Modèle" onChangeText={setModel} placeholder="Ex: Corolla" value={model} />
-          <CarInput keyboardType="numeric" label="Annee" onChangeText={setYear} placeholder="Ex: 2021" value={year} />
-          <CitySearchInput label="Ville du véhicule" onSelectCity={setCity} value={city} />
+          <Text className="text-base font-black text-slate-950">{t('car.main_info')}</Text>
+          <CarInput label={t('car.brand')} onChangeText={setBrand} placeholder="Ex: Toyota" value={brand} />
+          <CarInput label={t('car.model')} onChangeText={setModel} placeholder="Ex: Corolla" value={model} />
+          <CarInput keyboardType="numeric" label={t('car.year')} onChangeText={setYear} placeholder="Ex: 2021" value={year} />
+          <CitySearchInput label={t('car.city_label')} onSelectCity={setCity} value={city} />
           <CarInput
             keyboardType="numeric"
-            label="Prix journalier"
+            label={t('car.price_label')}
             onChangeText={setPricePerDay}
-            placeholder="Ex: 30000 FCFA"
+            placeholder={t('car.price_placeholder')}
             value={pricePerDay}
           />
-          <CarInput keyboardType="numeric" label="Nombre de places" onChangeText={setSeats} placeholder="Ex: 5" value={seats} />
+          <CarInput keyboardType="numeric" label={t('car.seats_label')} onChangeText={setSeats} placeholder={t('car.seats_placeholder')} value={seats} />
 
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold uppercase text-slate-500">Boite de vitesse</Text>
+            <Text className="text-xs font-semibold uppercase text-slate-500">{t('car.gearbox_label')}</Text>
             <View className="flex-row gap-2">
               {(['Automatique', 'Manuelle'] as const).map((option) => (
                 <TouchableOpacity
@@ -311,14 +323,14 @@ export function AddCarScreen() {
                   key={option}
                   onPress={() => setTransmission(option)}
                 >
-                  <Text className={`text-center font-bold ${transmission === option ? 'text-brand-blue' : 'text-slate-600'}`}>{option}</Text>
+                  <Text className={`text-center font-bold ${transmission === option ? 'text-brand-blue' : 'text-slate-600'}`}>{transmissionLabels[option]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold uppercase text-slate-500">Carburant</Text>
+            <Text className="text-xs font-semibold uppercase text-slate-500">{t('car.fuel_label')}</Text>
             <View className="flex-row flex-wrap gap-2">
               {(['Essence', 'Diesel', 'Hybride', 'Electrique'] as const).map((option) => (
                 <TouchableOpacity
@@ -327,20 +339,20 @@ export function AddCarScreen() {
                   key={option}
                   onPress={() => setFuelType(option)}
                 >
-                  <Text className={`font-bold ${fuelType === option ? 'text-brand-blue' : 'text-slate-600'}`}>{option}</Text>
+                  <Text className={`font-bold ${fuelType === option ? 'text-brand-blue' : 'text-slate-600'}`}>{fuelLabels[option]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold uppercase text-slate-500">Description</Text>
+            <Text className="text-xs font-semibold uppercase text-slate-500">{t('car.description')}</Text>
             <TextInput
               className="min-h-24 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-950"
               maxLength={500}
               multiline
               onChangeText={setDescription}
-              placeholder="Ex: Vehicule propre, climatise, disponible pour ville et route."
+              placeholder={t('car.description_placeholder')}
               placeholderTextColor="#94a3b8"
               textAlignVertical="top"
               value={description}
@@ -362,10 +374,8 @@ export function AddCarScreen() {
               {allowIndependentDrivers ? <Ionicons color="white" name="checkmark" size={16} /> : null}
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-slate-950">Autoriser les chauffeurs indépendants</Text>
-              <Text className="mt-1 text-xs text-slate-500">
-                J'autorise les chauffeurs indépendants vérifiés à conduire ce véhicule.
-              </Text>
+              <Text className="font-bold text-slate-950">{t('car.allow_independent_drivers')}</Text>
+              <Text className="mt-1 text-xs text-slate-500">{t('car.allow_independent_drivers_desc')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -374,24 +384,24 @@ export function AddCarScreen() {
           className="gap-3 rounded-2xl bg-white p-4"
           style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
         >
-          <Text className="text-base font-black text-slate-950">Fiche technique</Text>
-          <CarInput label="Immatriculation" onChangeText={setLicensePlate} placeholder="Ex: LT-123-AB" value={licensePlate} />
+          <Text className="text-base font-black text-slate-950">{t('car.technical_sheet')}</Text>
+          <CarInput label={t('car.plate_label')} onChangeText={setLicensePlate} placeholder="Ex: LT-123-AB" value={licensePlate} />
           <CarInput
-            label="Numéro de châssis"
+            label={t('car.chassis_label')}
             onChangeText={setChassisNumber}
             placeholder="Ex: JTDBR32E720012345"
             value={chassisNumber}
           />
-          <CarInput keyboardType="numeric" label="Kilométrage" onChangeText={setMileage} placeholder="Ex: 85000" value={mileage} />
+          <CarInput keyboardType="numeric" label={t('car.mileage_label')} onChangeText={setMileage} placeholder="Ex: 85000" value={mileage} />
           <DatePickerField
-            label="Expiration assurance"
+            label={t('car.insurance_expiry_label')}
             minimumDate={minDocumentDate}
             onChange={setInsuranceExpiry}
             placeholder="Ex: 03/06/2027"
             value={insuranceExpiry}
           />
           <DatePickerField
-            label="Expiration contrôle technique"
+            label={t('car.inspection_expiry_label')}
             minimumDate={minDocumentDate}
             onChange={setTechnicalInspectionExpiry}
             placeholder="Ex: 03/06/2027"
@@ -408,7 +418,7 @@ export function AddCarScreen() {
               size={18}
             />
             <Text className={`font-semibold ${registrationDocumentUri ? 'text-brand-blue' : 'text-slate-600'}`}>
-              {registrationDocumentUri ? 'Carte grise ajoutée' : 'Ajouter carte grise / document véhicule'}
+              {registrationDocumentUri ? t('car.reg_doc_added') : t('car.reg_doc_add')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -427,7 +437,7 @@ export function AddCarScreen() {
           loading={loading}
           onPress={submit}
         >
-          Publier l'annonce
+          {t('car.publish_cta')}
         </PrimaryButton>
       </View>
     </Screen>

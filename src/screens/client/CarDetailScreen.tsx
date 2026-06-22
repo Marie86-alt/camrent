@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
@@ -71,16 +72,16 @@ function getCarPhotos(car: CarDetailScreenProps['route']['params']['car']) {
   if (car.imageUrl && !photos.includes(car.imageUrl)) {
     photos.unshift(car.imageUrl);
   }
-
   return photos.slice(0, 6);
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | number }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between gap-4 border-b border-slate-100 py-3">
       <Text className="flex-1 text-sm font-semibold text-slate-500">{label}</Text>
       <Text className="flex-1 text-right text-sm font-bold text-slate-900">
-        {value || 'Non renseigné'}
+        {value || t('common.not_provided')}
       </Text>
     </View>
   );
@@ -112,6 +113,7 @@ function ActionCard({
 }
 
 export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
+  const { t } = useTranslation();
   const { car } = route.params;
   const user = useAuthStore((state) => state.user);
   const isVerified = car.documentsVerified && car.adminStatus === 'approved';
@@ -134,7 +136,6 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
       <View className="gap-5">
         <BackButton navigation={navigation} />
 
-        {/* ─── Image ─── */}
         <View className="overflow-hidden rounded-2xl">
           <Image
             cachePolicy="memory-disk"
@@ -150,23 +151,18 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
               style={{ backgroundColor: 'rgba(59,99,212,0.92)' }}
             >
               <Ionicons color="white" name="shield-checkmark" size={13} />
-              <Text className="text-xs font-bold text-white">Vérifié</Text>
+              <Text className="text-xs font-bold text-white">{t('common.verified')}</Text>
             </View>
           )}
         </View>
 
-        {/* ─── Title ─── */}
         {photos.length > 1 ? (
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-slate-950">Photos du véhicule</Text>
+              <Text className="text-lg font-bold text-slate-950">{t('car.photos_gallery')}</Text>
               <Text className="text-sm font-semibold text-slate-400">{photos.length}/6</Text>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10 }}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
               {photos.map((photo, index) => (
                 <Image
                   key={`${photo}-${index}`}
@@ -190,7 +186,7 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
             {isVerified && (
               <View className="mt-1 flex-row items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1">
                 <Ionicons color="#3B63D4" name="shield-checkmark" size={12} />
-                <Text className="text-xs font-bold text-brand-blue">Véhicule vérifié</Text>
+                <Text className="text-xs font-bold text-brand-blue">{t('car.verified_badge')}</Text>
               </View>
             )}
           </View>
@@ -198,36 +194,33 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
             {car.city} · {car.year}
           </Text>
 
-          {/* Rating summary inline */}
           {avgRating !== null && (
             <View className="mt-1 flex-row items-center gap-2">
               <StarBar rating={avgRating} />
               <Text className="text-sm font-bold text-slate-700">{avgRating}/5</Text>
-              <Text className="text-sm text-slate-400">({reviews.length} avis)</Text>
+              <Text className="text-sm text-slate-400">{t('car.count_badge', { count: reviews.length })}</Text>
             </View>
           )}
 
           <Text className="mt-1 text-2xl font-black text-brand-blue">
-            {formatFcfa(car.pricePerDay)}<Text className="text-base font-semibold">/jour</Text>
+            {formatFcfa(car.pricePerDay)}<Text className="text-base font-semibold">{t('common.per_day')}</Text>
           </Text>
         </View>
 
-        {/* ─── Specs ─── */}
         <View className="flex-row gap-3">
-          <SpecCard icon="people-outline" label="Places" value={String(car.seats)} />
-          <SpecCard icon="settings-outline" label="Boîte" value={car.transmission} />
-          <SpecCard icon="water-outline" label="Carburant" value={car.fuelType} />
+          <SpecCard icon="people-outline" label={t('car.seats')} value={String(car.seats)} />
+          <SpecCard icon="settings-outline" label={t('car.transmission_short')} value={car.transmission} />
+          <SpecCard icon="water-outline" label={t('car.fuel')} value={car.fuelType} />
         </View>
 
-        {/* ─── Description ─── */}
         <View className="flex-row gap-3">
           <ActionCard
             icon="images-outline"
-            label={`${photos.length} photo${photos.length > 1 ? 's' : ''}`}
+            label={`${photos.length} ${t('car.photos').toLowerCase()}`}
           />
           <ActionCard
             icon="people-outline"
-            label="Chauffeurs disponibles"
+            label={t('car.drivers_available')}
             onPress={() =>
               (navigation as any).navigate('DriverList', {
                 carCity: car.city,
@@ -240,33 +233,32 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
 
         <View className="rounded-2xl bg-white p-4">
           <View className="mb-1 flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-slate-950">Fiche technique</Text>
+            <Text className="text-lg font-bold text-slate-950">{t('car.technical_sheet')}</Text>
             {isVerified ? (
               <View className="flex-row items-center gap-1 rounded-full bg-blue-50 px-2 py-1">
                 <Ionicons color="#3B63D4" name="shield-checkmark" size={12} />
-                <Text className="text-xs font-bold text-brand-blue">Vérifiée</Text>
+                <Text className="text-xs font-bold text-brand-blue">{t('car.technical_sheet_verified')}</Text>
               </View>
             ) : null}
           </View>
-          <InfoRow label="Année" value={car.year} />
-          <InfoRow label="Kilométrage" value={technicalSheet?.mileage ? `${technicalSheet.mileage} km` : undefined} />
-          <InfoRow label="Assurance expire le" value={technicalSheet?.insuranceExpiry} />
-          <InfoRow label="Contrôle technique expire le" value={technicalSheet?.technicalInspectionExpiry} />
-          <InfoRow label="Carte grise" value={technicalSheet?.registrationDocumentUrl ? 'Document fourni' : undefined} />
+          <InfoRow label={t('car.year')} value={car.year} />
+          <InfoRow label={t('car.mileage')} value={technicalSheet?.mileage ? t('car.mileage_value', { value: technicalSheet.mileage }) : undefined} />
+          <InfoRow label={t('car.insurance_expiry')} value={technicalSheet?.insuranceExpiry} />
+          <InfoRow label={t('car.inspection_expiry')} value={technicalSheet?.technicalInspectionExpiry} />
+          <InfoRow label={t('car.registration_doc')} value={technicalSheet?.registrationDocumentUrl ? t('car.document_provided') : undefined} />
         </View>
 
         {car.description ? (
           <View className="gap-2">
-            <Text className="text-lg font-bold text-slate-950">Description</Text>
+            <Text className="text-lg font-bold text-slate-950">{t('car.description')}</Text>
             <Text className="leading-6 text-slate-600">{car.description}</Text>
           </View>
         ) : null}
 
-        {/* ─── Reviews ─── */}
         {reviews.length > 0 && (
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-slate-950">Avis clients</Text>
+              <Text className="text-lg font-bold text-slate-950">{t('car.reviews_title')}</Text>
               <View className="flex-row items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1">
                 <Ionicons color="#ca8a04" name="star" size={13} />
                 <Text className="text-sm font-black text-yellow-700">{avgRating}/5</Text>
@@ -280,7 +272,7 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
         )}
 
         <PrimaryButton onPress={() => (user ? navigation.navigate('Booking', { car }) : (navigation as any).navigate('Login'))}>
-          Réserver cette voiture
+          {t('car.book')}
         </PrimaryButton>
       </View>
     </Screen>

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -28,6 +29,7 @@ function StarRow({ rating, onRate }: { rating: number; onRate: (r: number) => vo
 }
 
 export function DriverReviewClientScreen({ navigation, route }: DriverReviewClientScreenProps) {
+  const { t } = useTranslation();
   const { booking } = route.params;
   const user = useAuthStore((state) => state.user);
   const toast = useToast();
@@ -35,11 +37,19 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const clientName = booking.driverLicense?.fullName ?? 'le client';
+  const clientName = booking.driverLicense?.fullName ?? t('driver.client_fallback');
+
+  function getRatingLabel(r: number) {
+    if (r >= 5) return t('driver.review_excellent');
+    if (r >= 4) return t('driver.review_very_good');
+    if (r >= 3) return t('driver.review_ok');
+    if (r >= 2) return t('driver.review_issues');
+    return t('driver.review_difficult');
+  }
 
   async function submit() {
     if (rating === 0) {
-      hapticWarning(); toast.warning('Veuillez attribuer une note avant de valider.');
+      hapticWarning(); toast.warning(t('driver.review_missing_rating'));
       return;
     }
     if (!user) return;
@@ -56,10 +66,10 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
       });
       await markDriverReviewSubmitted(booking.id);
       hapticSuccess();
-      toast.success('Merci ! Votre évaluation du client a été enregistrée.');
+      toast.success(t('driver.review_success'));
       navigation.goBack();
     } catch {
-      hapticError(); toast.error("L'avis n'a pas pu être enregistré.");
+      hapticError(); toast.error(t('driver.review_error'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +78,6 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
   return (
     <Screen topSafeArea>
       <View className="gap-6 px-5 pt-4">
-        {/* Header */}
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
             <BrandLogo variant="xs" />
@@ -81,12 +90,11 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
             </TouchableOpacity>
           </View>
           <View>
-            <Text className="text-xs font-medium text-slate-400">Mission terminée</Text>
-            <Text className="mt-0.5 text-2xl font-black text-slate-950">Noter le client</Text>
+            <Text className="text-xs font-medium text-slate-400">{t('driver.review_mission_done')}</Text>
+            <Text className="mt-0.5 text-2xl font-black text-slate-950">{t('driver.review_title')}</Text>
           </View>
         </View>
 
-        {/* Client info */}
         <View
           className="flex-row items-center gap-3 rounded-2xl bg-white p-4"
           style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
@@ -97,22 +105,21 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
           <View>
             <Text className="font-bold text-slate-950">{clientName}</Text>
             <Text className="text-xs text-slate-500">
-              {booking.carBrand} {booking.carModel} · {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''}
+              {booking.carBrand} {booking.carModel} · {booking.totalDays > 1
+                ? t('common.days_other', { count: booking.totalDays })
+                : t('common.days_one', { count: booking.totalDays })}
             </Text>
           </View>
         </View>
 
-        {/* Rating */}
         <View
           className="gap-4 rounded-2xl bg-white p-4"
           style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
         >
-          <Text className="font-semibold text-slate-800">Votre évaluation</Text>
+          <Text className="font-semibold text-slate-800">{t('driver.review_your_eval')}</Text>
           <StarRow rating={rating} onRate={setRating} />
           {rating > 0 && (
-            <Text className="text-sm text-slate-500">
-              {rating >= 5 ? 'Excellent client !' : rating >= 4 ? 'Très bon client' : rating >= 3 ? 'Client correct' : rating >= 2 ? 'Quelques problèmes' : 'Client difficile'}
-            </Text>
+            <Text className="text-sm text-slate-500">{getRatingLabel(rating)}</Text>
           )}
           <TextInput
             className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950"
@@ -120,7 +127,7 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
             multiline
             numberOfLines={3}
             onChangeText={setComment}
-            placeholder="Commentaire sur le comportement du client (optionnel)"
+            placeholder={t('driver.review_comment_placeholder')}
             placeholderTextColor="#94a3b8"
             textAlignVertical="top"
             value={comment}
@@ -128,7 +135,7 @@ export function DriverReviewClientScreen({ navigation, route }: DriverReviewClie
         </View>
 
         <PrimaryButton loading={loading} onPress={submit}>
-          Valider mon évaluation
+          {t('driver.review_submit_cta')}
         </PrimaryButton>
       </View>
     </Screen>

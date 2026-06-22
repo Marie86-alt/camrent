@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BackButton } from '../../components/BackButton';
 import { SignaturePad } from '../../components/SignaturePad';
@@ -14,6 +15,7 @@ import type { ContractScreenProps } from '../../types/navigation';
 import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
 
 export function ContractScreen({ navigation, route }: ContractScreenProps) {
+  const { t } = useTranslation();
   const { booking } = route.params;
   const { user } = useAuth();
   const toast = useToast();
@@ -26,7 +28,7 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
 
   const handleSign = async () => {
     if (!signatureBase64) {
-      hapticWarning(); toast.warning('Veuillez apposer votre signature avant de valider.');
+      hapticWarning(); toast.warning(t('contract.empty_warning'));
       return;
     }
 
@@ -42,13 +44,13 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
       await signContract(booking, signatureBase64);
 
       hapticSuccess();
-      toast.success(`Contrat signé · Réf : ${contractRef}`);
+      toast.success(t('contract.sign_success', { ref: contractRef }));
       navigation.goBack();
     } catch (error) {
       const message =
         error instanceof Error && error.message
           ? error.message
-          : "Impossible d'enregistrer la signature. Réessayez.";
+          : t('contract.sign_error');
 
       console.warn('Contract signature failed', error);
       hapticError();
@@ -72,30 +74,30 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
         >
-          {/* ─── En-tête ─── */}
+          {/* Header */}
           <View className="mb-6 items-center gap-3">
             <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-blue">
               <Ionicons color="white" name="document-text" size={26} />
             </View>
             <View className="items-center gap-1">
-              <Text className="text-xl font-black text-slate-950">Contrat de location</Text>
+              <Text className="text-xl font-black text-slate-950">{t('contract.title')}</Text>
               <Text className="text-xs font-semibold text-slate-400">{contractRef}</Text>
             </View>
 
             {booking.contractStatus === 'client_signed' ? (
               <View className="flex-row items-center gap-2 rounded-full bg-blue-50 px-4 py-2">
                 <Ionicons color="#3B63D4" name="shield-checkmark" size={16} />
-                <Text className="text-sm font-bold text-brand-blue">Contrat déjà signé</Text>
+                <Text className="text-sm font-bold text-brand-blue">{t('contract.already_signed')}</Text>
               </View>
             ) : (
               <View className="flex-row items-center gap-2 rounded-full bg-amber-50 px-4 py-2">
                 <Ionicons color="#ca8a04" name="time-outline" size={16} />
-                <Text className="text-sm font-bold text-amber-700">En attente de votre signature</Text>
+                <Text className="text-sm font-bold text-amber-700">{t('contract.pending_signature')}</Text>
               </View>
             )}
           </View>
 
-          {/* ─── Corps du contrat ─── */}
+          {/* Contract body */}
           <View
             className="mb-6 rounded-2xl bg-white p-5"
             style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
@@ -109,17 +111,17 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
             </Text>
           </View>
 
-          {/* ─── Bloc signature ─── */}
+          {/* Signature block */}
           {booking.contractStatus !== 'client_signed' ? (
             <View className="gap-4">
               <View className="flex-row items-center gap-2">
                 <View className="flex-1 h-px bg-slate-200" />
-                <Text className="text-xs font-bold text-slate-400">SIGNATURE ÉLECTRONIQUE</Text>
+                <Text className="text-xs font-bold text-slate-400">{t('contract.signature_section')}</Text>
                 <View className="flex-1 h-px bg-slate-200" />
               </View>
 
               <Text className="text-center text-xs text-slate-500">
-                En signant, vous acceptez les conditions ci-dessus et reconnaissez que cette signature électronique a valeur contractuelle.
+                {t('contract.signature_consent')}
               </Text>
 
               {signatureBase64 ? (
@@ -128,9 +130,9 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
                   style={{ borderWidth: 1.5, borderColor: '#bfdbfe' }}
                 >
                   <Ionicons color="#3B63D4" name="checkmark-circle" size={28} />
-                  <Text className="font-bold text-brand-blue">Signature apposée</Text>
+                  <Text className="font-bold text-brand-blue">{t('contract.signature_done')}</Text>
                   <Text className="text-xs text-slate-500">
-                    Appuyez sur "Signer le contrat" pour finaliser.
+                    {t('contract.signature_done_hint')}
                   </Text>
                 </View>
               ) : (
@@ -141,21 +143,21 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
                   <SignaturePad
                     onSignature={(base64) => setSignatureBase64(base64)}
                     onClear={() => setSignatureBase64(null)}
-                    onEmpty={() => { hapticWarning(); toast.warning('Tracez votre signature avant de valider.'); }}
+                    onEmpty={() => { hapticWarning(); toast.warning(t('contract.draw_warning')); }}
                   />
                 </View>
               )}
 
               <PrimaryButton loading={loading} onPress={handleSign}>
-                Signer le contrat
+                {t('contract.sign_cta')}
               </PrimaryButton>
             </View>
           ) : (
             <View className="items-center gap-3 rounded-2xl bg-blue-50 p-6 mb-4" style={{ borderWidth: 1, borderColor: '#bfdbfe' }}>
               <Ionicons color="#3B63D4" name="shield-checkmark" size={32} />
-              <Text className="font-black text-brand-blue">Contrat signé électroniquement</Text>
+              <Text className="font-black text-brand-blue">{t('contract.signed_title')}</Text>
               <Text className="text-center text-xs text-slate-500">
-                Votre signature a été enregistrée et archivée de façon sécurisée.
+                {t('contract.signed_subtitle')}
               </Text>
             </View>
           )}

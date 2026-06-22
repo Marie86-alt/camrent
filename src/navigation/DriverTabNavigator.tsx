@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { DriverCalendarScreen } from '../screens/driver/DriverCalendarScreen';
 import { DriverMissionsScreen } from '../screens/driver/DriverMissionsScreen';
@@ -15,6 +16,8 @@ const TAB_ICONS: Record<keyof DriverTabParamList, [string, string]> = {
 };
 
 export function DriverTabNavigator() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -44,9 +47,9 @@ export function DriverTabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="DriverMissions" component={DriverMissionsScreen} options={{ title: 'Missions' }} />
-      <Tab.Screen name="DriverCalendar" component={DriverCalendarScreen} options={{ title: 'Calendrier' }} />
-      <Tab.Screen name="DriverOwnProfile" component={DriverOwnProfileScreen} options={{ title: 'Profil' }} />
+      <Tab.Screen name="DriverMissions" component={DriverMissionsScreen} options={{ title: t('tabs.missions') }} />
+      <Tab.Screen name="DriverCalendar" component={DriverCalendarScreen} options={{ title: t('tabs.calendar') }} />
+      <Tab.Screen name="DriverOwnProfile" component={DriverOwnProfileScreen} options={{ title: t('tabs.profile') }} />
     </Tab.Navigator>
   );
 }

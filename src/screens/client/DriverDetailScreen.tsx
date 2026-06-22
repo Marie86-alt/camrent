@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -24,6 +25,7 @@ function InfoRow({
   label: string;
   value?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center gap-3 rounded-2xl bg-white p-4">
       <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50">
@@ -31,13 +33,14 @@ function InfoRow({
       </View>
       <View className="flex-1">
         <Text className="text-xs font-semibold uppercase text-slate-400">{label}</Text>
-        <Text className="mt-0.5 text-base font-bold text-slate-950">{value ?? 'Non renseigné'}</Text>
+        <Text className="mt-0.5 text-base font-bold text-slate-950">{value ?? t('common.not_provided')}</Text>
       </View>
     </View>
   );
 }
 
 function StarRow({ rating }: { rating?: number }) {
+  const { t } = useTranslation();
   const rounded = Math.round(rating ?? 0);
   return (
     <View className="flex-row items-center gap-1">
@@ -50,13 +53,14 @@ function StarRow({ rating }: { rating?: number }) {
         />
       ))}
       <Text className="ml-1 text-sm font-bold text-slate-700">
-        {rating ? `${rating}/5` : 'Pas encore noté'}
+        {rating ? `${rating}/5` : t('driver.no_rating')}
       </Text>
     </View>
   );
 }
 
 export function DriverDetailScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { driver } = route.params;
   const user = useAuthStore((state) => state.user);
   const { setSelectedDriver } = useBookingDraftStore();
@@ -70,6 +74,7 @@ export function DriverDetailScreen({ navigation, route }: Props) {
     .join('')
     .toUpperCase();
   const pricePerDay = driver.driverProfile?.pricePerDay;
+  const missionsCount = driver.missionsCount;
 
   function handleSelect() {
     if (!user) {
@@ -122,20 +127,22 @@ export function DriverDetailScreen({ navigation, route }: Props) {
             <View className="mt-1 flex-row items-center gap-1.5 rounded-full bg-green-50 px-3 py-1">
               <View className="h-2 w-2 rounded-full bg-green-500" />
               <Text className="text-xs font-bold text-green-700">
-                Chauffeur certifié · {driver.city}
+                {t('driver.certified')} · {driver.city}
               </Text>
             </View>
             <View className={`mt-2 rounded-full px-3 py-1 ${isIndependent ? 'bg-blue-50' : 'bg-slate-100'}`}>
               <Text className={`text-xs font-bold ${isIndependent ? 'text-brand-blue' : 'text-slate-600'}`}>
-                {isIndependent ? 'Chauffeur ind\u00e9pendant' : 'Chauffeur du propri\u00e9taire'}
+                {isIndependent ? t('driver.independent_short') : t('driver.owner_driver')}
               </Text>
             </View>
           </View>
 
           <StarRow rating={driver.ratingAverage} />
 
-          {driver.missionsCount ? (
-            <Text className="text-xs text-slate-400">{driver.missionsCount} mission{driver.missionsCount > 1 ? 's' : ''} effectuée{driver.missionsCount > 1 ? 's' : ''}</Text>
+          {missionsCount ? (
+            <Text className="text-xs text-slate-400">
+              {t('driver.missions_done', { count: missionsCount })}
+            </Text>
           ) : null}
         </View>
 
@@ -143,19 +150,23 @@ export function DriverDetailScreen({ navigation, route }: Props) {
         <View className="gap-3">
           <InfoRow
             icon="briefcase-outline"
-            label="Expérience"
-            value={driver.driverProfile?.experienceYears ? `${driver.driverProfile.experienceYears} ans` : undefined}
+            label={t('driver.experience')}
+            value={
+              driver.driverProfile?.experienceYears
+                ? t('driver.experience_years', { count: driver.driverProfile.experienceYears })
+                : undefined
+            }
           />
           <InfoRow
             icon="card-outline"
-            label="Catégories permis"
+            label={t('driver.license_categories_label')}
             value={driver.driverProfile?.licenseCategories}
           />
           {pricePerDay ? (
             <InfoRow
               icon="cash-outline"
-              label="Tarif chauffeur"
-              value={`${formatFcfa(pricePerDay)} / jour`}
+              label={t('driver.rate_label')}
+              value={t('driver.rate_value', { price: formatFcfa(pricePerDay) })}
             />
           ) : null}
         </View>
@@ -163,18 +174,18 @@ export function DriverDetailScreen({ navigation, route }: Props) {
         {/* CTA */}
         {user ? (
           <PrimaryButton onPress={handleSelect}>
-            Choisir ce chauffeur
+            {t('driver.choose_driver_cta')}
           </PrimaryButton>
         ) : (
           <View className="gap-3">
             <View className="flex-row items-start gap-2 rounded-xl bg-blue-50 px-3 py-3">
               <Ionicons color="#3B63D4" name="information-circle-outline" size={16} />
               <Text className="flex-1 text-xs leading-4 text-blue-700">
-                Créez un compte pour ajouter ce chauffeur à votre réservation.
+                {t('driver.create_account_notice')}
               </Text>
             </View>
             <PrimaryButton onPress={handleSelect}>
-              Créer un compte pour réserver
+              {t('driver.create_account_cta')}
             </PrimaryButton>
           </View>
         )}

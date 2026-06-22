@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { updateUserProfile } from '../services/authService';
 import { uploadUserProfilePhoto } from '../services/storageService';
@@ -25,6 +26,7 @@ function getInitials(fullName?: string) {
 }
 
 export function ProfilePhotoPicker({ roleLabel, user }: ProfilePhotoPickerProps) {
+  const { t } = useTranslation();
   const setUser = useAuthStore((state) => state.setUser);
   const [uploading, setUploading] = useState(false);
 
@@ -34,7 +36,7 @@ export function ProfilePhotoPicker({ roleLabel, user }: ProfilePhotoPickerProps)
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permission requise', 'Autorisez la galerie pour ajouter une photo de profil.');
+      Alert.alert(t('profile.photo_permission_title'), t('profile.photo_permission_message'));
       return;
     }
 
@@ -56,7 +58,7 @@ export function ProfilePhotoPicker({ roleLabel, user }: ProfilePhotoPickerProps)
       await updateUserProfile(user.id, { photoUrl });
       setUser(updatedUser);
     } catch {
-      Alert.alert('Upload impossible', "La photo de profil n'a pas pu etre envoyee.");
+      Alert.alert(t('profile.photo_upload_error_title'), t('profile.photo_upload_error_message'));
     } finally {
       setUploading(false);
     }
@@ -86,7 +88,7 @@ export function ProfilePhotoPicker({ roleLabel, user }: ProfilePhotoPickerProps)
       </View>
       <TouchableOpacity onPress={pickPhoto}>
         <Text className="text-sm font-semibold text-brand-blue">
-          {user?.photoUrl ? 'Modifier la photo' : 'Ajouter une photo'}
+          {user?.photoUrl ? t('profile.photo_change') : t('profile.photo_add')}
         </Text>
       </TouchableOpacity>
     </View>

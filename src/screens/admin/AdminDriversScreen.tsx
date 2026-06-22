@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { TextInput } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { CitySearchInput } from '../../components/CitySearchInput';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -36,21 +37,16 @@ async function pickImage(): Promise<{ uri: string | null; permissionDenied: bool
   return { uri: result.canceled ? null : result.assets[0].uri, permissionDenied: false };
 }
 
-function statusLabel(status?: AppUser['status']) {
-  if (status === 'suspended') return 'Suspendu';
-  if (status === 'banned') return 'Banni';
-  if (status === 'pending_validation') return 'En validation';
-  return 'Actif';
-}
-
-function kycLabel(status?: AppUser['kycStatus']) {
-  if (status === 'approved') return 'KYC valide';
-  if (status === 'rejected') return 'KYC refuse';
-  return 'KYC en attente';
-}
-
 function DriverRow({ driver, selected, onPress }: { driver: AppUser; selected: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
   const blocked = driver.status === 'suspended' || driver.status === 'banned';
+
+  function statusLabel(status?: AppUser['status']) {
+    if (status === 'suspended') return t('admin.driver_status_suspended');
+    if (status === 'banned') return t('admin.driver_status_banned');
+    if (status === 'pending_validation') return t('admin.driver_status_pending');
+    return t('admin.driver_status_active');
+  }
 
   return (
     <TouchableOpacity
@@ -62,7 +58,7 @@ function DriverRow({ driver, selected, onPress }: { driver: AppUser; selected: b
         <View className="flex-1">
           <Text className="text-base font-black text-slate-950">{driver.fullName}</Text>
           <Text className="mt-1 text-sm text-slate-500">
-            {driver.city} - {driver.phone || 'Telephone absent'}
+            {driver.city} - {driver.phone || t('admin.phone_missing')}
           </Text>
           <Text className="mt-1 text-xs font-semibold text-slate-400">{driver.email}</Text>
         </View>
@@ -77,15 +73,17 @@ function DriverRow({ driver, selected, onPress }: { driver: AppUser; selected: b
 }
 
 function DetailLine({ label, value }: { label: string; value?: string | number | null }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between border-b border-slate-100 py-3">
       <Text className="text-sm text-slate-500">{label}</Text>
-      <Text className="max-w-[60%] text-right text-sm font-bold text-slate-900">{value || 'Non renseigne'}</Text>
+      <Text className="max-w-[60%] text-right text-sm font-bold text-slate-900">{value || t('common.not_provided')}</Text>
     </View>
   );
 }
 
 export function AdminDriversScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [drivers, setDrivers] = useState<AppUser[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -126,20 +124,20 @@ export function AdminDriversScreen() {
     setError(null);
     const unsubscribe = subscribeToAllUsers(
       (items) => {
-        const driverLikeUsers = items.filter((user) => user.role === 'driver');
+        const driverLikeUsers = items.filter((u) => u.role === 'driver');
         setDrivers(driverLikeUsers);
         setSelectedId((current) => current ?? driverLikeUsers[0]?.id ?? null);
         setLoading(false);
         setError(null);
       },
       () => {
-        setError('Impossible de charger les chauffeurs.');
+        setError(t('admin.load_drivers_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const visibleDrivers = useMemo(
     () =>
@@ -159,9 +157,22 @@ export function AdminDriversScreen() {
   const pendingCount = drivers.filter((driver) => driver.status === 'pending_validation' || driver.kycStatus === 'pending').length;
   const suspendedCount = drivers.filter((driver) => driver.status === 'suspended' || driver.status === 'banned').length;
 
+  function kycLabel(status?: AppUser['kycStatus']) {
+    if (status === 'approved') return t('admin.kyc_validated_label');
+    if (status === 'rejected') return t('admin.kyc_rejected_label');
+    return t('admin.kyc_pending_status');
+  }
+
+  function statusLabel(status?: AppUser['status']) {
+    if (status === 'suspended') return t('admin.driver_status_suspended');
+    if (status === 'banned') return t('admin.driver_status_banned');
+    if (status === 'pending_validation') return t('admin.driver_status_pending');
+    return t('admin.driver_status_active');
+  }
+
   async function selectNewDocument(key: DriverDocumentKey) {
     const result = await pickImage();
-    if (result.permissionDenied) { toast.info("Autorisez l'acces aux photos pour ajouter le document."); return; }
+    if (result.permissionDenied) { toast.info(t('admin.photo_permission')); return; }
     const { uri } = result;
     if (!uri) return;
     setNewDocuments((current) => ({ ...current, [key]: uri }));
@@ -203,7 +214,7 @@ export function AdminDriversScreen() {
       !newPhone.trim() ||
       !newPricePerDay.trim()
     ) {
-      hapticWarning(); toast.warning('Formulaire incomplet — renseignez toutes les informations et ajoutez les documents.');
+      hapticWarning(); toast.warning(t('admin.form_incomplete'));
       return;
     }
 
@@ -234,16 +245,16 @@ export function AdminDriversScreen() {
         profilePhotoUrl,
       });
 
-      hapticSuccess(); toast.success('Chauffeur independant cree — en attente de validation KYC.');
+      hapticSuccess(); toast.success(t('admin.driver_created'));
       resetCreateForm();
       setShowCreateForm(false);
-    } catch (error) {
-      if (isOfflineError(error)) {
-        hapticWarning(); toast.warning(error.message);
+    } catch (err) {
+      if (isOfflineError(err)) {
+        hapticWarning(); toast.warning((err as Error).message);
         return;
       }
 
-      hapticError(); toast.error("Impossible d'ajouter le chauffeur independant.");
+      hapticError(); toast.error(t('admin.driver_create_error'));
     } finally {
       setCreating(false);
     }
@@ -259,7 +270,7 @@ export function AdminDriversScreen() {
       !selectedDriver.documents?.driverLicenseUrl;
 
     if (payload.kycStatus === 'approved' && missingDriverDocuments) {
-      toast.warning("Ajoutez la photo, la CNI recto/verso et le permis du chauffeur avant de valider le KYC.");
+      toast.warning(t('admin.kyc_docs_warning'));
       return;
     }
 
@@ -268,7 +279,7 @@ export function AdminDriversScreen() {
       await updateUserAdminStatus(selectedDriver.id, payload);
       hapticSuccess(); toast.success(successMessage);
     } catch {
-      hapticError(); toast.error("L'action admin n'a pas pu etre enregistree.");
+      hapticError(); toast.error(t('admin.action_error'));
     } finally {
       setSaving(false);
     }
@@ -285,7 +296,7 @@ export function AdminDriversScreen() {
       subtitle: message,
       actions: [
         {
-          label: 'Confirmer',
+          label: t('admin.action_confirm'),
           variant: 'danger',
           icon: 'checkmark-outline',
           onPress: () => updateSelected(payload, successMessage),
@@ -298,48 +309,57 @@ export function AdminDriversScreen() {
     if (!selectedDriver) return;
 
     if (!selectedDriver.driverProfile?.profilePhotoUrl) {
-      toast.info("Ajoutez une photo de profil chauffeur avant de valider le KYC.");
+      toast.info(t('admin.photo_missing_warning'));
       return;
     }
 
     confirmAction(
-      'Valider le KYC',
-      `Confirmez-vous la validation du KYC de ${selectedDriver.fullName} ?`,
+      t('admin.kyc_validate_title'),
+      t('admin.kyc_validate_confirm', { name: selectedDriver.fullName }),
       { kycStatus: 'approved', status: 'active', adminLastActionReason: 'KYC chauffeur valide par admin' },
-      'Le KYC du chauffeur est valide.',
+      t('admin.kyc_validated_success'),
     );
   }
+
+  const docItems: Array<{ key: DriverDocumentKey; label: string }> = [
+    { key: 'profilePhoto', label: t('admin.doc_photo') },
+    { key: 'nationalId', label: t('admin.doc_cni_front') },
+    { key: 'nationalIdBack', label: t('admin.doc_cni_back') },
+    { key: 'driverLicense', label: t('admin.doc_license') },
+  ];
+
+  const filterItems = [
+    { label: t('common.all'), value: 'all' as const },
+    { label: t('admin.filter_independent'), value: 'independent' as const },
+    { label: t('admin.filter_owners_type'), value: 'owner' as const },
+  ];
 
   return (
     <Screen topSafeArea>
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 4</Text>
-          <Text className="text-3xl font-black text-slate-950">Gestion des chauffeurs</Text>
-          <Text className="mt-1 text-sm text-slate-500">Validation KYC, suspension et suivi des comptes conducteurs.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.drivers_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.drivers_subtitle')}</Text>
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-slate-950">{drivers.length}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Chauffeurs</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.drivers_total')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-amber-600">{pendingCount}</Text>
-            <Text className="text-xs font-semibold text-slate-500">A valider</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.drivers_to_validate')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-red-600">{suspendedCount}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Bloques</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.drivers_blocked')}</Text>
           </View>
         </View>
 
         <View className="flex-row flex-wrap gap-2">
-          {[
-            { label: 'Tous', value: 'all' as const },
-            { label: 'Ind\u00e9pendants', value: 'independent' as const },
-            { label: 'Propri\u00e9taires', value: 'owner' as const },
-          ].map((item) => (
+          {filterItems.map((item) => (
             <TouchableOpacity
               className={`rounded-full px-4 py-2 ${filter === item.value ? 'bg-slate-950' : 'bg-white'}`}
               key={item.value}
@@ -359,10 +379,8 @@ export function AdminDriversScreen() {
             onPress={() => setShowCreateForm((value) => !value)}
           >
             <View>
-              <Text className="text-lg font-black text-slate-950">Ajouter un chauffeur independant</Text>
-              <Text className="mt-1 text-xs text-slate-500">
-                Creation manuelle par l'admin. Le KYC restera a valider.
-              </Text>
+              <Text className="text-lg font-black text-slate-950">{t('admin.add_independent_driver')}</Text>
+              <Text className="mt-1 text-xs text-slate-500">{t('admin.add_driver_notice')}</Text>
             </View>
             <Ionicons color="#3B63D4" name={showCreateForm ? 'chevron-up' : 'add-circle-outline'} size={24} />
           </TouchableOpacity>
@@ -372,7 +390,7 @@ export function AdminDriversScreen() {
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 onChangeText={setNewFullName}
-                placeholder="Nom complet"
+                placeholder={t('auth.full_name')}
                 placeholderTextColor="#94a3b8"
                 value={newFullName}
               />
@@ -381,7 +399,7 @@ export function AdminDriversScreen() {
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 keyboardType="email-address"
                 onChangeText={setNewEmail}
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 placeholderTextColor="#94a3b8"
                 value={newEmail}
               />
@@ -396,37 +414,37 @@ export function AdminDriversScreen() {
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 onChangeText={setNewPassword}
-                placeholder="Mot de passe provisoire"
+                placeholder={t('auth.password_temp')}
                 placeholderTextColor="#94a3b8"
                 secureTextEntry
                 value={newPassword}
               />
-              <CitySearchInput label="Ville" onSelectCity={setNewCity} value={newCity} />
+              <CitySearchInput label={t('common.city')} onSelectCity={setNewCity} value={newCity} />
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 onChangeText={setNewLicenseNumber}
-                placeholder="Numero de permis"
+                placeholder={t('auth.license_number')}
                 placeholderTextColor="#94a3b8"
                 value={newLicenseNumber}
               />
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 onChangeText={setNewLicenseCategories}
-                placeholder="Categories permis, ex: B"
+                placeholder={t('auth.license_categories')}
                 placeholderTextColor="#94a3b8"
                 value={newLicenseCategories}
               />
               <DatePickerField
-                label="Expiration permis"
+                label={t('auth.license_expiry')}
                 minimumDate={minLicenseExpiryDate}
                 onChange={setNewLicenseExpiryDate}
-                placeholder="Expiration permis, ex: 03/06/2027"
+                placeholder="Ex: 03/06/2027"
                 value={newLicenseExpiryDate}
               />
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 onChangeText={setNewNationalIdNumber}
-                placeholder="Numero CNI"
+                placeholder={t('auth.national_id')}
                 placeholderTextColor="#94a3b8"
                 value={newNationalIdNumber}
               />
@@ -434,7 +452,7 @@ export function AdminDriversScreen() {
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 keyboardType="numeric"
                 onChangeText={setNewExperienceYears}
-                placeholder="Annees d'experience"
+                placeholder={t('driver.experience_label')}
                 placeholderTextColor="#94a3b8"
                 value={newExperienceYears}
               />
@@ -442,18 +460,13 @@ export function AdminDriversScreen() {
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
                 keyboardType="numeric"
                 onChangeText={setNewPricePerDay}
-                placeholder="Tarif par jour en FCFA"
+                placeholder={t('driver.daily_rate_label')}
                 placeholderTextColor="#94a3b8"
                 value={newPricePerDay}
               />
 
               <View className="flex-row flex-wrap gap-3">
-                {[
-                  { key: 'profilePhoto' as const, label: 'Photo profil' },
-                  { key: 'nationalId' as const, label: 'CNI recto' },
-                  { key: 'nationalIdBack' as const, label: 'CNI verso' },
-                  { key: 'driverLicense' as const, label: 'Permis' },
-                ].map((item) => {
+                {docItems.map((item) => {
                   const uri = newDocuments[item.key];
                   return (
                     <TouchableOpacity
@@ -481,7 +494,7 @@ export function AdminDriversScreen() {
               </View>
 
               <PrimaryButton loading={creating} onPress={createIndependentDriver}>
-                Creer le chauffeur independant
+                {t('admin.add_independent_driver')}
               </PrimaryButton>
             </View>
           ) : null}
@@ -495,23 +508,23 @@ export function AdminDriversScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : (
           <View className="gap-5">
             <View>
-              <Text className="mb-3 text-lg font-black text-slate-950">Liste des chauffeurs</Text>
+              <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.driver_list_title')}</Text>
               {visibleDrivers.length === 0 ? (
                 <EmptyState
                   icon="people-outline"
                   illustration={EmptyDriversIllustration}
-                  subtitle="Changez le filtre ou ajoutez un chauffeur independant depuis le formulaire."
-                  title="Aucun chauffeur"
+                  subtitle={t('admin.empty_drivers_subtitle')}
+                  title={t('admin.empty_drivers')}
                 />
               ) : (
                 visibleDrivers.map((driver) => (
@@ -529,7 +542,7 @@ export function AdminDriversScreen() {
               <View className="gap-4 rounded-xl bg-white p-4">
                 <View className="flex-row items-center gap-2">
                   <Ionicons color="#3B63D4" name="person-circle-outline" size={24} />
-                  <Text className="flex-1 text-xl font-black text-slate-950">Fiche chauffeur</Text>
+                  <Text className="flex-1 text-xl font-black text-slate-950">{t('admin.driver_detail_title')}</Text>
                 </View>
 
                 {selectedDriverPhotoUrl ? (
@@ -540,62 +553,60 @@ export function AdminDriversScreen() {
                   />
                 ) : null}
 
-                <DetailLine label="Nom" value={selectedDriver.fullName} />
-                <DetailLine label="Email" value={selectedDriver.email} />
-                <DetailLine label="Telephone" value={selectedDriver.phone} />
-                <DetailLine label="Ville" value={selectedDriver.city} />
+                <DetailLine label={t('admin.detail_name')} value={selectedDriver.fullName} />
+                <DetailLine label={t('admin.detail_email')} value={selectedDriver.email} />
+                <DetailLine label={t('admin.detail_phone')} value={selectedDriver.phone} />
+                <DetailLine label={t('admin.detail_type')} value={selectedDriver.driverProfile?.isIndependent ? t('admin.driver_type_independent') : t('admin.driver_type_owner')} />
+                <DetailLine label={t('admin.detail_status')} value={statusLabel(selectedDriver.status)} />
+                <DetailLine label={t('admin.detail_kyc')} value={kycLabel(selectedDriver.kycStatus)} />
+                <DetailLine label={t('admin.detail_license_no')} value={selectedDriver.driverProfile?.licenseNumber} />
+                <DetailLine label={t('admin.detail_license_expiry')} value={selectedDriver.driverProfile?.licenseExpiryDate} />
+                <DetailLine label={t('admin.detail_license_cats')} value={selectedDriver.driverProfile?.licenseCategories} />
+                <DetailLine label={t('admin.detail_national_id')} value={selectedDriver.driverProfile?.nationalIdNumber} />
                 <DetailLine
-                  label="Type"
-                  value={selectedDriver.driverProfile?.isIndependent ? 'Chauffeur ind\u00e9pendant' : 'Chauffeur du propri\u00e9taire'}
+                  label={t('admin.detail_experience')}
+                  value={selectedDriver.driverProfile?.experienceYears
+                    ? t('admin.detail_experience_years', { count: selectedDriver.driverProfile.experienceYears })
+                    : undefined}
                 />
-                <DetailLine label="Statut" value={statusLabel(selectedDriver.status)} />
-                <DetailLine label="KYC" value={kycLabel(selectedDriver.kycStatus)} />
-                <DetailLine label="Numero permis" value={selectedDriver.driverProfile?.licenseNumber} />
-                <DetailLine label="Expiration permis" value={selectedDriver.driverProfile?.licenseExpiryDate} />
-                <DetailLine label="Categories permis" value={selectedDriver.driverProfile?.licenseCategories} />
-                <DetailLine label="Numero CNI" value={selectedDriver.driverProfile?.nationalIdNumber} />
-                <DetailLine label="Experience" value={selectedDriver.driverProfile?.experienceYears ? `${selectedDriver.driverProfile.experienceYears} ans` : undefined} />
-                <DetailLine label="Disponibilite" value={selectedDriver.driverProfile?.isAvailable ? 'Disponible' : 'Non renseigne'} />
-                <DetailLine label="Note moyenne" value={selectedDriver.ratingAverage ? `${selectedDriver.ratingAverage}/5` : undefined} />
-                <DetailLine label="Missions" value={selectedDriver.missionsCount ?? 0} />
-                <DetailLine label="Photo chauffeur" value={selectedDriver.driverProfile?.profilePhotoUrl ? 'Photo fournie' : undefined} />
-                <DetailLine label="CNI" value={selectedDriver.documents?.nationalIdUrl ? 'Document fourni' : undefined} />
-                <DetailLine label="CNI verso" value={selectedDriver.documents?.nationalIdBackUrl ? 'Document fourni' : undefined} />
-                <DetailLine label="Permis" value={selectedDriver.documents?.driverLicenseUrl ? 'Document fourni' : undefined} />
-                <DetailLine label="Derniere action admin" value={selectedDriver.adminLastActionReason} />
+                <DetailLine label={t('admin.detail_availability')} value={selectedDriver.driverProfile?.isAvailable ? t('admin.detail_available') : undefined} />
+                <DetailLine label={t('admin.detail_rating')} value={selectedDriver.ratingAverage ? `${selectedDriver.ratingAverage}/5` : undefined} />
+                <DetailLine label={t('admin.detail_missions')} value={selectedDriver.missionsCount ?? 0} />
+                <DetailLine label={t('admin.detail_driver_photo')} value={selectedDriver.driverProfile?.profilePhotoUrl ? t('admin.detail_provided') : undefined} />
+                <DetailLine label={t('admin.detail_cni')} value={selectedDriver.documents?.nationalIdUrl ? t('admin.detail_provided') : undefined} />
+                <DetailLine label={t('admin.detail_cni_back')} value={selectedDriver.documents?.nationalIdBackUrl ? t('admin.detail_provided') : undefined} />
+                <DetailLine label={t('admin.detail_license_doc')} value={selectedDriver.documents?.driverLicenseUrl ? t('admin.detail_provided') : undefined} />
+                <DetailLine label={t('admin.detail_last_action')} value={selectedDriver.adminLastActionReason} />
 
                 <View className="gap-3 pt-2">
-                  <PrimaryButton
-                    loading={saving}
-                    onPress={confirmKycApproval}
-                  >
-                    Valider KYC
+                  <PrimaryButton loading={saving} onPress={confirmKycApproval}>
+                    {t('admin.validate_kyc_cta')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
                     onPress={() =>
                       confirmAction(
-                        'Suspendre le compte',
-                        `Voulez-vous suspendre le compte de ${selectedDriver.fullName} ?`,
+                        t('admin.suspend_title'),
+                        t('admin.suspend_confirm', { name: selectedDriver.fullName }),
                         { status: 'suspended', adminLastActionReason: 'Suspension manuelle par admin' },
-                        'Le chauffeur est suspendu.',
+                        t('admin.driver_suspended'),
                       )
                     }
                   >
-                    Suspendre
+                    {t('admin.suspend_cta')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
                     onPress={() =>
                       confirmAction(
-                        'Débloquer le compte',
-                        `Voulez-vous débloquer le compte de ${selectedDriver.fullName} ?`,
+                        t('admin.unblock_title'),
+                        t('admin.unblock_confirm', { name: selectedDriver.fullName }),
                         { status: 'active', adminLastActionReason: 'Déblocage manuel après investigation' },
-                        'Le chauffeur est débloqué.',
+                        t('admin.driver_unblocked'),
                       )
                     }
                   >
-                    Débloquer
+                    {t('admin.unblock_cta')}
                   </PrimaryButton>
                 </View>
               </View>

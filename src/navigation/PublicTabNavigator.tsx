@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { HomeScreen } from '../screens/client/HomeScreen';
 import { SearchScreen } from '../screens/client/SearchScreen';
@@ -13,6 +14,8 @@ const TAB_ICONS: Record<keyof PublicTabParamList, [string, string]> = {
 };
 
 export function PublicTabNavigator() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -44,8 +47,8 @@ export function PublicTabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Accueil', headerShown: false }} />
-      <Tab.Screen name="Search" component={SearchScreen} options={{ title: 'Rechercher' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('tabs.home'), headerShown: false }} />
+      <Tab.Screen name="Search" component={SearchScreen} options={{ title: t('tabs.search') }} />
     </Tab.Navigator>
   );
 }

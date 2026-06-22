@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -11,22 +12,17 @@ import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { subscribeToReviews, updateReviewModeration } from '../../services/adminService';
 import type { Review, ReviewStatus } from '../../types/models';
 
-const filters: Array<{ label: string; value: 'all' | ReviewStatus }> = [
-  { label: 'Tous', value: 'all' },
-  { label: 'Publies', value: 'published' },
-  { label: 'Signales', value: 'flagged' },
-  { label: 'Supprimes', value: 'removed' },
-];
-
 const SKELETON_ITEMS = [0, 1, 2];
 
-function statusLabel(status: ReviewStatus) {
-  if (status === 'flagged') return 'Signale';
-  if (status === 'removed') return 'Supprime';
-  return 'Publie';
-}
-
 function ReviewRow({ review, selected, onPress }: { review: Review; selected: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
+
+  function statusLabel(status: ReviewStatus) {
+    if (status === 'flagged') return t('admin.review_status_flagged');
+    if (status === 'removed') return t('admin.review_status_removed');
+    return t('admin.review_status_published');
+  }
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -39,9 +35,11 @@ function ReviewRow({ review, selected, onPress }: { review: Review; selected: bo
             {review.targetType} - {review.rating}/5
           </Text>
           <Text className="mt-1 text-sm text-slate-500" numberOfLines={2}>
-            {review.comment || 'Avis sans commentaire'}
+            {review.comment || t('admin.review_no_comment')}
           </Text>
-          <Text className="mt-1 text-xs font-semibold text-slate-400">Auteur: {review.authorId}</Text>
+          <Text className="mt-1 text-xs font-semibold text-slate-400">
+            {t('admin.review_author', { id: review.authorId })}
+          </Text>
         </View>
         <Text className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
           {statusLabel(review.status)}
@@ -52,6 +50,7 @@ function ReviewRow({ review, selected, onPress }: { review: Review; selected: bo
 }
 
 export function AdminReviewsScreen() {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | ReviewStatus>('all');
@@ -60,6 +59,13 @@ export function AdminReviewsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
+
+  const filters: Array<{ label: string; value: 'all' | ReviewStatus }> = [
+    { label: t('common.all'), value: 'all' },
+    { label: t('admin.review_filter_published'), value: 'published' },
+    { label: t('admin.review_filter_flagged'), value: 'flagged' },
+    { label: t('admin.review_filter_removed'), value: 'removed' },
+  ];
 
   useEffect(() => {
     setLoading(true);
@@ -72,13 +78,13 @@ export function AdminReviewsScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les avis.');
+        setError(t('admin.load_reviews_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const visibleReviews = useMemo(
     () => (filter === 'all' ? reviews : reviews.filter((review) => review.status === filter)),
@@ -101,7 +107,7 @@ export function AdminReviewsScreen() {
       await updateReviewModeration(selectedReview.id, payload);
       hapticSuccess(); toast.success(message);
     } catch {
-      hapticError(); toast.error("L'avis n'a pas pu etre modere.");
+      hapticError(); toast.error(t('admin.review_moderation_error'));
     } finally {
       setSaving(false);
     }
@@ -112,26 +118,26 @@ export function AdminReviewsScreen() {
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 7</Text>
-          <Text className="text-3xl font-black text-slate-950">Avis & moderation</Text>
-          <Text className="mt-1 text-sm text-slate-500">Controle des avis voitures, chauffeurs et clients.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.reviews_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.reviews_subtitle')}</Text>
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-slate-950">{reviews.length}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Avis</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.reviews_total')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-amber-600">
               {reviews.filter((review) => review.status === 'flagged').length}
             </Text>
-            <Text className="text-xs font-semibold text-slate-500">Signales</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.reviews_flagged')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-red-600">
               {reviews.filter((review) => review.status === 'removed').length}
             </Text>
-            <Text className="text-xs font-semibold text-slate-500">Supprimes</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.reviews_removed')}</Text>
           </View>
         </View>
 
@@ -160,23 +166,23 @@ export function AdminReviewsScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : (
           <View className="gap-5">
             <View>
-              <Text className="mb-3 text-lg font-black text-slate-950">Liste des avis</Text>
+              <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.review_list_title')}</Text>
               {visibleReviews.length === 0 ? (
                 <EmptyState
                   icon="star-outline"
                   illustration={EmptyReviewsIllustration}
-                  subtitle="Changez le filtre ou attendez les prochains avis."
-                  title="Aucun avis"
+                  subtitle={t('admin.empty_reviews_subtitle')}
+                  title={t('admin.empty_reviews')}
                 />
               ) : (
                 visibleReviews.map((review) => (
@@ -194,40 +200,44 @@ export function AdminReviewsScreen() {
               <View className="gap-4 rounded-xl bg-white p-4">
                 <View className="flex-row items-center gap-2">
                   <Ionicons color="#3B63D4" name="star-outline" size={22} />
-                  <Text className="flex-1 text-xl font-black text-slate-950">Avis selectionne</Text>
+                  <Text className="flex-1 text-xl font-black text-slate-950">{t('admin.review_selected_title')}</Text>
                 </View>
                 <Text className="text-base font-semibold text-slate-800">{selectedReview.comment}</Text>
-                <Text className="text-sm text-slate-500">Cible: {selectedReview.targetType} / {selectedReview.targetId}</Text>
-                <Text className="text-sm text-slate-500">Motif signalement: {selectedReview.flaggedReason || 'Aucun'}</Text>
+                <Text className="text-sm text-slate-500">
+                  {t('admin.review_target', { type: selectedReview.targetType, id: selectedReview.targetId })}
+                </Text>
+                <Text className="text-sm text-slate-500">
+                  {t('admin.review_flag_reason', { reason: selectedReview.flaggedReason || t('admin.review_no_reason') })}
+                </Text>
 
                 <View className="gap-3">
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => moderate({ status: 'published', flaggedReason: '' }, "L'avis est republie.")}
+                    onPress={() => moderate({ status: 'published', flaggedReason: '' }, t('admin.republish_success'))}
                   >
-                    Republier
+                    {t('admin.republish_cta')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => moderate({ status: 'flagged', flaggedReason: 'Signalement manuel admin' }, "L'avis est signale.")}
+                    onPress={() => moderate({ status: 'flagged', flaggedReason: 'Signalement manuel admin' }, t('admin.flag_success'))}
                   >
-                    Signaler
+                    {t('admin.flag_cta')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => moderate({ status: 'removed', moderatedAt: new Date() }, "L'avis est supprime apres moderation.")}
+                    onPress={() => moderate({ status: 'removed', moderatedAt: new Date() }, t('admin.remove_success'))}
                   >
-                    Supprimer apres moderation
+                    {t('admin.remove_after_moderation')}
                   </PrimaryButton>
                 </View>
               </View>
             ) : null}
 
             <View className="rounded-xl bg-white p-4">
-              <Text className="mb-3 text-lg font-black text-slate-950">Distribution des etoiles</Text>
+              <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.rating_distribution')}</Text>
               {ratingDistribution.map((item) => (
                 <View className="flex-row items-center justify-between border-b border-slate-100 py-3" key={item.rating}>
-                  <Text className="font-bold text-slate-700">{item.rating} etoiles</Text>
+                  <Text className="font-bold text-slate-700">{t('admin.stars_label', { count: item.rating })}</Text>
                   <Text className="font-black text-slate-950">{item.count}</Text>
                 </View>
               ))}

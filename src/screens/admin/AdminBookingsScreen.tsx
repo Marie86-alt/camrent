@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -14,29 +15,23 @@ import { formatFcfa } from '../../utils/currency';
 import { formatDate } from '../../utils/dates';
 import { toJsDate } from '../../utils/firestoreDate';
 
-const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
-  { label: 'Toutes', value: 'all' },
-  { label: 'En attente', value: 'pending' },
-  { label: 'Confirmees', value: 'confirmed' },
-  { label: 'Annulees', value: 'cancelled' },
-  { label: 'Terminees', value: 'completed' },
-];
-
 const SKELETON_ITEMS = [0, 1, 2];
 
-function toReadableDate(value: Booking['startDate']) {
-  if (!value) return 'Non renseigne';
+function toReadableDate(value: Booking['startDate'], notProvided: string) {
+  if (!value) return notProvided;
   return formatDate(toJsDate(value));
 }
 
-function statusLabel(status: BookingStatus) {
-  if (status === 'confirmed') return 'Confirmee';
-  if (status === 'cancelled') return 'Annulee';
-  if (status === 'completed') return 'Terminee';
-  return 'En attente';
-}
-
 function BookingRow({ booking, selected, onPress }: { booking: Booking; selected: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
+
+  function statusLabel(status: BookingStatus) {
+    if (status === 'confirmed') return t('admin.booking_status_confirmed');
+    if (status === 'cancelled') return t('admin.booking_status_cancelled');
+    if (status === 'completed') return t('admin.booking_status_completed');
+    return t('admin.booking_status_pending');
+  }
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -49,7 +44,7 @@ function BookingRow({ booking, selected, onPress }: { booking: Booking; selected
             {booking.carBrand} {booking.carModel}
           </Text>
           <Text className="mt-1 text-sm text-slate-500">
-            {toReadableDate(booking.startDate)} - {toReadableDate(booking.endDate)}
+            {toReadableDate(booking.startDate, t('common.not_provided'))} - {toReadableDate(booking.endDate, t('common.not_provided'))}
           </Text>
           <Text className="mt-1 text-xs font-semibold text-slate-400">{booking.clientId}</Text>
         </View>
@@ -65,15 +60,17 @@ function BookingRow({ booking, selected, onPress }: { booking: Booking; selected
 }
 
 function DetailLine({ label, value }: { label: string; value?: string | number | null }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between border-b border-slate-100 py-3">
       <Text className="text-sm text-slate-500">{label}</Text>
-      <Text className="max-w-[60%] text-right text-sm font-bold text-slate-900">{value || 'Non renseigne'}</Text>
+      <Text className="max-w-[60%] text-right text-sm font-bold text-slate-900">{value || t('common.not_provided')}</Text>
     </View>
   );
 }
 
 export function AdminBookingsScreen() {
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | BookingStatus>('all');
@@ -82,6 +79,21 @@ export function AdminBookingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
+
+  const filters: Array<{ label: string; value: 'all' | BookingStatus }> = [
+    { label: t('admin.booking_filter_all'), value: 'all' },
+    { label: t('admin.booking_filter_pending'), value: 'pending' },
+    { label: t('admin.booking_filter_confirmed'), value: 'confirmed' },
+    { label: t('admin.booking_filter_cancelled'), value: 'cancelled' },
+    { label: t('admin.booking_filter_completed'), value: 'completed' },
+  ];
+
+  function statusLabel(status: BookingStatus) {
+    if (status === 'confirmed') return t('admin.booking_status_confirmed');
+    if (status === 'cancelled') return t('admin.booking_status_cancelled');
+    if (status === 'completed') return t('admin.booking_status_completed');
+    return t('admin.booking_status_pending');
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -94,13 +106,13 @@ export function AdminBookingsScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les reservations.');
+        setError(t('admin.load_bookings_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const visibleBookings = useMemo(
     () => (filter === 'all' ? bookings : bookings.filter((booking) => booking.status === filter)),
@@ -120,7 +132,7 @@ export function AdminBookingsScreen() {
       await updateBookingAdminFields(selectedBooking.id, payload);
       hapticSuccess(); toast.success(successMessage);
     } catch {
-      hapticError(); toast.error("L'action admin n'a pas pu etre enregistree.");
+      hapticError(); toast.error(t('admin.action_error'));
     } finally {
       setSaving(false);
     }
@@ -131,26 +143,26 @@ export function AdminBookingsScreen() {
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 5</Text>
-          <Text className="text-3xl font-black text-slate-950">Reservations & litiges</Text>
-          <Text className="mt-1 text-sm text-slate-500">Suivi complet des reservations, paiements, documents et litiges.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.bookings_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.bookings_subtitle')}</Text>
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-slate-950">{bookings.length}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Reservations</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.bookings')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-amber-600">
               {bookings.filter((booking) => booking.paymentStatus === 'pending').length}
             </Text>
-            <Text className="text-xs font-semibold text-slate-500">Paiements attente</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.pending_payments_label')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-red-600">
               {bookings.filter((booking) => booking.disputeStatus === 'open').length}
             </Text>
-            <Text className="text-xs font-semibold text-slate-500">Litiges ouverts</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.disputes_label')}</Text>
           </View>
         </View>
 
@@ -176,23 +188,23 @@ export function AdminBookingsScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : (
           <View className="gap-5">
             <View>
-              <Text className="mb-3 text-lg font-black text-slate-950">Tableau des reservations</Text>
+              <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.booking_list_title')}</Text>
               {visibleBookings.length === 0 ? (
                 <EmptyState
                   icon="receipt-outline"
                   illustration={EmptyBookingsIllustration}
-                  subtitle="Changez le filtre ou attendez une nouvelle reservation."
-                  title="Aucune reservation"
+                  subtitle={t('admin.empty_bookings_subtitle')}
+                  title={t('admin.empty_bookings')}
                 />
               ) : (
                 visibleBookings.map((booking) => (
@@ -210,46 +222,46 @@ export function AdminBookingsScreen() {
               <View className="gap-4 rounded-xl bg-white p-4">
                 <View className="flex-row items-center gap-2">
                   <Ionicons color="#3B63D4" name="receipt-outline" size={22} />
-                  <Text className="flex-1 text-xl font-black text-slate-950">Fiche reservation</Text>
+                  <Text className="flex-1 text-xl font-black text-slate-950">{t('admin.booking_detail_title')}</Text>
                 </View>
 
-                <DetailLine label="Vehicule" value={`${selectedBooking.carBrand} ${selectedBooking.carModel}`} />
-                <DetailLine label="Client" value={selectedBooking.clientId} />
-                <DetailLine label="Proprietaire" value={selectedBooking.ownerId} />
-                <DetailLine label="Debut" value={toReadableDate(selectedBooking.startDate)} />
-                <DetailLine label="Fin" value={toReadableDate(selectedBooking.endDate)} />
-                <DetailLine label="Montant" value={formatFcfa(selectedBooking.totalPrice)} />
-                <DetailLine label="Paiement" value={`${selectedBooking.paymentMethod} - ${selectedBooking.paymentStatus}`} />
-                <DetailLine label="Statut" value={statusLabel(selectedBooking.status)} />
-                <DetailLine label="Litige" value={selectedBooking.disputeStatus ?? 'none'} />
-                <DetailLine label="Caution" value={selectedBooking.depositStatus ?? 'held'} />
-                <DetailLine label="Permis" value={selectedBooking.driverLicense?.licenseNumber} />
-                <DetailLine label="Expiration permis" value={selectedBooking.driverLicense?.expiryDate} />
+                <DetailLine label={t('admin.field_vehicle')} value={`${selectedBooking.carBrand} ${selectedBooking.carModel}`} />
+                <DetailLine label={t('admin.field_client')} value={selectedBooking.clientId} />
+                <DetailLine label={t('admin.field_owner')} value={selectedBooking.ownerId} />
+                <DetailLine label={t('admin.field_start')} value={toReadableDate(selectedBooking.startDate, t('common.not_provided'))} />
+                <DetailLine label={t('admin.field_end')} value={toReadableDate(selectedBooking.endDate, t('common.not_provided'))} />
+                <DetailLine label={t('admin.field_amount')} value={formatFcfa(selectedBooking.totalPrice)} />
+                <DetailLine label={t('admin.field_payment')} value={`${selectedBooking.paymentMethod} - ${selectedBooking.paymentStatus}`} />
+                <DetailLine label={t('admin.field_status')} value={statusLabel(selectedBooking.status)} />
+                <DetailLine label={t('admin.field_dispute')} value={selectedBooking.disputeStatus ?? 'none'} />
+                <DetailLine label={t('admin.field_deposit')} value={selectedBooking.depositStatus ?? 'held'} />
+                <DetailLine label={t('admin.field_license')} value={selectedBooking.driverLicense?.licenseNumber} />
+                <DetailLine label={t('admin.field_license_expiry')} value={selectedBooking.driverLicense?.expiryDate} />
 
                 <View className="gap-3 pt-2">
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => updateSelected({ disputeStatus: 'open' }, 'Un dossier litige est ouvert.')}
+                    onPress={() => updateSelected({ disputeStatus: 'open' }, t('admin.dispute_opened'))}
                   >
-                    Ouvrir litige
+                    {t('admin.open_dispute')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => updateSelected({ disputeStatus: 'resolved' }, 'Le litige est marque comme resolu.')}
+                    onPress={() => updateSelected({ disputeStatus: 'resolved' }, t('admin.dispute_resolved'))}
                   >
-                    Resoudre litige
+                    {t('admin.resolve_dispute')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => updateSelected({ refundStatus: 'approved' }, 'Le remboursement manuel est valide.')}
+                    onPress={() => updateSelected({ refundStatus: 'approved' }, t('admin.refund_approved'))}
                   >
-                    Valider remboursement
+                    {t('admin.approve_refund')}
                   </PrimaryButton>
                   <PrimaryButton
                     loading={saving}
-                    onPress={() => updateSelected({ depositStatus: 'released' }, 'La caution est liberee.')}
+                    onPress={() => updateSelected({ depositStatus: 'released' }, t('admin.deposit_released'))}
                   >
-                    Liberer caution
+                    {t('admin.release_deposit')}
                   </PrimaryButton>
                 </View>
               </View>

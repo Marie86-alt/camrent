@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -14,13 +15,8 @@ import { formatFcfa } from '../../utils/currency';
 const adminRoles: AdminRole[] = ['super_admin', 'moderator', 'accountant'];
 const SKELETON_ITEMS = [0, 1, 2];
 
-function roleLabel(role?: AdminRole) {
-  if (role === 'super_admin') return 'Super admin';
-  if (role === 'accountant') return 'Comptable';
-  return 'Moderateur';
-}
-
 export function AdminSecurityScreen() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
   const [commission, setCommission] = useState('10');
@@ -30,6 +26,12 @@ export function AdminSecurityScreen() {
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
   const toast = useToast();
+
+  function roleLabel(role?: AdminRole) {
+    if (role === 'super_admin') return t('admin.role_super_admin');
+    if (role === 'accountant') return t('admin.role_accountant');
+    return t('admin.role_moderator');
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -43,13 +45,13 @@ export function AdminSecurityScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les administrateurs.');
+        setError(t('admin.load_admins_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const selectedAdmin = useMemo(
     () => users.find((user) => user.id === selectedAdminId) ?? users[0],
@@ -62,9 +64,9 @@ export function AdminSecurityScreen() {
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedAdmin.id, { adminRole } as Partial<AppUser>);
-      hapticSuccess(); toast.success(`${selectedAdmin.fullName} est maintenant ${roleLabel(adminRole)}.`);
+      hapticSuccess(); toast.success(t('admin.role_set_success', { name: selectedAdmin.fullName, role: roleLabel(adminRole) }));
     } catch {
-      hapticError(); toast.error("Le role admin n'a pas pu etre modifie.");
+      hapticError(); toast.error(t('admin.role_set_error'));
     } finally {
       setSaving(false);
     }
@@ -76,9 +78,9 @@ export function AdminSecurityScreen() {
     try {
       setSaving(true);
       await updateUserAdminStatus(selectedAdmin.id, { status: 'suspended', adminLastActionReason: 'Compte admin desactive' });
-      hapticSuccess(); toast.success('Le compte administrateur est suspendu.');
+      hapticSuccess(); toast.success(t('admin.disable_admin_success'));
     } catch {
-      hapticError(); toast.error("Le compte admin n'a pas pu etre desactive.");
+      hapticError(); toast.error(t('admin.disable_admin_error'));
     } finally {
       setSaving(false);
     }
@@ -89,16 +91,16 @@ export function AdminSecurityScreen() {
     const defaultDepositAmount = Number(deposit);
 
     if (!Number.isFinite(rentalCommissionRate) || !Number.isFinite(defaultDepositAmount)) {
-      hapticWarning(); toast.warning('Renseignez des montants numeriques.');
+      hapticWarning(); toast.warning(t('admin.numeric_warning'));
       return;
     }
 
     try {
       setSaving(true);
       await updatePlatformSecuritySettings({ defaultDepositAmount, rentalCommissionRate });
-      hapticSuccess(); toast.success('Parametres de securite mis a jour.');
+      hapticSuccess(); toast.success(t('admin.save_settings_success'));
     } catch {
-      hapticError(); toast.error("Les parametres n'ont pas pu etre sauvegardes.");
+      hapticError(); toast.error(t('admin.save_settings_error'));
     } finally {
       setSaving(false);
     }
@@ -109,8 +111,8 @@ export function AdminSecurityScreen() {
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 9</Text>
-          <Text className="text-3xl font-black text-slate-950">Parametres & securite</Text>
-          <Text className="mt-1 text-sm text-slate-500">Comptes admin, roles, audit et parametres de risque.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.security_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.security_subtitle')}</Text>
         </View>
 
         {loading ? (
@@ -124,11 +126,11 @@ export function AdminSecurityScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : (
@@ -136,7 +138,7 @@ export function AdminSecurityScreen() {
             <View className="rounded-xl bg-white p-4">
               <View className="mb-4 flex-row items-center gap-2">
                 <Ionicons color="#3B63D4" name="shield-checkmark-outline" size={22} />
-                <Text className="text-lg font-black text-slate-950">Comptes administrateurs</Text>
+                <Text className="text-lg font-black text-slate-950">{t('admin.admin_accounts')}</Text>
               </View>
 
               {users.map((admin) => (
@@ -154,15 +156,15 @@ export function AdminSecurityScreen() {
               {users.length === 0 ? (
                 <EmptyState
                   icon="shield-checkmark-outline"
-                  subtitle="Creez ou promouvez un compte admin pour gerer les permissions."
-                  title="Aucun administrateur"
+                  subtitle={t('admin.no_admins_subtitle')}
+                  title={t('admin.no_admins')}
                 />
               ) : null}
 
               {selectedAdmin ? (
                 <View className="gap-3 pt-2">
                   <Text className="text-sm font-semibold text-slate-500">
-                    Role actuel: {roleLabel(selectedAdmin.adminRole)}
+                    {t('admin.role_current', { role: roleLabel(selectedAdmin.adminRole) })}
                   </Text>
                   <View className="flex-row flex-wrap gap-2">
                     {adminRoles.map((item) => (
@@ -176,7 +178,7 @@ export function AdminSecurityScreen() {
                     ))}
                   </View>
                   <PrimaryButton loading={saving} onPress={disableAdmin}>
-                    Desactiver ce compte admin
+                    {t('admin.disable_admin_cta')}
                   </PrimaryButton>
                 </View>
               ) : null}
@@ -185,12 +187,12 @@ export function AdminSecurityScreen() {
             <View className="rounded-xl bg-white p-4">
               <View className="mb-4 flex-row items-center gap-2">
                 <Ionicons color="#3B63D4" name="settings-outline" size={22} />
-                <Text className="text-lg font-black text-slate-950">Parametres financiers de securite</Text>
+                <Text className="text-lg font-black text-slate-950">{t('admin.finance_settings')}</Text>
               </View>
 
               <View className="gap-3">
                 <View>
-                  <Text className="mb-2 text-sm font-semibold text-slate-500">Commission par type de location (%)</Text>
+                  <Text className="mb-2 text-sm font-semibold text-slate-500">{t('admin.commission_type_label')}</Text>
                   <TextInput
                     className="h-12 rounded-lg border border-slate-200 px-4 text-slate-950"
                     keyboardType="numeric"
@@ -199,7 +201,7 @@ export function AdminSecurityScreen() {
                   />
                 </View>
                 <View>
-                  <Text className="mb-2 text-sm font-semibold text-slate-500">Caution par defaut</Text>
+                  <Text className="mb-2 text-sm font-semibold text-slate-500">{t('admin.deposit_default_label')}</Text>
                   <TextInput
                     className="h-12 rounded-lg border border-slate-200 px-4 text-slate-950"
                     keyboardType="numeric"
@@ -209,16 +211,14 @@ export function AdminSecurityScreen() {
                   <Text className="mt-2 text-xs font-semibold text-slate-400">{formatFcfa(Number(deposit) || 0)}</Text>
                 </View>
                 <PrimaryButton loading={saving} onPress={saveSettings}>
-                  Sauvegarder les parametres
+                  {t('admin.save_settings_cta')}
                 </PrimaryButton>
               </View>
             </View>
 
             <View className="rounded-xl bg-white p-4">
-              <Text className="text-lg font-black text-slate-950">Logs d'activite admin</Text>
-              <Text className="mt-2 text-sm text-slate-500">
-                La structure est prete pour brancher une collection adminLogs depuis les actions sensibles.
-              </Text>
+              <Text className="text-lg font-black text-slate-950">{t('admin.activity_logs')}</Text>
+              <Text className="mt-2 text-sm text-slate-500">{t('admin.activity_logs_subtitle')}</Text>
             </View>
           </View>
         )}

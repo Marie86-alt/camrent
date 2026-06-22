@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -25,29 +26,6 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<OwnerStackParamList>
 >;
 
-const TEXT = {
-  activity: 'Activit\u00e9 r\u00e9cente',
-  cancelled: 'Annul\u00e9e',
-  completed: 'Termin\u00e9e',
-  confirmed: 'Confirm\u00e9e',
-  dash: '\u2014',
-  dot: '\u00b7',
-  reservation: 'R\u00e9servation',
-  reservations: 'R\u00e9servations',
-  revenues: 'Revenus confirm\u00e9s',
-  revenueEmpty: 'Vos revenus appara\u00eetront ici une fois les r\u00e9servations confirm\u00e9es.',
-  updateError: 'Impossible de mettre \u00e0 jour la r\u00e9servation.',
-  vehicle: 'V\u00e9hicule',
-  arrow: '\u2192',
-};
-
-const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'En attente', color: '#ca8a04', bg: '#fefce8' },
-  confirmed: { label: TEXT.confirmed, color: '#3B63D4', bg: '#eff6ff' },
-  cancelled: { label: TEXT.cancelled, color: '#b91c1c', bg: '#fef2f2' },
-  completed: { label: TEXT.completed, color: '#64748b', bg: '#f1f5f9' },
-};
-
 const PAYMENT_METHODS: { key: PaymentMethod; label: string; color: string }[] = [
   { key: 'MTN MoMo', label: 'MTN MoMo', color: '#eab308' },
   { key: 'Orange Money', label: 'Orange Money', color: '#f97316' },
@@ -55,11 +33,19 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; color: string }[] = 
 ];
 
 export function DashboardScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { cars } = useCars(user?.id);
   const { bookings } = useBookings(user?.id, 'owner');
   const toast = useToast();
   const bottomSheet = useBottomSheet();
+
+  const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: string }> = {
+    pending: { label: t('booking.status_pending'), color: '#ca8a04', bg: '#fefce8' },
+    confirmed: { label: t('booking.status_confirmed'), color: '#3B63D4', bg: '#eff6ff' },
+    cancelled: { label: t('booking.status_cancelled'), color: '#b91c1c', bg: '#fef2f2' },
+    completed: { label: t('booking.status_completed'), color: '#64748b', bg: '#f1f5f9' },
+  };
 
   const handleStatusUpdate = useCallback(async (
     booking: Booking,
@@ -72,37 +58,35 @@ export function DashboardScreen({ navigation }: Props) {
         hapticWarning(); toast.warning(error.message);
         return;
       }
-
-      hapticError(); toast.error(TEXT.updateError);
+      hapticError(); toast.error(t('owner.update_error'));
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const confirmOwnerCancellation = useCallback((booking: Booking) => {
     bottomSheet.show({
-      title: 'Annuler cette reservation ?',
-      subtitle: "Le client sera rembourse integralement s'il a deja paye.",
+      title: t('owner.cancel_title'),
+      subtitle: t('owner.cancel_subtitle'),
       actions: [
         {
-          label: 'Annuler la reservation',
+          label: t('owner.cancel_action'),
           variant: 'danger',
           icon: 'close-circle-outline',
           onPress: async () => {
             try {
               await ownerCancelBooking(booking.id);
-              hapticSuccess(); toast.success('Reservation annulee.');
+              hapticSuccess(); toast.success(t('owner.cancel_success'));
             } catch (error) {
               if (isOfflineError(error)) {
                 hapticWarning(); toast.warning(error.message);
                 return;
               }
-
-              hapticError(); toast.error("Impossible d'annuler la reservation.");
+              hapticError(); toast.error(t('owner.cancel_error'));
             }
           },
         },
       ],
     });
-  }, [bottomSheet, toast]);
+  }, [bottomSheet, toast, t]);
 
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const recentBookings = bookings.filter((b) => b.status !== 'pending').slice(0, 3);
@@ -125,19 +109,12 @@ export function DashboardScreen({ navigation }: Props) {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-6 px-5 pb-8 pt-4">
           <View className="gap-3">
-            {/* Top bar: logo left · actions right */}
             <View className="flex-row items-center justify-between">
               <BrandLogo variant="xs" />
               <View className="flex-row items-center gap-2">
                 <TouchableOpacity
                   className="h-10 w-10 items-center justify-center rounded-full bg-white"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOpacity: 0.06,
-                    shadowRadius: 4,
-                    shadowOffset: { width: 0, height: 1 },
-                    elevation: 1,
-                  }}
+                  style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                   onPress={() => navigation.navigate('Reservations')}
                 >
                   <Ionicons color="#64748b" name="notifications-outline" size={20} />
@@ -158,79 +135,44 @@ export function DashboardScreen({ navigation }: Props) {
               </View>
             </View>
 
-            {/* Greeting */}
             <View>
-              <Text className="text-xs font-medium text-slate-400">Tableau de bord propriétaire</Text>
+              <Text className="text-xs font-medium text-slate-400">{t('owner.greeting_subtitle')}</Text>
               <Text className="mt-0.5 text-2xl font-black text-slate-950">
-                Bonjour, {user?.fullName?.split(' ')[0]} 👋
+                {t('home.greeting_name', { name: user?.fullName?.split(' ')[0] })}
               </Text>
             </View>
           </View>
 
           <View className="flex-row gap-3">
-            <View
-              className="flex-1 rounded-2xl bg-white p-4"
-              style={{
-                shadowColor: '#000',
-                shadowOpacity: 0.05,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 1 },
-                elevation: 1,
-              }}
-            >
+            <View className="flex-1 rounded-2xl bg-white p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}>
               <View className="mb-2 h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
                 <Ionicons color="#3B63D4" name="car-outline" size={18} />
               </View>
               <Text className="text-2xl font-black text-slate-950">{cars.length}</Text>
-              <Text className="mt-0.5 text-xs text-slate-400">
-                Voiture{cars.length > 1 ? 's' : ''}
-              </Text>
+              <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.cars')}</Text>
             </View>
 
-            <View
-              className="flex-1 rounded-2xl bg-white p-4"
-              style={{
-                shadowColor: '#000',
-                shadowOpacity: 0.05,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 1 },
-                elevation: 1,
-              }}
-            >
+            <View className="flex-1 rounded-2xl bg-white p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}>
               <View className="mb-2 h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
                 <Ionicons color="#2563eb" name="calendar-outline" size={18} />
               </View>
               <Text className="text-2xl font-black text-slate-950">{bookings.length}</Text>
-              <Text className="mt-0.5 text-xs text-slate-400">
-                {TEXT.reservation}
-                {bookings.length > 1 ? 's' : ''}
-              </Text>
+              <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.bookings')}</Text>
             </View>
           </View>
 
-          <View
-            className="rounded-2xl bg-slate-950 p-5"
-            style={{
-              shadowColor: '#3B63D4',
-              shadowOpacity: 0.2,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 4,
-            }}
-          >
+          <View className="rounded-2xl bg-slate-950 p-5" style={{ shadowColor: '#3B63D4', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 4 }}>
             <View className="flex-row items-start justify-between">
               <View>
-                <Text className="text-xs font-semibold text-slate-400">{TEXT.revenues}</Text>
-                <Text className="mt-1 text-3xl font-black text-white">
-                  {formatFcfa(confirmedRevenue)}
-                </Text>
+                <Text className="text-xs font-semibold text-slate-400">{t('owner.confirmed_revenue')}</Text>
+                <Text className="mt-1 text-3xl font-black text-white">{formatFcfa(confirmedRevenue)}</Text>
               </View>
               <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-warning">
                 <Ionicons color="#78350f" name="cash-outline" size={20} />
               </View>
             </View>
             {confirmedRevenue === 0 ? (
-              <Text className="mt-3 text-xs text-slate-500">{TEXT.revenueEmpty}</Text>
+              <Text className="mt-3 text-xs text-slate-500">{t('owner.revenue_empty')}</Text>
             ) : (
               <View className="mt-4 gap-2">
                 <View className="h-px bg-white/10" />
@@ -239,7 +181,7 @@ export function DashboardScreen({ navigation }: Props) {
                     <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
                     <Text className="flex-1 text-xs text-slate-400">{label}</Text>
                     <Text className="text-xs font-bold text-slate-300">
-                      {count > 0 ? formatFcfa(amount) : TEXT.dash}
+                      {count > 0 ? formatFcfa(amount) : '—'}
                     </Text>
                   </View>
                 ))}
@@ -252,12 +194,10 @@ export function DashboardScreen({ navigation }: Props) {
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2">
                   <View className="h-2 w-2 rounded-full bg-yellow-400" />
-                  <Text className="font-bold text-slate-950">En attente de confirmation</Text>
+                  <Text className="font-bold text-slate-950">{t('owner.pending_confirm')}</Text>
                 </View>
                 <View className="rounded-full bg-yellow-50 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-yellow-700">
-                    {pendingBookings.length}
-                  </Text>
+                  <Text className="text-xs font-bold text-yellow-700">{pendingBookings.length}</Text>
                 </View>
               </View>
 
@@ -265,21 +205,13 @@ export function DashboardScreen({ navigation }: Props) {
                 const carLabel =
                   booking.carBrand && booking.carModel
                     ? `${booking.carBrand} ${booking.carModel}`
-                    : TEXT.vehicle;
+                    : t('owner.vehicle_label');
 
                 return (
                   <View
                     key={booking.id}
                     className="rounded-2xl bg-white p-4"
-                    style={{
-                      shadowColor: '#000',
-                      shadowOpacity: 0.06,
-                      shadowRadius: 6,
-                      shadowOffset: { width: 0, height: 2 },
-                      elevation: 2,
-                      borderLeftWidth: 4,
-                      borderLeftColor: '#facc15',
-                    }}
+                    style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#facc15' }}
                   >
                     <View className="flex-row items-start justify-between gap-3">
                       <View className="flex-1">
@@ -288,13 +220,10 @@ export function DashboardScreen({ navigation }: Props) {
                           {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
                         </Text>
                         <Text className="mt-0.5 text-xs text-slate-500">
-                          {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''}{' '}
-                          {TEXT.dot} {booking.paymentMethod}
+                          {booking.totalDays} {booking.totalDays > 1 ? t('common.days_other', { count: booking.totalDays }) : t('common.days_one', { count: booking.totalDays }).replace('1 ', '')} · {booking.paymentMethod}
                         </Text>
                       </View>
-                      <Text className="text-base font-black text-brand-blue">
-                        {formatFcfa(booking.totalPrice)}
-                      </Text>
+                      <Text className="text-base font-black text-brand-blue">{formatFcfa(booking.totalPrice)}</Text>
                     </View>
 
                     <View className="mt-3 flex-row gap-2">
@@ -304,7 +233,7 @@ export function DashboardScreen({ navigation }: Props) {
                         onPress={() => handleStatusUpdate(booking, 'confirmed')}
                       >
                         <Ionicons color="white" name="checkmark-outline" size={16} />
-                        <Text className="font-semibold text-white">Accepter</Text>
+                        <Text className="font-semibold text-white">{t('owner.accept')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         activeOpacity={0.8}
@@ -312,7 +241,7 @@ export function DashboardScreen({ navigation }: Props) {
                         onPress={() => confirmOwnerCancellation(booking)}
                       >
                         <Ionicons color="#b91c1c" name="close-outline" size={16} />
-                        <Text className="font-semibold text-brand-danger">Refuser</Text>
+                        <Text className="font-semibold text-brand-danger">{t('owner.reject_booking')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -324,9 +253,9 @@ export function DashboardScreen({ navigation }: Props) {
           {recentBookings.length > 0 ? (
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
-                <Text className="font-bold text-slate-950">{TEXT.activity}</Text>
+                <Text className="font-bold text-slate-950">{t('owner.activity')}</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Reservations')}>
-                  <Text className="text-sm font-semibold text-brand-blue">Tout voir</Text>
+                  <Text className="text-sm font-semibold text-brand-blue">{t('owner.see_all')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -335,40 +264,24 @@ export function DashboardScreen({ navigation }: Props) {
                 const carLabel =
                   booking.carBrand && booking.carModel
                     ? `${booking.carBrand} ${booking.carModel}`
-                    : TEXT.vehicle;
+                    : t('owner.vehicle_label');
 
                 return (
                   <View
                     key={booking.id}
                     className="flex-row items-center gap-3 rounded-2xl bg-white p-4"
-                    style={{
-                      shadowColor: '#000',
-                      shadowOpacity: 0.05,
-                      shadowRadius: 4,
-                      shadowOffset: { width: 0, height: 1 },
-                      elevation: 1,
-                    }}
+                    style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                   >
-                    <View
-                      className="h-10 w-10 items-center justify-center rounded-xl"
-                      style={{ backgroundColor: st.bg }}
-                    >
+                    <View className="h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: st.bg }}>
                       <Ionicons color={st.color} name="car-outline" size={20} />
                     </View>
                     <View className="flex-1">
                       <Text className="font-semibold text-slate-950">{carLabel}</Text>
-                      <Text className="text-xs text-slate-400">
-                        {formatDate(toJsDate(booking.startDate))}
-                      </Text>
+                      <Text className="text-xs text-slate-400">{formatDate(toJsDate(booking.startDate))}</Text>
                     </View>
-                    <View>
-                      <Text
-                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={{ color: st.color, backgroundColor: st.bg }}
-                      >
-                        {st.label}
-                      </Text>
-                    </View>
+                    <Text className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ color: st.color, backgroundColor: st.bg }}>
+                      {st.label}
+                    </Text>
                   </View>
                 );
               })}
@@ -376,25 +289,18 @@ export function DashboardScreen({ navigation }: Props) {
           ) : null}
 
           <View className="gap-3">
-            <Text className="font-bold text-slate-950">Actions rapides</Text>
+            <Text className="font-bold text-slate-950">{t('owner.quick_actions')}</Text>
 
             <TouchableOpacity
               activeOpacity={0.85}
               className="flex-row items-center gap-3 rounded-2xl bg-brand-blue p-4"
-              style={{
-                backgroundColor: '#3B63D4',
-                shadowColor: '#3B63D4',
-                shadowOpacity: 0.25,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 3,
-              }}
+              style={{ backgroundColor: '#3B63D4', shadowColor: '#3B63D4', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 }}
               onPress={() => navigation.navigate('AddCar')}
             >
               <View className="h-10 w-10 items-center justify-center rounded-xl bg-white/20">
                 <Ionicons color="white" name="add" size={22} />
               </View>
-              <Text className="flex-1 font-bold text-white">Ajouter une voiture</Text>
+              <Text className="flex-1 font-bold text-white">{t('owner.add_car')}</Text>
               <Ionicons color="rgba(255,255,255,0.6)" name="chevron-forward" size={18} />
             </TouchableOpacity>
 
@@ -402,37 +308,25 @@ export function DashboardScreen({ navigation }: Props) {
               <TouchableOpacity
                 activeOpacity={0.8}
                 className="flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white py-4"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.04,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
+                style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                 onPress={() => navigation.navigate('ManageCars')}
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
                   <Ionicons color="#334155" name="car-outline" size={20} />
                 </View>
-                <Text className="text-sm font-semibold text-slate-700">Mes voitures</Text>
+                <Text className="text-sm font-semibold text-slate-700">{t('owner.my_cars')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 activeOpacity={0.8}
                 className="flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white py-4"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.04,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
+                style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                 onPress={() => navigation.navigate('Reservations')}
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
                   <Ionicons color="#2563eb" name="calendar-outline" size={20} />
                 </View>
-                <Text className="text-sm font-semibold text-slate-700">{TEXT.reservations}</Text>
+                <Text className="text-sm font-semibold text-slate-700">{t('owner.reservations')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -440,37 +334,25 @@ export function DashboardScreen({ navigation }: Props) {
               <TouchableOpacity
                 activeOpacity={0.8}
                 className="flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white py-4"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.04,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
+                style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                 onPress={() => navigation.navigate('OwnerDrivers')}
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
                   <Ionicons color="#3B63D4" name="people-outline" size={20} />
                 </View>
-                <Text className="text-sm font-semibold text-slate-700">Mes chauffeurs</Text>
+                <Text className="text-sm font-semibold text-slate-700">{t('owner.my_drivers')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 activeOpacity={0.8}
                 className="flex-1 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 py-4"
-                style={{
-                  shadowColor: '#3B63D4',
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 1,
-                }}
+                style={{ shadowColor: '#3B63D4', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
                 onPress={() => navigation.navigate('DriverProfile')}
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-white">
                   <Ionicons color="#3B63D4" name="person-add-outline" size={20} />
                 </View>
-                <Text className="text-sm font-semibold text-brand-blue">Ajouter chauffeur</Text>
+                <Text className="text-sm font-semibold text-brand-blue">{t('owner.add_driver_short')}</Text>
               </TouchableOpacity>
             </View>
           </View>

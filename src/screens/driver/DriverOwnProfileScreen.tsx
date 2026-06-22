@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Image, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -37,7 +38,17 @@ function Field({
   );
 }
 
+function InfoRow({ label, value, last }: { label: string; value?: string; last?: boolean }) {
+  return (
+    <View className={`flex-row items-center gap-3 py-3 ${last ? '' : 'border-b border-slate-100'}`}>
+      <Text className="w-24 text-sm font-semibold text-slate-500">{label}</Text>
+      <Text className="flex-1 text-right text-sm text-slate-800">{value ?? '—'}</Text>
+    </View>
+  );
+}
+
 export function DriverOwnProfileScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
   const toast = useToast();
@@ -53,7 +64,7 @@ export function DriverOwnProfileScreen() {
     if (!user) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      hapticWarning(); toast.warning('Autorisez la galerie pour changer la photo.');
+      hapticWarning(); toast.warning(t('driver.photo_permission'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,7 +76,7 @@ export function DriverOwnProfileScreen() {
       const url = await uploadDriverProfilePhoto(user.id, result.assets[0].uri);
       setPhotoUrl(url);
     } catch {
-      hapticError(); toast.error("La photo n'a pas pu être envoyée.");
+      hapticError(); toast.error(t('driver.photo_error'));
     } finally {
       setUploadingPhoto(false);
     }
@@ -74,7 +85,7 @@ export function DriverOwnProfileScreen() {
   async function save() {
     if (!user) return;
     if (pricePerDay && Number(pricePerDay) < 1000) {
-      hapticWarning(); toast.warning('Le tarif minimum est de 1 000 FCFA/jour.');
+      hapticWarning(); toast.warning(t('driver.min_rate_warning'));
       return;
     }
     const updated: AppUser = {
@@ -91,9 +102,9 @@ export function DriverOwnProfileScreen() {
       setSaving(true);
       await updateUserProfile(user.id, { driverProfile: updated.driverProfile });
       setUser(updated);
-      hapticSuccess(); toast.success('Profil mis à jour avec succès.');
+      hapticSuccess(); toast.success(t('driver.save_success'));
     } catch {
-      hapticError(); toast.error("Le profil n'a pas pu être sauvegardé.");
+      hapticError(); toast.error(t('driver.save_profile_error'));
     } finally {
       setSaving(false);
     }
@@ -104,7 +115,6 @@ export function DriverOwnProfileScreen() {
   return (
     <Screen topSafeArea>
       <View className="gap-5 px-5 pt-4">
-        {/* Header */}
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
             <BrandLogo variant="xs" />
@@ -117,14 +127,13 @@ export function DriverOwnProfileScreen() {
             </TouchableOpacity>
           </View>
           <View>
-            <Text className="text-xs font-medium text-slate-400">Mon profil chauffeur</Text>
+            <Text className="text-xs font-medium text-slate-400">{t('driver.my_profile')}</Text>
             <Text className="mt-0.5 text-2xl font-black text-slate-950">
               {user?.fullName?.split(' ')[0]} 👋
             </Text>
           </View>
         </View>
 
-        {/* Photo + KYC badge */}
         <View className="items-center gap-3">
           <TouchableOpacity activeOpacity={0.85} onPress={pickPhoto}>
             {photoUrl ? (
@@ -141,20 +150,19 @@ export function DriverOwnProfileScreen() {
           <Text className="text-base font-black text-slate-950">{user?.fullName}</Text>
           <View className={`rounded-full px-3 py-1 ${user?.kycStatus === 'approved' ? 'bg-green-50' : 'bg-amber-50'}`}>
             <Text className={`text-xs font-bold ${user?.kycStatus === 'approved' ? 'text-green-700' : 'text-amber-700'}`}>
-              {user?.kycStatus === 'approved' ? 'KYC validé' : 'KYC en attente'}
+              {user?.kycStatus === 'approved' ? t('auth.kyc_validated') : t('auth.kyc_pending')}
             </Text>
           </View>
           {user?.ratingAverage ? (
             <View className="flex-row items-center gap-1">
               <Ionicons color="#ca8a04" name="star" size={14} />
               <Text className="text-sm font-bold text-slate-700">
-                {user.ratingAverage}/5 · {user.missionsCount ?? 0} missions
+                {t('driver.rating_missions', { rating: user.ratingAverage, count: user.missionsCount ?? 0 })}
               </Text>
             </View>
           ) : null}
         </View>
 
-        {/* Availability toggle */}
         <View
           className="flex-row items-center justify-between rounded-2xl bg-white p-4"
           style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
@@ -164,8 +172,8 @@ export function DriverOwnProfileScreen() {
               <Ionicons color={isAvailable ? '#16a34a' : '#94a3b8'} name="radio-button-on-outline" size={20} />
             </View>
             <View>
-              <Text className="font-bold text-slate-950">Disponibilité</Text>
-              <Text className="text-xs text-slate-400">{isAvailable ? 'Visible pour les clients' : 'Non visible'}</Text>
+              <Text className="font-bold text-slate-950">{t('driver.availability_label')}</Text>
+              <Text className="text-xs text-slate-400">{isAvailable ? t('driver.visible_clients') : t('driver.not_visible')}</Text>
             </View>
           </View>
           <Switch
@@ -176,48 +184,37 @@ export function DriverOwnProfileScreen() {
           />
         </View>
 
-        {/* Editable fields */}
         <Field
           keyboardType="numeric"
-          label="Tarif journalier (FCFA)"
+          label={t('driver.daily_rate_label')}
           onChangeText={setPricePerDay}
           placeholder="Ex: 15000"
           value={pricePerDay}
         />
         {pricePerDay ? (
           <Text className="-mt-2 text-xs text-slate-400">
-            Tarif affiché aux clients : {formatFcfa(Number(pricePerDay) || 0)}/jour
+            {t('driver.rate_shown', { price: formatFcfa(Number(pricePerDay) || 0) })}
           </Text>
         ) : null}
         <Field
           keyboardType="numeric"
-          label="Années d'expérience"
+          label={t('driver.experience_label')}
           onChangeText={setExperienceYears}
           placeholder="Ex: 5"
           value={experienceYears}
         />
 
-        {/* Info rows */}
         <View className="rounded-2xl bg-white p-4" style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}>
-          <InfoRow label="Email" value={user?.email} />
-          <InfoRow label="Téléphone" value={user?.phone} />
-          <InfoRow label="Ville" value={user?.city} />
-          <InfoRow label="Permis" value={user?.driverProfile?.licenseNumber} last />
+          <InfoRow label={t('auth.email')} value={user?.email} />
+          <InfoRow label={t('auth.phone')} value={user?.phone} />
+          <InfoRow label={t('common.city')} value={user?.city} />
+          <InfoRow label={t('driver.field_license')} value={user?.driverProfile?.licenseNumber} last />
         </View>
 
         <PrimaryButton loading={saving || uploadingPhoto} onPress={save}>
-          Sauvegarder
+          {t('driver.save_cta')}
         </PrimaryButton>
       </View>
     </Screen>
-  );
-}
-
-function InfoRow({ label, value, last }: { label: string; value?: string; last?: boolean }) {
-  return (
-    <View className={`flex-row items-center gap-3 py-3 ${last ? '' : 'border-b border-slate-100'}`}>
-      <Text className="w-24 text-sm font-semibold text-slate-500">{label}</Text>
-      <Text className="flex-1 text-right text-sm text-slate-800">{value ?? '—'}</Text>
-    </View>
   );
 }

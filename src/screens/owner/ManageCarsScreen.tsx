@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -28,44 +29,56 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<OwnerStackParamList>
 >;
 
-const ADMIN_STATUS_CONFIG = {
-  approved: {
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    color: '#3B63D4',
-    icon: 'checkmark-circle' as const,
-    label: 'Annonce approuvée',
-  },
-  rejected: {
-    bg: '#fef2f2',
-    border: '#fecaca',
-    color: '#b91c1c',
-    icon: 'close-circle' as const,
-    label: 'Annonce refusée',
-  },
-  pending_review: {
-    bg: '#fffbeb',
-    border: '#fde68a',
-    color: '#ca8a04',
-    icon: 'time-outline' as const,
-    label: 'En attente de validation',
-  },
+type AdminStatusKey = 'approved' | 'rejected' | 'pending_review';
+
+type AdminStatusCfg = {
+  bg: string;
+  border: string;
+  color: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
 };
 
 function AdminStatusBanner({ car }: { car: Car }) {
-  const key = car.adminStatus ?? 'pending_review';
+  const { t } = useTranslation();
+
+  const ADMIN_STATUS_CONFIG: Record<AdminStatusKey, AdminStatusCfg> = {
+    approved: {
+      bg: '#eff6ff',
+      border: '#bfdbfe',
+      color: '#3B63D4',
+      icon: 'checkmark-circle',
+      label: t('owner.admin_approved'),
+    },
+    rejected: {
+      bg: '#fef2f2',
+      border: '#fecaca',
+      color: '#b91c1c',
+      icon: 'close-circle',
+      label: t('owner.admin_rejected'),
+    },
+    pending_review: {
+      bg: '#fffbeb',
+      border: '#fde68a',
+      color: '#ca8a04',
+      icon: 'time-outline',
+      label: t('owner.admin_pending'),
+    },
+  };
+
+  const key: AdminStatusKey = (car.adminStatus as AdminStatusKey) ?? 'pending_review';
   const cfg = ADMIN_STATUS_CONFIG[key] ?? ADMIN_STATUS_CONFIG.pending_review;
   const isVisibleToClients = key === 'approved' && car.isAvailable === true;
 
-  let description = 'Documents en cours de verification';
+  let description = t('owner.admin_desc_verifying');
   if (key === 'pending_review') {
-    description = "L'admin verifie vos photos et la fiche technique.";
+    description = t('owner.admin_desc_pending');
   } else if (key === 'rejected') {
-    description = 'Corrigez les informations manquantes et resoumettez.';
+    description = t('owner.admin_desc_rejected');
   } else if (isVisibleToClients) {
-    description = 'Documents verifies - Visible des clients';
+    description = t('owner.admin_desc_visible');
   } else if (key === 'approved') {
-    description = 'Annonce approuvee mais desactivee';
+    description = t('owner.admin_desc_inactive');
   }
 
   return (
@@ -102,6 +115,8 @@ function OwnerCarListItem({
   onEdit: (car: Car) => void;
   onToggleAvailability: (car: Car) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <View
       className="mb-4 overflow-hidden rounded-2xl bg-white"
@@ -132,7 +147,7 @@ function OwnerCarListItem({
       >
         <View className="h-1.5 w-1.5 rounded-full bg-white" />
         <Text className="text-xs font-bold text-white">
-          {car.isAvailable ? 'Disponible' : 'D\u00e9sactiv\u00e9e'}
+          {car.isAvailable ? t('owner.car_available') : t('owner.car_deactivated')}
         </Text>
       </View>
 
@@ -143,14 +158,14 @@ function OwnerCarListItem({
               {car.brand} {car.model}
             </Text>
             <Text className="text-sm text-slate-500">
-              {car.city} {'\u00b7'} {car.year} {'\u00b7'} {car.seats} places
+              {car.city} {'·'} {car.year} {'·'} {t('owner.car_seats', { count: car.seats })}
             </Text>
           </View>
           <View className="items-end">
             <Text className="font-black text-brand-blue">
               {formatFcfa(car.pricePerDay)}
             </Text>
-            <Text className="text-xs text-slate-400">/jour</Text>
+            <Text className="text-xs text-slate-400">{t('owner.car_per_day')}</Text>
           </View>
         </View>
 
@@ -163,7 +178,7 @@ function OwnerCarListItem({
             onPress={() => onEdit(car)}
           >
             <Ionicons color="white" name="create-outline" size={16} />
-            <Text className="font-semibold text-white">Modifier</Text>
+            <Text className="font-semibold text-white">{t('owner.car_edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -178,7 +193,7 @@ function OwnerCarListItem({
               size={16}
             />
             <Text className="font-semibold text-white">
-              {car.isAvailable ? 'D\u00e9sactiver' : 'R\u00e9activer'}
+              {car.isAvailable ? t('owner.car_deactivate') : t('owner.car_reactivate')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -189,7 +204,7 @@ function OwnerCarListItem({
           onPress={() => onDelete(car)}
         >
           <Ionicons color="#b91c1c" name="trash-outline" size={16} />
-          <Text className="text-sm font-semibold text-red-700">Supprimer</Text>
+          <Text className="text-sm font-semibold text-red-700">{t('common.delete')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -197,6 +212,7 @@ function OwnerCarListItem({
 }
 
 export function ManageCarsScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { cars, error, loading, retry } = useCars(user?.id);
   const [selectedCity, setSelectedCity] = useState<CameroonCity | null>(null);
@@ -210,37 +226,38 @@ export function ManageCarsScreen({ navigation }: Props) {
 
   const toggleAvailability = useCallback(async (car: Car) => {
     if (!car.isAvailable && car.adminStatus !== 'approved') {
-      toast.info("Cette voiture doit d'abord etre validee par l'admin avant d'etre publiee.");
+      toast.info(t('owner.car_toggle_pending'));
       return;
     }
 
     try {
       await setCarAvailability(car.id, !car.isAvailable);
     } catch {
-      hapticError(); toast.error('Impossible de modifier la disponibilite.');
+      hapticError(); toast.error(t('owner.car_toggle_error'));
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const confirmDeleteCar = useCallback((car: Car) => {
     bottomSheet.show({
-      title: 'Supprimer cette voiture ?',
-      subtitle: `${car.brand} ${car.model} sera retiree de votre flotte. Cette action est definitive.`,
+      title: t('owner.car_delete_title'),
+      subtitle: t('owner.car_delete_subtitle', { brand: car.brand, model: car.model }),
       actions: [
         {
-          label: 'Supprimer la voiture',
+          label: t('owner.car_delete_action'),
           variant: 'danger',
           icon: 'trash-outline',
           onPress: async () => {
             try {
               await deleteCar(car.id);
             } catch {
-              hapticError(); toast.error('Impossible de supprimer cette voiture.');
+              hapticError(); toast.error(t('owner.car_delete_error'));
             }
           },
         },
       ],
     });
-  }, [bottomSheet, toast]);
+  }, [bottomSheet, toast, t]);
+
   const carKeyExtractor = useCallback((item: Car) => item.id, []);
   const editCar = useCallback((car: Car) => {
     navigation.navigate('EditCar', { car });
@@ -257,22 +274,29 @@ export function ManageCarsScreen({ navigation }: Props) {
     [confirmDeleteCar, editCar, toggleAvailability],
   );
 
+  const header = (
+    <View className="mb-4 gap-4">
+      <Text className="text-2xl font-black text-slate-950">{t('owner.my_cars')}</Text>
+      <CitySearchInput
+        label={t('owner.filter_city')}
+        onSelectCity={(city) => setSelectedCity(city || null)}
+        placeholder={t('owner.filter_city_placeholder')}
+        value={selectedCity}
+      />
+      {selectedCity ? (
+        <TouchableOpacity onPress={() => setSelectedCity(null)}>
+          <Text className="text-sm font-semibold text-brand-blue">{t('owner.show_all_cars')}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
   if (loading) {
     return (
       <Screen scroll={false}>
         <View className="flex-1 px-5 pt-4">
           <FlatList
-            ListHeaderComponent={
-              <View className="mb-4 gap-4">
-                <Text className="text-2xl font-black text-slate-950">Mes voitures</Text>
-                <CitySearchInput
-                  label="Filtrer par ville"
-                  onSelectCity={(city) => setSelectedCity(city || null)}
-                  placeholder="Choisir une ville"
-                  value={selectedCity}
-                />
-              </View>
-            }
+            ListHeaderComponent={header}
             data={SKELETON_ITEMS}
             keyExtractor={(item) => `car-skeleton-${item}`}
             renderItem={() => <CarCardSkeleton />}
@@ -287,34 +311,19 @@ export function ManageCarsScreen({ navigation }: Props) {
     <Screen scroll={false}>
       <View className="flex-1 px-5 pt-4">
         <FlatList
-          ListHeaderComponent={
-            <View className="mb-4 gap-4">
-              <Text className="text-2xl font-black text-slate-950">Mes voitures</Text>
-              <CitySearchInput
-                label="Filtrer par ville"
-                onSelectCity={(city) => setSelectedCity(city || null)}
-                placeholder="Choisir une ville"
-                value={selectedCity}
-              />
-              {selectedCity ? (
-                <TouchableOpacity onPress={() => setSelectedCity(null)}>
-                  <Text className="text-sm font-semibold text-brand-blue">Afficher toutes mes voitures</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          }
+          ListHeaderComponent={header}
           ListEmptyComponent={
             <EmptyState
-              ctaLabel={error ? 'Réessayer' : 'Ajouter une voiture'}
+              ctaLabel={error ? t('common.retry') : t('owner.add_car')}
               icon={error ? 'cloud-offline-outline' : 'car-outline'}
               illustration={error ? ErrorIllustration : EmptyReservationsIllustration}
               onCta={error ? retry : () => navigation.navigate('AddCar')}
               subtitle={
                 error
-                  ? 'Vérifiez votre connexion puis relancez le chargement.'
-                  : 'Ajoutez votre premiere voiture depuis le tableau de bord.'
+                  ? t('errors.connection_retry')
+                  : t('owner.no_cars_subtitle_add')
               }
-              title={error ?? 'Aucune voiture publiee'}
+              title={error ?? t('owner.no_cars_published')}
             />
           }
           data={displayedCars}

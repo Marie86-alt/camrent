@@ -4,6 +4,7 @@ import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
@@ -22,21 +23,23 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<DriverStackParamList>
 >;
 
-const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'En attente', color: '#ca8a04', bg: '#fefce8' },
-  confirmed: { label: 'Confirmée', color: '#3B63D4', bg: '#eff6ff' },
-  cancelled: { label: 'Annulée', color: '#b91c1c', bg: '#fef2f2' },
-  completed: { label: 'Terminée', color: '#64748b', bg: '#f1f5f9' },
-};
-
 const SKELETON_ITEMS = [0, 1, 2];
 
 function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewClient?: () => void }) {
+  const { t } = useTranslation();
+
+  const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: string }> = {
+    pending: { label: t('booking.status_pending'), color: '#ca8a04', bg: '#fefce8' },
+    confirmed: { label: t('booking.status_confirmed'), color: '#3B63D4', bg: '#eff6ff' },
+    cancelled: { label: t('booking.status_cancelled'), color: '#b91c1c', bg: '#fef2f2' },
+    completed: { label: t('booking.status_completed'), color: '#64748b', bg: '#f1f5f9' },
+  };
+
   const st = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
   const carLabel =
     booking.carBrand && booking.carModel
       ? `${booking.carBrand} ${booking.carModel}`
-      : 'Véhicule';
+      : t('driver.vehicle_label');
 
   return (
     <View
@@ -58,7 +61,9 @@ function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewCl
             {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
           </Text>
           <Text className="mt-0.5 text-xs text-slate-400">
-            {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''} · {booking.city ?? ''}
+            {booking.totalDays > 1
+              ? t('common.days_other', { count: booking.totalDays })
+              : t('common.days_one', { count: booking.totalDays })} · {booking.city ?? ''}
           </Text>
         </View>
         <View className="items-end gap-1">
@@ -81,7 +86,7 @@ function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewCl
           onPress={onReviewClient}
         >
           <Ionicons color="#ca8a04" name="star-outline" size={15} />
-          <Text className="text-xs font-bold text-yellow-700">Noter le client</Text>
+          <Text className="text-xs font-bold text-yellow-700">{t('driver.rate_client')}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -89,6 +94,7 @@ function MissionCard({ booking, onReviewClient }: { booking: Booking; onReviewCl
 }
 
 export function DriverMissionsScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,13 +132,12 @@ export function DriverMissionsScreen({ navigation }: Props) {
   return (
     <Screen scroll={false} topSafeArea>
       <View className="flex-1 px-5 pt-4">
-        {/* Header */}
         <View className="mb-5 gap-3">
           <BrandLogo variant="xs" />
           <View>
-            <Text className="text-xs font-medium text-slate-400">Tableau de bord</Text>
+            <Text className="text-xs font-medium text-slate-400">{t('driver.dashboard_subtitle')}</Text>
             <Text className="mt-0.5 text-2xl font-black text-slate-950">
-              Bonjour, {user?.fullName?.split(' ')[0]} 👋
+              {t('home.greeting_name', { name: user?.fullName?.split(' ')[0] })}
             </Text>
           </View>
         </View>
@@ -148,10 +153,9 @@ export function DriverMissionsScreen({ navigation }: Props) {
           <FlatList
             ListHeaderComponent={
               <View className="gap-5 pb-2">
-                {/* Stats */}
                 <View className="flex-row gap-3">
                   <View className="flex-1 rounded-2xl bg-slate-950 p-4">
-                    <Text className="text-xs font-semibold text-slate-400">Revenus cumulés</Text>
+                    <Text className="text-xs font-semibold text-slate-400">{t('driver.cumulative_earnings')}</Text>
                     <Text className="mt-1 text-xl font-black text-white">{formatFcfa(totalEarned)}</Text>
                   </View>
                   <View className="flex-1 rounded-2xl bg-white p-4" style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}>
@@ -159,19 +163,19 @@ export function DriverMissionsScreen({ navigation }: Props) {
                       <Ionicons color="#3B63D4" name="car-outline" size={16} />
                     </View>
                     <Text className="text-xl font-black text-slate-950">{bookings.length}</Text>
-                    <Text className="text-xs text-slate-400">Missions</Text>
+                    <Text className="text-xs text-slate-400">{t('driver.missions_count_label')}</Text>
                   </View>
                 </View>
 
                 {active.length > 0 ? (
                   <View>
-                    <Text className="mb-3 font-bold text-slate-950">Missions en cours</Text>
+                    <Text className="mb-3 font-bold text-slate-950">{t('driver.active_missions')}</Text>
                     {active.map((b) => <MissionCard booking={b} key={b.id} />)}
                   </View>
                 ) : null}
 
                 {history.length > 0 ? (
-                  <Text className="font-bold text-slate-950">Historique</Text>
+                  <Text className="font-bold text-slate-950">{t('driver.history')}</Text>
                 ) : null}
               </View>
             }
@@ -180,8 +184,8 @@ export function DriverMissionsScreen({ navigation }: Props) {
                 <EmptyState
                   icon="car-outline"
                   illustration={EmptyMissionsIllustration}
-                  subtitle="Vos missions apparaitront ici une fois assignees."
-                  title="Aucune mission pour l'instant"
+                  subtitle={t('driver.no_missions_subtitle')}
+                  title={t('driver.no_missions_title')}
                 />
               ) : null
             }

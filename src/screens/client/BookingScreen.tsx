@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PAYMENT_METHODS } from '../../constants/cameroon';
 import { DatePickerField } from '../../components/DatePickerField';
@@ -15,23 +16,12 @@ import { useAuthStore } from '../../store/authStore';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
 import type { PaymentMethod } from '../../types/models';
 import type { BookingScreenProps } from '../../types/navigation';
-import { useToast } from '../../components/ui';
+import { SuccessOverlay, useToast } from '../../components/ui';
 import { hapticWarning, hapticError } from '../../utils/haptics';
 import { formatFcfa } from '../../utils/currency';
 import { formatDate, formatInputDate, getRentalDays, parseHumanDate } from '../../utils/dates';
 
 type DateField = 'start' | 'end';
-
-const TEXT = {
-  bookingError: "La r\u00e9servation n'a pas pu \u00eatre cr\u00e9\u00e9e.",
-  bookingSubmit: 'Confirmer la r\u00e9servation',
-  dateInfo: 'Minimum 1 jour \u00b7 D\u00e9but et fin le m\u00eame jour comptent pour 1 jour',
-  duration: 'Dur\u00e9e',
-  issueDate: 'D\u00e9livr\u00e9 le',
-  licenseHelp: 'Ces informations seront transmises au propri\u00e9taire pour valider la location.',
-  sessionExpired: 'Session expir\u00e9e',
-  start: 'D\u00e9but',
-};
 
 type DriverLicenseForm = {
   fullName: string;
@@ -56,7 +46,6 @@ function formatLicenseDateInput(value: string) {
   const day = digits.slice(0, 2);
   const month = digits.slice(2, 4);
   const year = digits.slice(4, 8);
-
   if (digits.length <= 2) return day;
   if (digits.length <= 4) return `${day}/${month}`;
   return `${day}/${month}/${year}`;
@@ -90,6 +79,7 @@ function LicenseInput({ keyboardType, label, maxLength, onChangeText, placeholde
 }
 
 export function BookingScreen({ navigation, route }: BookingScreenProps) {
+  const { t } = useTranslation();
   const { car } = route.params;
   const user = useAuthStore((state) => state.user);
   const { selectedDriver, clearDriver } = useBookingDraftStore();
@@ -109,6 +99,11 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
   const [driverLicense, setDriverLicense] = useState<DriverLicenseForm>(INITIAL_DRIVER_LICENSE);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN MoMo');
   const [loading, setLoading] = useState(false);
+  const [nextPayment, setNextPayment] = useState<{
+    amount: number;
+    bookingId: string;
+    paymentMethod: PaymentMethod;
+  } | null>(null);
 
   useEffect(() => {
     return () => { clearDriver(); };
@@ -129,11 +124,9 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     if (field === 'start') {
       setStartDateInput(formatted);
       if (!parsed) return;
-
       const nextStart = parsed < today ? today : parsed;
       setStartDate(nextStart);
       setStartDateInput(formatInputDate(nextStart));
-
       if (nextStart > endDate) {
         setEndDate(nextStart);
         setEndDateInput(formatInputDate(nextStart));
@@ -143,7 +136,6 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
     setEndDateInput(formatted);
     if (!parsed) return;
-
     const nextEnd = parsed < startDate ? startDate : parsed;
     setEndDate(nextEnd);
     setEndDateInput(formatInputDate(nextEnd));
@@ -157,7 +149,6 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       const nextStart = selectedDate < today ? today : selectedDate;
       setStartDate(nextStart);
       setStartDateInput(formatInputDate(nextStart));
-
       if (nextStart > endDate) {
         setEndDate(nextStart);
         setEndDateInput(formatInputDate(nextStart));
@@ -175,11 +166,9 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       setActiveDatePicker(null);
       return;
     }
-
     if (activeDatePicker && selectedDate) {
       updateRentalDateFromPicker(activeDatePicker, selectedDate);
     }
-
     setActiveDatePicker(null);
   };
 
@@ -201,12 +190,12 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       !normalized.expiryDate ||
       !normalized.categories
     ) {
-      hapticWarning(); toast.warning('Renseignez toutes les informations du permis de conduire.');
+      hapticWarning(); toast.warning(t('booking.license_missing'));
       return null;
     }
 
     if (normalized.licenseNumber.length < 5) {
-      hapticWarning(); toast.warning('Le numéro du permis doit contenir au moins 5 caractères.');
+      hapticWarning(); toast.warning(t('booking.license_number_short'));
       return null;
     }
 
@@ -214,15 +203,15 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     const expiryDate = parseHumanDate(normalized.expiryDate);
 
     if (!issueDate || !expiryDate) {
-      hapticWarning(); toast.warning('Dates invalides — utilisez le format 03/06/2026.');
+      hapticWarning(); toast.warning(t('booking.dates_invalid'));
       return null;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
 
-    if (expiryDate < today) {
-      hapticWarning(); toast.warning('Permis expiré — réservation refusée.');
+    if (expiryDate < now) {
+      hapticWarning(); toast.warning(t('booking.license_expired_msg'));
       return null;
     }
 
@@ -235,7 +224,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
   const reserve = async () => {
     if (!user) {
-      hapticWarning(); toast.warning('Session expirée — reconnectez-vous pour réserver.');
+      hapticWarning(); toast.warning(t('booking.session_expired_msg'));
       return;
     }
 
@@ -245,7 +234,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     try {
       setLoading(true);
       if (!hasFirebaseConfig) {
-        navigation.navigate('Payment', {
+        setNextPayment({
           amount: totalPrice,
           bookingId: `demo-booking-${Date.now()}`,
           paymentMethod,
@@ -271,7 +260,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         } : {}),
       });
 
-      navigation.navigate('Payment', {
+      setNextPayment({
         amount: booking.totalPrice,
         bookingId: booking.id,
         paymentMethod,
@@ -282,19 +271,24 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         toast.warning(error.message);
         return;
       }
-
-      hapticError(); toast.error(error instanceof Error ? error.message : TEXT.bookingError);
+      hapticError(); toast.error(error instanceof Error ? error.message : t('booking.create_error'));
     } finally {
       setLoading(false);
     }
   };
+
+  const continueToPayment = useCallback(() => {
+    if (!nextPayment) return;
+    const paymentParams = nextPayment;
+    setNextPayment(null);
+    navigation.navigate('Payment', paymentParams);
+  }, [navigation, nextPayment]);
 
   const goBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
-
     navigation.navigate('CarDetail', { car });
   };
 
@@ -302,7 +296,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     <Screen topSafeArea>
       <View className="gap-6">
         <TouchableOpacity
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           activeOpacity={0.8}
           className="self-start rounded-full bg-white p-3"
           onPress={goBack}
@@ -315,11 +309,11 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <Text className="text-2xl font-black text-slate-950">
             {car.brand} {car.model}
           </Text>
-          <Text className="mt-1 text-slate-500">{formatFcfa(car.pricePerDay)} par jour</Text>
+          <Text className="mt-1 text-slate-500">{formatFcfa(car.pricePerDay)} {t('common.per_day')}</Text>
         </View>
 
         <View className="gap-3">
-          <Text className="font-semibold text-slate-800">Dates de location</Text>
+          <Text className="font-semibold text-slate-800">{t('booking.rental_dates')}</Text>
           <View className="flex-row gap-3">
             <TouchableOpacity
               activeOpacity={0.85}
@@ -328,7 +322,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             >
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
-                <Text className="text-xs text-slate-500">{TEXT.start}</Text>
+                <Text className="text-xs text-slate-500">{t('booking.start_label')}</Text>
               </View>
               <TextInput
                 className="p-0 text-base font-bold text-slate-950"
@@ -336,7 +330,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
                 keyboardType="number-pad"
                 maxLength={10}
                 onChangeText={(value) => updateRentalDate('start', value)}
-                placeholder="JJ/MM/AAAA"
+                placeholder={t('common.date_placeholder')}
                 placeholderTextColor="#94a3b8"
                 pointerEvents="none"
                 value={startDateInput}
@@ -355,7 +349,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             >
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Ionicons color="#94a3b8" name="calendar-outline" size={14} />
-                <Text className="text-xs text-slate-500">Fin</Text>
+                <Text className="text-xs text-slate-500">{t('common.end')}</Text>
               </View>
               <TextInput
                 className="p-0 text-base font-bold text-slate-950"
@@ -363,7 +357,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
                 keyboardType="number-pad"
                 maxLength={10}
                 onChangeText={(value) => updateRentalDate('end', value)}
-                placeholder="JJ/MM/AAAA"
+                placeholder={t('common.date_placeholder')}
                 placeholderTextColor="#94a3b8"
                 pointerEvents="none"
                 value={endDateInput}
@@ -384,37 +378,36 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
           <View className="flex-row items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2">
             <Ionicons color="#3b82f6" name="information-circle-outline" size={16} />
-            <Text className="text-xs text-blue-600">
-              {TEXT.dateInfo}
-            </Text>
+            <Text className="text-xs text-blue-600">{t('booking.date_info')}</Text>
           </View>
         </View>
 
-        {/* ─── Avec / sans chauffeur ─── */}
         <View className="gap-3">
-          <Text className="font-semibold text-slate-800">Chauffeur</Text>
+          <Text className="font-semibold text-slate-800">{t('booking.driver_toggle')}</Text>
           <View className="flex-row gap-2">
             <TouchableOpacity
               className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3 ${!withDriver ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}
               onPress={() => { setWithDriver(false); clearDriver(); }}
             >
               <Ionicons color={!withDriver ? '#3B63D4' : '#94a3b8'} name="person-outline" size={16} />
-              <Text className={`font-semibold ${!withDriver ? 'text-brand-blue' : 'text-slate-500'}`}>Sans chauffeur</Text>
+              <Text className={`font-semibold ${!withDriver ? 'text-brand-blue' : 'text-slate-500'}`}>
+                {t('booking.without_driver')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3 ${withDriver ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}
               onPress={() => setWithDriver(true)}
             >
               <Ionicons color={withDriver ? '#3B63D4' : '#94a3b8'} name="people-outline" size={16} />
-              <Text className={`font-semibold ${withDriver ? 'text-brand-blue' : 'text-slate-500'}`}>Avec chauffeur</Text>
+              <Text className={`font-semibold ${withDriver ? 'text-brand-blue' : 'text-slate-500'}`}>
+                {t('booking.with_driver')}
+              </Text>
             </TouchableOpacity>
           </View>
 
           {withDriver ? (
             selectedDriver ? (
-              <View
-                className="flex-row items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3"
-              >
+              <View className="flex-row items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
                 {selectedDriver.driverProfile?.profilePhotoUrl ? (
                   <Image
                     className="h-12 w-12 rounded-full bg-slate-200"
@@ -432,16 +425,18 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
                   <Text className="font-bold text-slate-950">{selectedDriver.fullName}</Text>
                   <Text className="text-xs text-slate-500">
                     {selectedDriver.driverProfile?.experienceYears
-                      ? `${selectedDriver.driverProfile.experienceYears} ans d'expérience`
-                      : 'Chauffeur certifié'}
+                      ? (selectedDriver.driverProfile.experienceYears > 1
+                          ? t('booking.driver_experience_plural', { count: selectedDriver.driverProfile.experienceYears })
+                          : t('booking.driver_experience', { count: selectedDriver.driverProfile.experienceYears }))
+                      : t('booking.driver_certified')}
                     {selectedDriver.ratingAverage ? ` · ★ ${selectedDriver.ratingAverage}/5` : ''}
                   </Text>
                   <Text className="mt-0.5 text-xs font-semibold text-brand-blue">
-                    +{formatFcfa(driverPricePerDay)}/jour
+                    {t('booking.driver_price_per_day', { price: formatFcfa(driverPricePerDay) })}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('DriverList', { carCity: car.city, carId: car.id, startDate: startDate.toISOString(), endDate: endDate.toISOString() })}>
-                  <Text className="text-xs font-bold text-brand-blue">Changer</Text>
+                  <Text className="text-xs font-bold text-brand-blue">{t('common.change')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -451,30 +446,22 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
                 onPress={() => navigation.navigate('DriverList', { carCity: car.city, carId: car.id, startDate: startDate.toISOString(), endDate: endDate.toISOString() })}
               >
                 <Ionicons color="#3B63D4" name="person-add-outline" size={18} />
-                <Text className="font-semibold text-brand-blue">Choisir un chauffeur</Text>
+                <Text className="font-semibold text-brand-blue">{t('booking.driver_choose')}</Text>
               </TouchableOpacity>
             )
           ) : null}
         </View>
 
         <View className="gap-3">
-          <Text className="font-semibold text-slate-800">Paiement Mobile Money</Text>
+          <Text className="font-semibold text-slate-800">{t('booking.payment_section')}</Text>
           <View className="flex-row gap-2">
             {PAYMENT_METHODS.map((method) => (
               <TouchableOpacity
-                className={`flex-1 rounded-xl border px-4 py-3 ${
-                  paymentMethod === method
-                    ? 'border-brand-blue bg-blue-50'
-                    : 'border-slate-200 bg-white'
-                }`}
+                className={`flex-1 rounded-xl border px-4 py-3 ${paymentMethod === method ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}
                 key={method}
                 onPress={() => setPaymentMethod(method)}
               >
-                <Text
-                  className={`text-center font-semibold ${
-                    paymentMethod === method ? 'text-brand-blue' : 'text-slate-600'
-                  }`}
-                >
+                <Text className={`text-center font-semibold ${paymentMethod === method ? 'text-brand-blue' : 'text-slate-600'}`}>
                   {method}
                 </Text>
               </TouchableOpacity>
@@ -484,30 +471,26 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
 
         <View className="gap-3">
           <View>
-            <Text className="font-semibold text-slate-800">Permis de conduire</Text>
-            <Text className="mt-1 text-xs text-slate-500">
-              {TEXT.licenseHelp}
-            </Text>
+            <Text className="font-semibold text-slate-800">{t('booking.license_section')}</Text>
+            <Text className="mt-1 text-xs text-slate-500">{t('booking.license_help')}</Text>
           </View>
 
           <LicenseInput
-            label="Nom complet sur le permis"
+            label={t('booking.license_full_name')}
             onChangeText={(value) => updateDriverLicense('fullName', value)}
             placeholder="Ex: Jean Kamga"
             value={driverLicense.fullName}
           />
-
           <LicenseInput
-            label="Numero du permis"
+            label={t('booking.license_number')}
             onChangeText={(value) => updateDriverLicense('licenseNumber', value)}
             placeholder="Ex: CE-123456789"
             value={driverLicense.licenseNumber}
           />
-
           <View className="flex-row gap-3">
             <View className="flex-1">
               <LicenseInput
-                label="Pays"
+                label={t('booking.license_country_short')}
                 onChangeText={(value) => updateDriverLicense('issuingCountry', value)}
                 placeholder="Cameroun"
                 value={driverLicense.issuingCountry}
@@ -515,7 +498,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             </View>
             <View className="w-24">
               <LicenseInput
-                label="Cat."
+                label={t('booking.license_cat_short')}
                 onChangeText={(value) => updateDriverLicense('categories', value)}
                 placeholder="B"
                 value={driverLicense.categories}
@@ -526,7 +509,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           <View className="flex-row gap-3">
             <View className="flex-1">
               <DatePickerField
-                label={TEXT.issueDate}
+                label={t('booking.license_issue_date')}
                 maximumDate={today}
                 onChange={(value) => updateDriverLicense('issueDate', value)}
                 placeholder="Ex: 03/06/2026"
@@ -535,7 +518,7 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             </View>
             <View className="flex-1">
               <DatePickerField
-                label="Expire le"
+                label={t('booking.license_expire')}
                 minimumDate={today}
                 onChange={(value) => updateDriverLicense('expiryDate', value)}
                 placeholder="Ex: 03/06/2030"
@@ -550,29 +533,34 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
         >
           <View className="flex-row justify-between">
-            <Text className="text-slate-500">{TEXT.duration}</Text>
+            <Text className="text-slate-500">{t('booking.total_days')}</Text>
             <Text className="font-bold text-slate-950">
-              {totalDays} jour{totalDays > 1 ? 's' : ''}
+              {totalDays > 1 ? t('booking.duration_days_other', { count: totalDays }) : t('booking.duration_days_one', { count: totalDays })}
             </Text>
           </View>
           <View className="mt-2 flex-row justify-between">
-            <Text className="text-slate-500">Véhicule</Text>
+            <Text className="text-slate-500">{t('booking.car_label')}</Text>
             <Text className="font-semibold text-slate-800">{formatFcfa(totalDays * car.pricePerDay)}</Text>
           </View>
           {withDriver && selectedDriver ? (
             <View className="mt-1 flex-row justify-between">
-              <Text className="text-slate-500">Chauffeur</Text>
+              <Text className="text-slate-500">{t('booking.driver_price')}</Text>
               <Text className="font-semibold text-slate-800">{formatFcfa(totalDays * driverPricePerDay)}</Text>
             </View>
           ) : null}
           <View className="mt-2 border-t border-slate-100 pt-3 flex-row justify-between">
-            <Text className="font-semibold text-slate-700">Total</Text>
+            <Text className="font-semibold text-slate-700">{t('booking.total_price')}</Text>
             <Text className="text-xl font-black text-brand-blue">{formatFcfa(totalPrice)}</Text>
           </View>
         </View>
 
-        <PrimaryButton loading={loading} onPress={reserve}>{TEXT.bookingSubmit}</PrimaryButton>
+        <PrimaryButton loading={loading} onPress={reserve}>{t('booking.confirm_cta')}</PrimaryButton>
       </View>
+      <SuccessOverlay
+        message={t('booking.created')}
+        onDone={continueToPayment}
+        visible={Boolean(nextPayment)}
+      />
     </Screen>
   );
 }

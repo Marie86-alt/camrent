@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../components/BrandLogo';
@@ -26,24 +27,6 @@ import { hapticError } from '../../utils/haptics';
 const CAR_BG_URI =
   'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=1300&fit=crop&crop=center&q=85';
 
-function getLoginErrorMessage(error: unknown) {
-  const code = (error as { code?: string; message?: string }).code;
-  const message = (error as { message?: string }).message;
-
-  if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
-    return 'Aucun compte Firebase Auth ne correspond a cet email/mot de passe.';
-  }
-
-  if (code === 'auth/invalid-email') {
-    return "L'adresse email est invalide.";
-  }
-
-  if (message === 'user-profile-not-found') {
-    return "Connexion Auth reussie, mais le profil Firestore users/{uid} est introuvable.";
-  }
-
-  return message || 'Verifiez votre email et votre mot de passe.';
-}
 
 type LoginScreenProps = {
   navigation: {
@@ -54,6 +37,7 @@ type LoginScreenProps = {
 };
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
+  const { t } = useTranslation();
   const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,7 +52,19 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       const credentials = await loginWithEmail(email, password);
       setUser(credentials.user as AppUser);
     } catch (error) {
-      hapticError(); toast.error(getLoginErrorMessage(error));
+      const code = (error as { code?: string; message?: string }).code;
+      const message = (error as { message?: string }).message;
+      let errorMsg: string;
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        errorMsg = t('auth.error_invalid_credentials');
+      } else if (code === 'auth/invalid-email') {
+        errorMsg = t('auth.error_invalid_email');
+      } else if (message === 'user-profile-not-found') {
+        errorMsg = t('auth.login_error_profile_not_found');
+      } else {
+        errorMsg = message || t('auth.login_error_default');
+      }
+      hapticError(); toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -134,7 +130,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   lineHeight: 22,
                 }}
               >
-                Louez une voiture au Cameroun{'\n'}en quelques minutes.
+                {t('auth.login_tagline')}
               </Text>
             </View>
             <View
@@ -147,10 +143,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 borderColor: 'rgba(255,255,255,0.14)',
               }}
             >
-              <Text
-                style={{ fontSize: 22, fontWeight: '900', color: '#ffffff' }}
-              >
-                Se connecter
+              <Text style={{ fontSize: 22, fontWeight: '900', color: '#ffffff' }}>
+                {t('auth.login_cta')}
               </Text>
               {!hasFirebaseConfig ? (
                 <View
@@ -164,32 +158,30 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   }}
                 >
                   <Text style={{ fontWeight: '700', color: '#fde68a', fontSize: 13 }}>
-                    Mode demo
+                    {t('auth.demo_mode')}
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
-                    Client : client@autofixpro.cm
+                    {t('auth.demo_client')} : client@autofixpro.cm
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
-                    Proprietaire : owner@autofixpro.cm
+                    {t('auth.demo_owner')} : owner@autofixpro.cm
                   </Text>
                   <Text style={{ color: 'rgba(253,230,138,0.8)', fontSize: 12 }}>
-                    Mot de passe : {DEMO_PASSWORD}
+                    {t('auth.password')} : {DEMO_PASSWORD}
                   </Text>
                 </View>
               ) : null}
               <View style={{ gap: 14 }}>
                 <View style={{ gap: 6 }}>
-                  <Text
-                    style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}
-                  >
-                    Adresse email
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}>
+                    {t('auth.email')}
                   </Text>
                   <TextInput
                     autoCapitalize="none"
                     keyboardType="email-address"
                     onChangeText={setEmail}
                     onSubmitEditing={() => passwordRef.current?.focus()}
-                    placeholder="exemple@email.com"
+                    placeholder={t('auth.email_placeholder')}
                     placeholderTextColor="rgba(255,255,255,0.35)"
                     returnKeyType="next"
                     style={{
@@ -206,10 +198,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   />
                 </View>
                 <View style={{ gap: 6 }}>
-                  <Text
-                    style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}
-                  >
-                    Mot de passe
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}>
+                    {t('auth.password')}
                   </Text>
                   <View style={{ position: 'relative' }}>
                     <TextInput
@@ -250,7 +240,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   loading={loading}
                   onPress={login}
                 >
-                  Se connecter
+                  {t('auth.login_cta')}
                 </PrimaryButton>
               </View>
               {!hasFirebaseConfig ? (
@@ -277,7 +267,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                         fontSize: 13,
                       }}
                     >
-                      Compte client
+                      {t('auth.demo_client')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -302,7 +292,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                         fontSize: 13,
                       }}
                     >
-                      Compte proprio
+                      {t('auth.demo_owner')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -317,7 +307,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                       fontSize: 14,
                     }}
                   >
-                    Mot de passe oublie ?
+                    {t('auth.forgot_password')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -329,12 +319,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                       fontSize: 14,
                     }}
                   >
-                    Creer un compte
+                    {t('auth.sign_up_link')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
-
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { Booking, BookingStatus } from '../types/models';
 import { formatFcfa } from '../utils/currency';
@@ -15,23 +16,16 @@ type BookingCardProps = {
 };
 
 type StatusStyle = {
-  label: string;
   color: string;
   bg: string;
   border: string;
 };
 
-const TEXT = {
-  carFallback: 'V\u00e9hicule r\u00e9serv\u00e9',
-  contractSigned: 'Contrat sign\u00e9',
-  dot: '\u00b7',
-};
-
-const STATUS_MAP: Record<BookingStatus, StatusStyle> = {
-  pending: { label: 'En attente', color: '#ca8a04', bg: '#fefce8', border: '#facc15' },
-  confirmed: { label: 'Confirm\u00e9e', color: '#3B63D4', bg: '#eff6ff', border: '#bfdbfe' },
-  cancelled: { label: 'Annul\u00e9e', color: '#b91c1c', bg: '#fef2f2', border: '#fca5a5' },
-  completed: { label: 'Termin\u00e9e', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1' },
+const STATUS_STYLE: Record<BookingStatus, StatusStyle> = {
+  pending:   { color: '#ca8a04', bg: '#fefce8', border: '#facc15' },
+  confirmed: { color: '#3B63D4', bg: '#eff6ff', border: '#bfdbfe' },
+  cancelled: { color: '#b91c1c', bg: '#fef2f2', border: '#fca5a5' },
+  completed: { color: '#64748b', bg: '#f8fafc', border: '#cbd5e1' },
 };
 
 const PAYMENT_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -47,11 +41,16 @@ const PAYMENT_COLORS: Record<string, string> = {
 };
 
 export function BookingCard({ booking, onCancel, onSignContract, onReview }: BookingCardProps) {
-  const status = STATUS_MAP[booking.status] ?? STATUS_MAP.pending;
+  const { t } = useTranslation();
+
+  const statusStyle = STATUS_STYLE[booking.status] ?? STATUS_STYLE.pending;
+  const statusLabel = t(`booking.status_${booking.status}` as const);
+
   const carLabel =
     booking.carBrand && booking.carModel
       ? `${booking.carBrand} ${booking.carModel}`
-      : TEXT.carFallback;
+      : t('booking.car_reserved');
+
   const paymentIcon = PAYMENT_ICONS[booking.paymentMethod] ?? 'cash-outline';
   const paymentColor = PAYMENT_COLORS[booking.paymentMethod] ?? '#64748b';
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
@@ -67,7 +66,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
         shadowOffset: { width: 0, height: 2 },
         elevation: 2,
         borderLeftWidth: 4,
-        borderLeftColor: status.border,
+        borderLeftColor: statusStyle.border,
       }}
     >
       <View className="gap-3 p-4">
@@ -78,9 +77,9 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
               {formatDateRange(toJsDate(booking.startDate), toJsDate(booking.endDate))}
             </Text>
           </View>
-          <View className="rounded-full px-3 py-1" style={{ backgroundColor: status.bg }}>
-            <Text className="text-xs font-bold" style={{ color: status.color }}>
-              {status.label}
+          <View className="rounded-full px-3 py-1" style={{ backgroundColor: statusStyle.bg }}>
+            <Text className="text-xs font-bold" style={{ color: statusStyle.color }}>
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -89,8 +88,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
           <View className="flex-row items-center gap-1.5">
             <Ionicons color={paymentColor} name={paymentIcon} size={14} />
             <Text className="text-xs text-slate-500">
-              {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''} {TEXT.dot}{' '}
-              {booking.paymentMethod}
+              {t('booking.duration_days', { count: booking.totalDays })} · {booking.paymentMethod}
             </Text>
           </View>
           <Text className="text-base font-black text-brand-blue">
@@ -102,8 +100,10 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
           <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2">
             <Ionicons color="#64748b" name="id-card-outline" size={13} />
             <Text className="text-xs text-slate-400">
-              Permis {booking.driverLicense.licenseNumber} {TEXT.dot} Cat.{' '}
-              {booking.driverLicense.categories}
+              {t('booking.license_row', {
+                number: booking.driverLicense.licenseNumber,
+                categories: booking.driverLicense.categories,
+              })}
             </Text>
           </View>
         ) : null}
@@ -112,7 +112,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
           (booking.contractStatus === 'client_signed' ? (
             <View className="flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5">
               <Ionicons color="#3B63D4" name="shield-checkmark" size={15} />
-              <Text className="text-xs font-bold text-brand-blue">{TEXT.contractSigned}</Text>
+              <Text className="text-xs font-bold text-brand-blue">{t('booking.contract_signed')}</Text>
             </View>
           ) : onSignContract ? (
             <TouchableOpacity
@@ -121,7 +121,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
               onPress={() => { hapticLight(); onSignContract!(); }}
             >
               <Ionicons color="white" name="document-text-outline" size={15} />
-              <Text className="text-xs font-bold text-white">Signer le contrat</Text>
+              <Text className="text-xs font-bold text-white">{t('booking.sign_contract_cta')}</Text>
             </TouchableOpacity>
           ) : null)}
 
@@ -133,7 +133,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
             onPress={() => { hapticLight(); onCancel!(); }}
           >
             <Ionicons color="#b91c1c" name="close-circle-outline" size={15} />
-            <Text className="text-xs font-bold text-red-700">Annuler la réservation</Text>
+            <Text className="text-xs font-bold text-red-700">{t('booking.cancel_booking_cta')}</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -141,8 +141,8 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
           <View className="rounded-xl bg-slate-50 px-3 py-2">
             <Text className="text-xs font-semibold text-slate-500">
               {booking.cancellationPolicy === 'free_before_48h'
-                ? 'Annulation sans frais'
-                : `Frais d'annulation : ${formatFcfa(cancellationFee)}`}
+                ? t('booking.cancel_free_label')
+                : t('booking.cancel_fee_label', { amount: formatFcfa(cancellationFee) })}
             </Text>
           </View>
         ) : null}
@@ -155,7 +155,7 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
             onPress={() => { hapticLight(); onReview!(); }}
           >
             <Ionicons color="#ca8a04" name="star-outline" size={15} />
-            <Text className="text-xs font-bold text-yellow-700">Laisser un avis</Text>
+            <Text className="text-xs font-bold text-yellow-700">{t('review.leave_review')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>

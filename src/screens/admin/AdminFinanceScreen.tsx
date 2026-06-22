@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
@@ -21,22 +22,27 @@ function methodTotal(bookings: Booking[], method: PaymentMethod) {
     .reduce((sum, booking) => sum + booking.totalPrice, 0);
 }
 
-function paymentStatusLabel(status?: PaymentFlow['status']) {
-  if (status === 'success') return 'Succes';
-  if (status === 'failed') return 'Echec';
-  return 'En attente';
-}
-
 function PaymentRow({ payment }: { payment: PaymentFlow }) {
+  const { t } = useTranslation();
+
+  function paymentStatusLabel(status?: PaymentFlow['status']) {
+    if (status === 'success') return t('admin.payment_status_success');
+    if (status === 'failed') return t('admin.payment_status_failed');
+    return t('admin.payment_status_pending');
+  }
+
   return (
     <View className="mb-3 rounded-xl border border-slate-100 bg-white p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
           <Text className="text-base font-black text-slate-950">{payment.reference ?? payment.id}</Text>
           <Text className="mt-1 text-sm text-slate-500">
-            {payment.method ?? payment.provider ?? 'Methode inconnue'} - {payment.phone ?? 'Telephone absent'}
+            {payment.method ?? payment.provider ?? t('admin.payment_method_unknown')} -{' '}
+            {payment.phone ?? t('admin.phone_missing')}
           </Text>
-          <Text className="mt-1 text-xs font-semibold text-slate-400">{payment.bookingId ?? 'Reservation non liee'}</Text>
+          <Text className="mt-1 text-xs font-semibold text-slate-400">
+            {payment.bookingId ?? t('admin.payment_booking_unlinked')}
+          </Text>
         </View>
         <View className="items-end">
           <Text className="text-sm font-black text-slate-950">{formatFcfa(payment.amount || 0)}</Text>
@@ -50,6 +56,7 @@ function PaymentRow({ payment }: { payment: PaymentFlow }) {
 }
 
 export function AdminFinanceScreen() {
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<PaymentFlow[]>([]);
   const [commissionRate, setCommissionRate] = useState(10);
@@ -71,7 +78,7 @@ export function AdminFinanceScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les reservations.');
+        setError(t('admin.load_bookings_error'));
         setLoadingBookings(false);
       },
     );
@@ -83,7 +90,7 @@ export function AdminFinanceScreen() {
         setError(null);
       },
       () => {
-        setError('Impossible de charger les paiements.');
+        setError(t('admin.load_payments_error'));
         setLoadingPayments(false);
       },
     );
@@ -92,7 +99,7 @@ export function AdminFinanceScreen() {
       unsubscribeBookings();
       unsubscribePayments();
     };
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const paidRevenue = useMemo(
     () => bookings.filter((booking) => booking.paymentStatus === 'paid').reduce((sum, booking) => sum + booking.totalPrice, 0),
@@ -109,9 +116,9 @@ export function AdminFinanceScreen() {
     try {
       setSaving(true);
       await updatePlatformFinanceSettings({ commissionRate });
-      hapticSuccess(); toast.success(`Commission plateforme sauvegardee : ${commissionRate}%.`);
+      hapticSuccess(); toast.success(t('admin.finance_save_success', { rate: commissionRate }));
     } catch {
-      hapticError(); toast.error("Le taux de commission n'a pas pu etre sauvegarde.");
+      hapticError(); toast.error(t('admin.finance_save_error'));
     } finally {
       setSaving(false);
     }
@@ -122,22 +129,22 @@ export function AdminFinanceScreen() {
       <View className="gap-5">
         <View>
           <Text className="text-xs font-bold uppercase text-brand-blue">Module 6</Text>
-          <Text className="text-3xl font-black text-slate-950">Paiements & finances</Text>
-          <Text className="mt-1 text-sm text-slate-500">Suivi des encaissements, echecs et commissions plateforme.</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.finance_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.finance_subtitle')}</Text>
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-xl font-black text-slate-950">{formatFcfa(paidRevenue)}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Encaisse</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.finance_collected')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-xl font-black text-amber-600">{formatFcfa(pendingRevenue)}</Text>
-            <Text className="text-xs font-semibold text-slate-500">En attente</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.finance_pending')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-xl font-black text-red-600">{failedCount}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Echecs</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.finance_failures')}</Text>
           </View>
         </View>
 
@@ -149,11 +156,11 @@ export function AdminFinanceScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : (
@@ -161,7 +168,7 @@ export function AdminFinanceScreen() {
             <View className="rounded-xl bg-white p-4">
               <View className="mb-3 flex-row items-center gap-2">
                 <Ionicons color="#3B63D4" name="analytics-outline" size={22} />
-                <Text className="text-lg font-black text-slate-950">Suivi par methode</Text>
+                <Text className="text-lg font-black text-slate-950">{t('admin.finance_by_method')}</Text>
               </View>
               {methods.map((method) => (
                 <View className="flex-row items-center justify-between border-b border-slate-100 py-3" key={method}>
@@ -174,9 +181,9 @@ export function AdminFinanceScreen() {
             <View className="rounded-xl bg-white p-4">
               <View className="mb-3 flex-row items-center gap-2">
                 <Ionicons color="#3B63D4" name="cash-outline" size={22} />
-                <Text className="text-lg font-black text-slate-950">Commission plateforme</Text>
+                <Text className="text-lg font-black text-slate-950">{t('admin.finance_commission')}</Text>
               </View>
-              <Text className="text-sm text-slate-500">Taux actuel</Text>
+              <Text className="text-sm text-slate-500">{t('admin.finance_current_rate')}</Text>
               <View className="mt-3 flex-row items-center justify-between">
                 <TouchableOpacity
                   className="h-10 w-10 items-center justify-center rounded-full bg-slate-100"
@@ -186,7 +193,9 @@ export function AdminFinanceScreen() {
                 </TouchableOpacity>
                 <View className="items-center">
                   <Text className="text-3xl font-black text-slate-950">{commissionRate}%</Text>
-                  <Text className="text-xs font-semibold text-slate-500">{formatFcfa(platformCommission)} sur l'encaisse</Text>
+                  <Text className="text-xs font-semibold text-slate-500">
+                    {t('admin.finance_on_collected', { amount: formatFcfa(platformCommission) })}
+                  </Text>
                 </View>
                 <TouchableOpacity
                   className="h-10 w-10 items-center justify-center rounded-full bg-slate-100"
@@ -197,27 +206,27 @@ export function AdminFinanceScreen() {
               </View>
               <View className="mt-4">
                 <PrimaryButton loading={saving} onPress={saveCommission}>
-                  Sauvegarder le taux
+                  {t('admin.finance_save_rate')}
                 </PrimaryButton>
               </View>
             </View>
 
             <View>
               <View className="mb-3 flex-row items-center justify-between">
-                <Text className="text-lg font-black text-slate-950">Flux financiers</Text>
+                <Text className="text-lg font-black text-slate-950">{t('admin.finance_flows')}</Text>
                 <TouchableOpacity
                   className="rounded-full bg-slate-950 px-4 py-2"
-                  onPress={() => toast.info('Export CSV / Excel a brancher sur le back-office web.')}
+                  onPress={() => toast.info(t('admin.finance_export_info'))}
                 >
-                  <Text className="text-xs font-bold text-white">Export</Text>
+                  <Text className="text-xs font-bold text-white">{t('admin.finance_export')}</Text>
                 </TouchableOpacity>
               </View>
               {payments.length === 0 ? (
                 <EmptyState
                   icon="cash-outline"
                   illustration={EmptyBookingsIllustration}
-                  subtitle="Les transactions apparaitront ici apres les premiers paiements."
-                  title="Aucun flux paiement"
+                  subtitle={t('admin.finance_empty_subtitle')}
+                  title={t('admin.finance_empty')}
                 />
               ) : (
                 payments.map((payment) => <PaymentRow key={payment.id} payment={payment} />)

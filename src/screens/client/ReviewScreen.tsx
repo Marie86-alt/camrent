@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -29,6 +30,7 @@ function StarRow({ rating, onRate }: { rating: number; onRate: (r: number) => vo
 }
 
 export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
+  const { t } = useTranslation();
   const { booking } = route.params;
   const user = useAuthStore((state) => state.user);
   const toast = useToast();
@@ -43,11 +45,11 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
 
   async function submit() {
     if (carRating === 0) {
-      hapticWarning(); toast.warning('Veuillez noter le véhicule avant de soumettre.');
+      hapticWarning(); toast.warning(t('review.rating_car_required'));
       return;
     }
     if (hasDriver && driverRating === 0) {
-      hapticWarning(); toast.warning('Veuillez noter le chauffeur avant de soumettre.');
+      hapticWarning(); toast.warning(t('review.rating_driver_required'));
       return;
     }
     if (!user) return;
@@ -79,7 +81,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
       await markBookingReviewSubmitted(booking.id);
 
       hapticSuccess();
-      toast.success('Merci ! Votre avis a bien été enregistré.');
+      toast.success(t('review.success'));
       navigation.goBack();
     } catch (error) {
       if (isOfflineError(error)) {
@@ -87,7 +89,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
         return;
       }
 
-      hapticError(); toast.error("L'avis n'a pas pu être enregistré. Réessayez.");
+      hapticError(); toast.error(t('review.error'));
     } finally {
       setLoading(false);
     }
@@ -109,8 +111,8 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
             </TouchableOpacity>
           </View>
           <View>
-            <Text className="text-xs font-medium text-slate-400">Location terminée</Text>
-            <Text className="mt-0.5 text-2xl font-black text-slate-950">Laisser un avis</Text>
+            <Text className="text-xs font-medium text-slate-400">{t('review.completed_rental')}</Text>
+            <Text className="mt-0.5 text-2xl font-black text-slate-950">{t('review.leave_review')}</Text>
           </View>
         </View>
 
@@ -124,7 +126,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
               <Ionicons color="#3B63D4" name="car-outline" size={18} />
             </View>
             <View>
-              <Text className="text-xs text-slate-400">Véhicule</Text>
+              <Text className="text-xs text-slate-400">{t('review.vehicle_label')}</Text>
               <Text className="font-bold text-slate-950">
                 {booking.carBrand} {booking.carModel}
               </Text>
@@ -137,14 +139,14 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
             multiline
             numberOfLines={3}
             onChangeText={setCarComment}
-            placeholder="Votre commentaire sur le véhicule (optionnel)"
+            placeholder={t('review.comment_car_placeholder')}
             placeholderTextColor="#94a3b8"
             textAlignVertical="top"
             value={carComment}
           />
         </View>
 
-        {/* Driver rating — only when booking had a driver */}
+        {/* Driver rating */}
         {hasDriver ? (
           <View
             className="gap-4 rounded-2xl bg-white p-4"
@@ -155,9 +157,9 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
                 <Ionicons color="#ca8a04" name="person-outline" size={18} />
               </View>
               <View>
-                <Text className="text-xs text-slate-400">Chauffeur</Text>
+                <Text className="text-xs text-slate-400">{t('review.driver_label')}</Text>
                 <Text className="font-bold text-slate-950">
-                  {booking.driverName ?? 'Votre chauffeur'}
+                  {booking.driverName ?? t('review.your_driver')}
                 </Text>
               </View>
             </View>
@@ -166,7 +168,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
               <View className="flex-row items-center gap-2 rounded-lg bg-red-50 px-3 py-2">
                 <Ionicons color="#b91c1c" name="warning-outline" size={14} />
                 <Text className="flex-1 text-xs text-red-700">
-                  Une note ≤ 2/5 peut entraîner la suspension automatique du chauffeur.
+                  {t('review.low_rating_warning')}
                 </Text>
               </View>
             ) : null}
@@ -176,7 +178,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
               multiline
               numberOfLines={3}
               onChangeText={setDriverComment}
-              placeholder="Votre commentaire sur le chauffeur (optionnel)"
+              placeholder={t('review.comment_driver_placeholder')}
               placeholderTextColor="#94a3b8"
               textAlignVertical="top"
               value={driverComment}
@@ -185,7 +187,7 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
         ) : null}
 
         <PrimaryButton loading={loading} onPress={submit}>
-          Soumettre mon avis
+          {t('review.submit_cta')}
         </PrimaryButton>
       </View>
     </Screen>

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
@@ -23,15 +24,16 @@ type InfoRowProps = {
 
 const SKELETON_ITEMS = [0, 1, 2];
 
-function normalizeValue(value: InfoRowProps['value']) {
-  if (value === true) return 'Oui';
-  if (value === false) return 'Non';
-  if (value === undefined || value === null || value === '') return 'Non renseigne';
-  return String(value);
-}
-
 function InfoRow({ label, value }: InfoRowProps) {
+  const { t } = useTranslation();
   const missing = value === undefined || value === null || value === '';
+
+  function normalizeValue(v: InfoRowProps['value']) {
+    if (v === true) return t('common.yes');
+    if (v === false) return t('common.no');
+    if (v === undefined || v === null || v === '') return t('common.not_provided');
+    return String(v);
+  }
 
   return (
     <View className="flex-row items-center justify-between gap-4 border-b border-slate-100 py-2.5">
@@ -57,12 +59,6 @@ function isCarVisibleToClients(car: Car) {
   return car.adminStatus === 'approved' && car.isAvailable === true;
 }
 
-function getAdminStatusLabel(car: Car) {
-  if (isCarVisibleToClients(car)) return 'Visible client';
-  if (car.adminStatus === 'approved') return 'Approuvee mais inactive';
-  if (car.adminStatus === 'rejected') return 'Refusee';
-  return 'A verifier';
-}
 
 function getAdminStatusDotClass(car: Car) {
   if (isCarVisibleToClients(car)) return 'bg-brand-blue';
@@ -72,13 +68,14 @@ function getAdminStatusDotClass(car: Car) {
 }
 
 function PhotoGrid({ car }: { car: Car }) {
+  const { t } = useTranslation();
   const photos = getCarPhotos(car);
   const slots = Array.from({ length: 6 }, (_, index) => photos[index]);
 
   return (
     <View className="gap-3">
       <View className="flex-row items-center justify-between">
-        <Text className="text-lg font-black text-slate-950">Photos du vehicule</Text>
+        <Text className="text-lg font-black text-slate-950">{t('admin.car_photos_title')}</Text>
         <Text className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
           {photos.length}/6
         </Text>
@@ -115,7 +112,15 @@ function PhotoGrid({ car }: { car: Car }) {
 }
 
 function VehicleCard({ car, selected, onPress }: { car: Car; selected: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
   const photos = getCarPhotos(car);
+
+  function getAdminStatusLabel(c: Car) {
+    if (isCarVisibleToClients(c)) return t('admin.vehicle_status_visible');
+    if (c.adminStatus === 'approved') return t('admin.vehicle_status_inactive');
+    if (c.adminStatus === 'rejected') return t('admin.vehicle_status_rejected');
+    return t('admin.vehicle_status_pending');
+  }
 
   return (
     <TouchableOpacity
@@ -160,34 +165,36 @@ function VehicleCard({ car, selected, onPress }: { car: Car; selected: boolean; 
 }
 
 function TechnicalSheet({ car }: { car: Car }) {
+  const { t } = useTranslation();
   const sheet = car.technicalSheet;
 
   return (
     <View className="rounded-xl bg-white p-4">
       <View className="mb-2 flex-row items-center gap-2">
         <Ionicons color="#3B63D4" name="document-text-outline" size={20} />
-        <Text className="text-lg font-black text-slate-950">Fiche technique</Text>
+        <Text className="text-lg font-black text-slate-950">{t('admin.car_tech_title')}</Text>
       </View>
 
-      <InfoRow label="Marque" value={car.brand} />
-      <InfoRow label="Modele" value={car.model} />
-      <InfoRow label="Annee" value={car.year} />
-      <InfoRow label="Ville" value={car.city} />
-      <InfoRow label="Prix journalier" value={formatFcfa(car.pricePerDay)} />
-      <InfoRow label="Places" value={car.seats} />
-      <InfoRow label="Transmission" value={car.transmission} />
-      <InfoRow label="Carburant" value={car.fuelType} />
-      <InfoRow label="Immatriculation" value={sheet?.licensePlate} />
-      <InfoRow label="Numero chassis" value={sheet?.chassisNumber} />
-      <InfoRow label="Kilometrage" value={sheet?.mileage ? `${sheet.mileage} km` : undefined} />
-      <InfoRow label="Assurance expire le" value={sheet?.insuranceExpiry} />
-      <InfoRow label="Controle technique expire le" value={sheet?.technicalInspectionExpiry} />
-      <InfoRow label="Documents verifies" value={car.documentsVerified} />
+      <InfoRow label={t('admin.field_brand')} value={car.brand} />
+      <InfoRow label={t('admin.field_model')} value={car.model} />
+      <InfoRow label={t('admin.field_year')} value={car.year} />
+      <InfoRow label={t('admin.field_city')} value={car.city} />
+      <InfoRow label={t('admin.field_price')} value={formatFcfa(car.pricePerDay)} />
+      <InfoRow label={t('admin.field_seats')} value={car.seats} />
+      <InfoRow label={t('admin.field_transmission')} value={car.transmission} />
+      <InfoRow label={t('admin.field_fuel')} value={car.fuelType} />
+      <InfoRow label={t('admin.field_plate')} value={sheet?.licensePlate} />
+      <InfoRow label={t('admin.field_chassis')} value={sheet?.chassisNumber} />
+      <InfoRow label={t('admin.field_mileage')} value={sheet?.mileage ? `${sheet.mileage} km` : undefined} />
+      <InfoRow label={t('admin.field_insurance')} value={sheet?.insuranceExpiry} />
+      <InfoRow label={t('admin.field_inspection')} value={sheet?.technicalInspectionExpiry} />
+      <InfoRow label={t('admin.field_docs_verified')} value={car.documentsVerified} />
     </View>
   );
 }
 
 export function AdminVehicleReviewScreen() {
+  const { t } = useTranslation();
   const [cars, setCars] = useState<Car[]>([]);
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,13 +215,13 @@ export function AdminVehicleReviewScreen() {
         setLoading(false);
       },
       () => {
-        setError('Impossible de charger les vehicules.');
+        setError(t('admin.load_vehicles_error'));
         setLoading(false);
       },
     );
 
     return unsubscribe;
-  }, [retryToken]);
+  }, [retryToken, t]);
 
   const selectedCar = useMemo(
     () => cars.find((car) => car.id === selectedCarId) ?? cars[0],
@@ -233,9 +240,9 @@ export function AdminVehicleReviewScreen() {
         documentsVerified: true,
         isAvailable: true,
       });
-      hapticSuccess(); toast.success('Annonce approuvee — vehicule visible par les clients.');
+      hapticSuccess(); toast.success(t('admin.approve_success'));
     } catch {
-      hapticError(); toast.error("L'annonce n'a pas pu etre approuvee.");
+      hapticError(); toast.error(t('admin.approve_error'));
     } finally {
       setReviewActionLoading(null);
     }
@@ -245,11 +252,11 @@ export function AdminVehicleReviewScreen() {
     if (!selectedCar) return;
 
     bottomSheet.show({
-      title: 'Rejeter cette annonce ?',
-      subtitle: 'Le vehicule sera masque aux clients. Le proprietaire devra corriger les photos ou la fiche technique.',
+      title: t('admin.reject_listing_title'),
+      subtitle: t('admin.reject_listing_subtitle'),
       actions: [
         {
-          label: "Rejeter l'annonce",
+          label: t('admin.reject_listing'),
           variant: 'danger',
           icon: 'close-circle-outline',
           onPress: async () => {
@@ -260,9 +267,9 @@ export function AdminVehicleReviewScreen() {
                 documentsVerified: false,
                 isAvailable: false,
               });
-              hapticSuccess(); toast.success("Annonce rejetee — l'annonce a ete masquee.");
+              hapticSuccess(); toast.success(t('admin.reject_success'));
             } catch {
-              hapticError(); toast.error("L'annonce n'a pas pu etre rejetee.");
+              hapticError(); toast.error(t('admin.reject_error'));
             } finally {
               setReviewActionLoading(null);
             }
@@ -276,25 +283,25 @@ export function AdminVehicleReviewScreen() {
     <Screen topSafeArea>
       <View className="gap-5">
         <View>
-          <Text className="text-xs font-bold uppercase text-brand-blue">Administration</Text>
-          <Text className="text-3xl font-black text-slate-950">Validation véhicules</Text>
-          <Text className="mt-1 text-sm text-slate-500">Contrôle des 6 photos et de la fiche technique.</Text>
+          <Text className="text-xs font-bold uppercase text-brand-blue">{t('admin.dashboard')}</Text>
+          <Text className="text-3xl font-black text-slate-950">{t('admin.vehicles_title')}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{t('admin.vehicles_subtitle')}</Text>
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-slate-950">{cars.length}</Text>
-            <Text className="text-xs font-semibold text-slate-500">Vehicules</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.vehicles')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-amber-600">{incompleteCars}</Text>
-            <Text className="text-xs font-semibold text-slate-500">A completer</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.vehicles_to_complete')}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-white p-4">
             <Text className="text-2xl font-black text-brand-blue">
               {cars.filter((car) => car.documentsVerified).length}
             </Text>
-            <Text className="text-xs font-semibold text-slate-500">Verifies</Text>
+            <Text className="text-xs font-semibold text-slate-500">{t('admin.vehicles_verified')}</Text>
           </View>
         </View>
 
@@ -306,24 +313,24 @@ export function AdminVehicleReviewScreen() {
           </View>
         ) : error ? (
           <EmptyState
-            ctaLabel="Réessayer"
+            ctaLabel={t('common.retry')}
             icon="cloud-offline-outline"
             illustration={ErrorIllustration}
             onCta={() => setRetryToken((value) => value + 1)}
-            subtitle="Vérifiez votre connexion puis relancez le chargement."
+            subtitle={t('errors.connection_retry')}
             title={error}
           />
         ) : cars.length === 0 ? (
           <EmptyState
             icon="shield-checkmark-outline"
             illustration={EmptyCarsIllustration}
-            subtitle="Les annonces soumises par les proprietaires apparaitront ici."
-            title="Aucun vehicule a valider"
+            subtitle={t('admin.empty_vehicles_subtitle')}
+            title={t('admin.empty_vehicles')}
           />
         ) : (
           <View className="gap-5">
             <View>
-              <Text className="mb-3 text-lg font-black text-slate-950">Annonces a controler</Text>
+              <Text className="mb-3 text-lg font-black text-slate-950">{t('admin.listings_to_check')}</Text>
               {cars.map((car) => (
                 <VehicleCard
                   car={car}
@@ -337,7 +344,7 @@ export function AdminVehicleReviewScreen() {
             {selectedCar ? (
               <View className="gap-5">
                 <View className="rounded-xl bg-slate-950 p-4">
-                  <Text className="text-xs font-bold uppercase text-slate-400">Annonce selectionnee</Text>
+                  <Text className="text-xs font-bold uppercase text-slate-400">{t('admin.selected_listing')}</Text>
                   <Text className="mt-1 text-2xl font-black text-white">
                     {selectedCar.brand} {selectedCar.model}
                   </Text>
@@ -350,10 +357,10 @@ export function AdminVehicleReviewScreen() {
                 <View className="gap-3 rounded-xl bg-white p-4">
                   <View className="flex-row items-center gap-2">
                     <Ionicons color="#3B63D4" name="shield-checkmark-outline" size={20} />
-                    <Text className="text-lg font-black text-slate-950">Decision admin</Text>
+                    <Text className="text-lg font-black text-slate-950">{t('admin.decision_title')}</Text>
                   </View>
                   <Text className="text-sm leading-5 text-slate-500">
-                    Approuver publie le vehicule cote client. Rejeter masque l'annonce jusqu'a correction par le proprietaire.
+                    {t('admin.decision_subtitle')}
                   </Text>
                   <View className="gap-3">
                     <PrimaryButton
@@ -361,8 +368,8 @@ export function AdminVehicleReviewScreen() {
                       onPress={approveSelectedCar}
                     >
                       {selectedCar.adminStatus === 'approved' && !selectedCar.isAvailable
-                        ? "Publier l'annonce"
-                        : "Approuver et publier l'annonce"}
+                        ? t('admin.publish_listing')
+                        : t('admin.approve_listing')}
                     </PrimaryButton>
                     <TouchableOpacity
                       activeOpacity={0.85}
@@ -371,7 +378,7 @@ export function AdminVehicleReviewScreen() {
                       onPress={rejectSelectedCar}
                     >
                       <Text className="font-bold text-red-700">
-                        {reviewActionLoading === 'reject' ? 'Rejet en cours...' : "Rejeter l'annonce"}
+                        {reviewActionLoading === 'reject' ? t('admin.rejecting') : t('admin.reject_listing')}
                       </Text>
                     </TouchableOpacity>
                   </View>

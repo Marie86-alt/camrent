@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PAYMENT_METHODS } from '../constants/cameroon';
 import type { PaymentMethod } from '../types/models';
@@ -16,6 +17,7 @@ type PaymentModalProps = {
 };
 
 export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: PaymentModalProps) {
+  const { t } = useTranslation();
   const [method, setMethod] = useState<PaymentMethod>('MTN MoMo');
   const [phone, setPhone] = useState('+237');
   const requiresPhone = method !== 'Carte bancaire';
@@ -25,7 +27,7 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
       <View className="flex-1 justify-end bg-black/50">
         <View className="gap-5 rounded-t-3xl bg-white p-5 pb-8">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-black text-slate-950">Confirmer le paiement</Text>
+            <Text className="text-xl font-black text-slate-950">{t('payment.confirm_title')}</Text>
             <TouchableOpacity
               className="h-8 w-8 items-center justify-center rounded-full bg-slate-100"
               onPress={onClose}
@@ -35,12 +37,12 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
           </View>
 
           <View className="items-center rounded-xl bg-blue-50 py-4">
-            <Text className="text-sm text-slate-500">Total</Text>
+            <Text className="text-sm text-slate-500">{t('payment.total_label')}</Text>
             <Text className="text-3xl font-black text-brand-blue">{formatFcfa(amount)}</Text>
           </View>
 
           <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Moyen de paiement</Text>
+            <Text className="text-sm font-semibold text-slate-700">{t('payment.method_label')}</Text>
             <View className="flex-row flex-wrap gap-2">
               {PAYMENT_METHODS.map((item) => (
                 <TouchableOpacity
@@ -64,7 +66,7 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
 
           {requiresPhone ? (
             <View className="gap-1.5">
-              <Text className="text-sm font-semibold text-slate-700">Numero Mobile Money</Text>
+              <Text className="text-sm font-semibold text-slate-700">{t('payment.phone_label')}</Text>
               <View className="flex-row items-center gap-2 rounded-xl border border-slate-200 bg-white px-4">
                 <Ionicons color="#94a3b8" name="phone-portrait-outline" size={18} />
                 <TextInput
@@ -80,13 +82,13 @@ export function PaymentModal({ amount, loading, onClose, onSubmit, visible }: Pa
           ) : (
             <View className="rounded-xl bg-blue-50 p-4">
               <Text className="text-sm leading-5 text-blue-800">
-                Vous serez redirige vers une page bancaire securisee pour finaliser le paiement par carte.
+                {t('payment.card_redirect')}
               </Text>
             </View>
           )}
 
           <PrimaryButton loading={loading} onPress={() => onSubmit(method, requiresPhone ? phone : undefined)}>
-            Payer maintenant
+            {t('payment.pay_now_cta')}
           </PrimaryButton>
         </View>
       </View>

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BackButton } from '../../components/BackButton';
 import { CitySearchInput } from '../../components/CitySearchInput';
@@ -14,12 +15,6 @@ import { useAuthStore } from '../../store/authStore';
 import type { AppUser, CameroonCity, UserRole } from '../../types/models';
 import type { RegisterScreenProps } from '../../types/navigation';
 import { isValidCameroonPhone } from '../../utils/validation';
-
-const roles: { label: string; value: UserRole; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { label: 'Client', value: 'client', icon: 'person-outline' },
-  { label: 'Propriétaire', value: 'owner', icon: 'car-outline' },
-  { label: 'Chauffeur indépendant', value: 'driver', icon: 'briefcase-outline' },
-];
 
 type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense';
 
@@ -40,6 +35,7 @@ async function pickImage(): Promise<string | null> {
 }
 
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+237');
@@ -68,6 +64,19 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
     return date;
   }, []);
 
+  const roles: { label: string; value: UserRole; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { label: t('auth.role_client'), value: 'client', icon: 'person-outline' },
+    { label: t('auth.role_owner'), value: 'owner', icon: 'car-outline' },
+    { label: t('auth.role_driver_independent'), value: 'driver', icon: 'briefcase-outline' },
+  ];
+
+  const driverDocItems = [
+    { key: 'profilePhoto' as const, label: t('driver.doc_profile_photo') },
+    { key: 'nationalId' as const, label: t('driver.national_id_front') },
+    { key: 'nationalIdBack' as const, label: t('driver.national_id_back') },
+    { key: 'driverLicense' as const, label: t('driver.license') },
+  ];
+
   const selectDriverDocument = async (key: DriverDocumentKey) => {
     const uri = await pickImage();
     if (!uri) return;
@@ -86,10 +95,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       !nationalIdNumber.trim() ||
       !pricePerDay.trim()
     ) {
-      Alert.alert(
-        'Profil chauffeur incomplet',
-        'Ajoutez la photo, la CNI recto/verso, le permis et les informations chauffeur.',
-      );
+      Alert.alert(t('auth.driver_profile_title'), t('auth.driver_profile_incomplete'));
       return false;
     }
 
@@ -110,10 +116,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   const register = async () => {
     if (!isValidCameroonPhone(phone)) {
-      Alert.alert(
-        'Numéro invalide',
-        'Utilisez un numéro camerounais au format +237XXXXXXXXX.',
-      );
+      Alert.alert(t('auth.phone'), t('auth.phone_invalid'));
       return;
     }
 
@@ -165,7 +168,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       });
       setUser(updatedUser);
     } catch {
-      Alert.alert('Inscription impossible', 'Vérifiez les informations et réessayez.');
+      Alert.alert(t('auth.register_title'), t('auth.register_error'));
     } finally {
       setLoading(false);
     }
@@ -176,19 +179,17 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       <View className="gap-6 pt-8">
         <BackButton navigation={navigation} />
         <View>
-          <Text className="text-3xl font-black text-slate-950">Créer un compte</Text>
-          <Text className="mt-2 text-base text-slate-600">
-            Rejoignez Autofix Pro comme client, propriétaire ou chauffeur indépendant.
-          </Text>
+          <Text className="text-3xl font-black text-slate-950">{t('auth.register_title')}</Text>
+          <Text className="mt-2 text-base text-slate-600">{t('auth.register_subtitle')}</Text>
         </View>
 
         <View className="gap-4">
           <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-slate-700">Nom complet</Text>
+            <Text className="text-sm font-semibold text-slate-700">{t('auth.full_name')}</Text>
             <TextInput
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               onChangeText={setFullName}
-              placeholder="Jean Dupont"
+              placeholder={t('auth.full_name_placeholder')}
               placeholderTextColor="#94a3b8"
               returnKeyType="next"
               value={fullName}
@@ -196,13 +197,13 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-slate-700">Adresse email</Text>
+            <Text className="text-sm font-semibold text-slate-700">{t('auth.email')}</Text>
             <TextInput
               autoCapitalize="none"
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               keyboardType="email-address"
               onChangeText={setEmail}
-              placeholder="exemple@email.com"
+              placeholder={t('auth.email_placeholder')}
               placeholderTextColor="#94a3b8"
               returnKeyType="next"
               value={email}
@@ -210,27 +211,27 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-slate-700">Téléphone</Text>
+            <Text className="text-sm font-semibold text-slate-700">{t('auth.phone')}</Text>
             <TextInput
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               keyboardType="phone-pad"
               onChangeText={setPhone}
-              placeholder="+237 6XX XXX XXX"
+              placeholder={t('auth.phone_placeholder')}
               placeholderTextColor="#94a3b8"
               returnKeyType="next"
               value={phone}
             />
           </View>
 
-          <CitySearchInput label="Ville" onSelectCity={setCity} value={city} />
+          <CitySearchInput label={t('profile.city')} onSelectCity={setCity} value={city} />
 
           <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-slate-700">Mot de passe</Text>
+            <Text className="text-sm font-semibold text-slate-700">{t('auth.password')}</Text>
             <View className="relative">
               <TextInput
                 className="h-12 rounded-xl border border-slate-200 bg-white px-4 pr-12 text-slate-950"
                 onChangeText={setPassword}
-                placeholder="Mot de passe"
+                placeholder={t('auth.password_placeholder')}
                 placeholderTextColor="#94a3b8"
                 returnKeyType="done"
                 secureTextEntry={!showPassword}
@@ -251,7 +252,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         </View>
 
         <View className="gap-3">
-          <Text className="font-semibold text-slate-800">Profil</Text>
+          <Text className="font-semibold text-slate-800">{t('auth.profile_section')}</Text>
           <View className="gap-2">
             {roles.map((item) => (
               <TouchableOpacity
@@ -283,19 +284,12 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         {isIndependentDriver ? (
           <View className="gap-4 rounded-2xl bg-white p-4">
             <View>
-              <Text className="text-base font-black text-slate-950">Profil chauffeur indépendant</Text>
-              <Text className="mt-1 text-xs text-slate-500">
-                Votre compte sera soumis à validation admin avant d'apparaître aux clients.
-              </Text>
+              <Text className="text-base font-black text-slate-950">{t('auth.driver_profile_title')}</Text>
+              <Text className="mt-1 text-xs text-slate-500">{t('auth.driver_validation_notice')}</Text>
             </View>
 
             <View className="flex-row flex-wrap gap-3">
-              {[
-                { key: 'profilePhoto' as const, label: 'Photo profil' },
-                { key: 'nationalId' as const, label: 'CNI recto' },
-                { key: 'nationalIdBack' as const, label: 'CNI verso' },
-                { key: 'driverLicense' as const, label: 'Permis' },
-              ].map((item) => {
+              {driverDocItems.map((item) => {
                 const uri = driverDocuments[item.key];
                 return (
                   <TouchableOpacity
@@ -325,28 +319,28 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             <TextInput
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               onChangeText={setLicenseNumber}
-              placeholder="Numéro de permis"
+              placeholder={t('driver.license_number_placeholder')}
               placeholderTextColor="#94a3b8"
               value={licenseNumber}
             />
             <TextInput
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               onChangeText={setLicenseCategories}
-              placeholder="Catégories du permis, ex: B"
+              placeholder={t('driver.license_categories_placeholder')}
               placeholderTextColor="#94a3b8"
               value={licenseCategories}
             />
             <DatePickerField
-              label="Expiration permis"
+              label={t('driver.license_expiry')}
               minimumDate={minLicenseExpiryDate}
               onChange={setLicenseExpiryDate}
-              placeholder="Expiration permis, ex: 03/06/2027"
+              placeholder={t('common.date_placeholder')}
               value={licenseExpiryDate}
             />
             <TextInput
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               onChangeText={setNationalIdNumber}
-              placeholder="Numéro CNI"
+              placeholder={t('driver.national_id_number')}
               placeholderTextColor="#94a3b8"
               value={nationalIdNumber}
             />
@@ -354,7 +348,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               keyboardType="numeric"
               onChangeText={setExperienceYears}
-              placeholder="Années d'expérience"
+              placeholder={t('driver.experience_placeholder')}
               placeholderTextColor="#94a3b8"
               value={experienceYears}
             />
@@ -362,7 +356,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
               className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
               keyboardType="numeric"
               onChangeText={setPricePerDay}
-              placeholder="Tarif par jour en FCFA"
+              placeholder={t('driver.price_per_day_placeholder')}
               placeholderTextColor="#94a3b8"
               value={pricePerDay}
             />
@@ -370,11 +364,11 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         ) : null}
 
         <PrimaryButton disabled={!fullName || !email || !password} loading={loading} onPress={register}>
-          S'inscrire
+          {t('auth.register_cta_short')}
         </PrimaryButton>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text className="text-center font-semibold text-brand-blue">J'ai déjà un compte</Text>
+          <Text className="text-center font-semibold text-brand-blue">{t('auth.already_have_account')}</Text>
         </TouchableOpacity>
       </View>
     </Screen>

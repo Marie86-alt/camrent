@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BackButton } from '../../components/BackButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -10,6 +11,7 @@ import type { ForgotPasswordScreenProps } from '../../types/navigation';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const toast = useToast();
@@ -18,10 +20,10 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
     try {
       setLoading(true);
       await resetPassword(email);
-      hapticSuccess(); toast.success('Email envoyé — consultez votre boîte mail.');
+      hapticSuccess(); toast.success(t('auth.reset_success'));
       navigation.goBack();
     } catch {
-      hapticError(); toast.error("Impossible d'envoyer le lien de réinitialisation.");
+      hapticError(); toast.error(t('auth.reset_error'));
     } finally {
       setLoading(false);
     }
@@ -32,21 +34,19 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
       <View className="gap-6 pt-12">
         <BackButton navigation={navigation} />
         <View>
-          <Text className="text-3xl font-black text-slate-950">Mot de passe oublié</Text>
-          <Text className="mt-2 text-base text-slate-600">
-            Entrez votre email pour recevoir un lien de réinitialisation.
-          </Text>
+          <Text className="text-3xl font-black text-slate-950">{t('auth.reset_password_title')}</Text>
+          <Text className="mt-2 text-base text-slate-600">{t('auth.reset_password_subtitle')}</Text>
         </View>
 
         <View className="gap-1.5">
-          <Text className="text-sm font-semibold text-slate-700">Adresse email</Text>
+          <Text className="text-sm font-semibold text-slate-700">{t('auth.email')}</Text>
           <TextInput
             autoCapitalize="none"
             className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-slate-950"
             keyboardType="email-address"
             onChangeText={setEmail}
             onSubmitEditing={submit}
-            placeholder="exemple@email.com"
+            placeholder={t('auth.email_placeholder')}
             placeholderTextColor="#94a3b8"
             returnKeyType="done"
             value={email}
@@ -54,11 +54,11 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
         </View>
 
         <PrimaryButton disabled={!email} loading={loading} onPress={submit}>
-          Envoyer le lien
+          {t('auth.reset_password_cta')}
         </PrimaryButton>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text className="text-center font-semibold text-brand-blue">Retour à la connexion</Text>
+          <Text className="text-center font-semibold text-brand-blue">{t('auth.back_to_login')}</Text>
         </TouchableOpacity>
       </View>
     </Screen>

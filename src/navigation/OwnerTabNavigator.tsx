@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { DashboardScreen } from '../screens/owner/DashboardScreen';
 import { ManageCarsScreen } from '../screens/owner/ManageCarsScreen';
@@ -17,6 +18,8 @@ const TAB_ICONS: Record<keyof OwnerTabParamList, [string, string]> = {
 };
 
 export function OwnerTabNavigator() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -51,10 +54,10 @@ export function OwnerTabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Accueil', headerShown: false }} />
-      <Tab.Screen name="ManageCars" component={ManageCarsScreen} options={{ title: 'Voitures' }} />
-      <Tab.Screen name="Reservations" component={ReservationsScreen} options={{ title: 'Resa recues' }} />
-      <Tab.Screen name="OwnerProfile" component={OwnerProfileScreen} options={{ title: 'Profil', headerShown: false }} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: t('tabs.home'), headerShown: false }} />
+      <Tab.Screen name="ManageCars" component={ManageCarsScreen} options={{ title: t('tabs.cars') }} />
+      <Tab.Screen name="Reservations" component={ReservationsScreen} options={{ title: t('tabs.received') }} />
+      <Tab.Screen name="OwnerProfile" component={OwnerProfileScreen} options={{ title: t('tabs.profile'), headerShown: false }} />
     </Tab.Navigator>
   );
 }
