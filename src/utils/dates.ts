@@ -41,11 +41,8 @@ export function formatDateRange(startDate: Date, endDate: Date) {
 }
 
 export function formatInputDate(date: Date) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(toJsDate(date));
+  const d = toJsDate(date);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 export function parseHumanDate(value: string): Date | null {

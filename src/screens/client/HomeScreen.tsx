@@ -20,6 +20,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useCarsStore } from '../../store/carsStore';
 import type { CameroonCity, Car } from '../../types/models';
 import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
+import { normalizeCity } from '../../utils/city';
 
 type HomeNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<ClientTabParamList, 'Home'>,
@@ -81,7 +82,10 @@ export function HomeScreen() {
   };
 
   const activeBooking = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed');
-  const displayedCars = selectedCity ? cars.filter((c) => c.city === selectedCity) : cars;
+
+  const displayedCars = selectedCity
+    ? cars.filter((c) => normalizeCity(c.city ?? '') === normalizeCity(selectedCity))
+    : cars;
   const skeletonItems = Array.from({ length: SKELETON_COUNT }, (_, i) => i);
 
   const renderSkeleton = useCallback(() => <CarCardSkeleton />, []);

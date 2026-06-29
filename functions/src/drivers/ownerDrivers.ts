@@ -239,7 +239,7 @@ export async function handleListAvailableDrivers(request: Request, response: Res
   const endDate = typeof request.query.endDate === 'string' ? request.query.endDate : undefined;
   let city = requestedCity;
   let ownerId = '';
-  let allowIndependentDrivers = false;
+  let allowIndependentDrivers = true;
 
   if (carId) {
     const carSnapshot = await db.collection('cars').doc(carId).get();
@@ -255,7 +255,7 @@ export async function handleListAvailableDrivers(request: Request, response: Res
     };
     city = car.city ?? city;
     ownerId = car.ownerId ?? '';
-    allowIndependentDrivers = car.allowIndependentDrivers === true;
+    allowIndependentDrivers = car.allowIndependentDrivers !== false;
   }
 
   if (!city) {

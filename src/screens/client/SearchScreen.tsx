@@ -13,6 +13,7 @@ import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useCars } from '../../hooks/useCars';
 import type { CameroonCity, Car } from '../../types/models';
 import type { ClientStackParamList } from '../../types/navigation';
+import { normalizeCity } from '../../utils/city';
 
 const SKELETON_COUNT = 3;
 
@@ -26,7 +27,7 @@ export function SearchScreen() {
   const filteredCars = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return cars.filter((car) => {
-      if (selectedCity) return car.city === selectedCity;
+      if (selectedCity) return normalizeCity(car.city ?? '') === normalizeCity(selectedCity);
       if (!normalized) return true;
       return `${car.brand} ${car.model} ${car.city}`.toLowerCase().includes(normalized);
     });

@@ -21,6 +21,7 @@ import { deleteCar, setCarAvailability } from '../../services/carService';
 import type { CameroonCity, Car } from '../../types/models';
 import type { OwnerStackParamList, OwnerTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+import { normalizeCity } from '../../utils/city';
 
 const SKELETON_ITEMS = [0, 1, 2];
 
@@ -220,7 +221,7 @@ export function ManageCarsScreen({ navigation }: Props) {
   const bottomSheet = useBottomSheet();
 
   const displayedCars = useMemo(
-    () => (selectedCity ? cars.filter((car) => car.city === selectedCity) : cars),
+    () => (selectedCity ? cars.filter((car) => normalizeCity(car.city ?? '') === normalizeCity(selectedCity)) : cars),
     [cars, selectedCity],
   );
 

@@ -215,10 +215,13 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       return null;
     }
 
+    function toApiDate(date: Date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
     return {
       ...normalized,
-      issueDate: formatInputDate(issueDate),
-      expiryDate: formatInputDate(expiryDate),
+      issueDate: toApiDate(issueDate),
+      expiryDate: toApiDate(expiryDate),
     };
   };
 

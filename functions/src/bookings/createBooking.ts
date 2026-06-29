@@ -27,6 +27,10 @@ type CreateBookingRequest = {
 
 const PAYMENT_METHODS: PaymentMethod[] = ['MTN MoMo', 'Orange Money', 'Carte bancaire'];
 
+function normalizeCity(city: string) {
+  return city.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
 function assertString(value: unknown, field: string) {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`${field} est requis.`);
@@ -140,14 +144,14 @@ export async function handleCreateBooking(request: Request, response: Response) 
 
       const isOwnerDriver = driver.ownerId === car.ownerId;
       const isIndependentDriver =
-        driver.driverProfile?.isIndependent === true && car.allowIndependentDrivers === true;
+        driver.driverProfile?.isIndependent === true && car.allowIndependentDrivers !== false;
 
       if (
         driver.role !== 'driver' ||
         (!isOwnerDriver && !isIndependentDriver) ||
         driver.status !== 'active' ||
         driver.kycStatus !== 'approved' ||
-        driver.city !== car.city ||
+        normalizeCity(driver.city ?? '') !== normalizeCity(car.city ?? '') ||
         driver.driverProfile?.isAvailable !== true ||
         !isAvailableForDates(driver.driverProfile?.blockedDates, startDate, endDate)
       ) {

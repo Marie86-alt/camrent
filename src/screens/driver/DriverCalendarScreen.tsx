@@ -4,6 +4,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { BrandLogo } from '../../components/BrandLogo';
+import { CitySearchInput } from '../../components/CitySearchInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useToast } from '../../components/ui';
@@ -12,7 +13,7 @@ import { updateUserProfile } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/authStore';
 import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
-import type { Booking } from '../../types/models';
+import type { Booking, CameroonCity } from '../../types/models';
 import { toJsDate } from '../../utils/firestoreDate';
 
 function dateKey(d: Date): string {
@@ -34,6 +35,7 @@ export function DriverCalendarScreen() {
   const [blockedDates, setBlockedDates] = useState<Set<string>>(
     new Set(user?.driverProfile?.blockedDates ?? []),
   );
+  const [selectedCity, setSelectedCity] = useState<CameroonCity>(user?.city ?? '');
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -102,10 +104,12 @@ export function DriverCalendarScreen() {
     try {
       setSaving(true);
       const newBlockedDates = Array.from(blockedDates);
+      const cityToSave = selectedCity.trim() || user.city;
       await updateUserProfile(user.id, {
+        city: cityToSave,
         driverProfile: { ...user.driverProfile, blockedDates: newBlockedDates },
       });
-      setUser({ ...user, driverProfile: { ...user.driverProfile, blockedDates: newBlockedDates } });
+      setUser({ ...user, city: cityToSave, driverProfile: { ...user.driverProfile, blockedDates: newBlockedDates } });
       setDirty(false);
       hapticSuccess(); toast.success(t('driver.availability_updated'));
     } catch {
@@ -147,6 +151,26 @@ export function DriverCalendarScreen() {
             <TouchableOpacity onPress={() => setViewDate(new Date(year, month + 1, 1))}>
               <Ionicons color="#64748b" name="chevron-forward" size={22} />
             </TouchableOpacity>
+          </View>
+
+          <View
+            className="rounded-2xl bg-white p-4"
+            style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
+          >
+            <View className="mb-1 flex-row items-center gap-2">
+              <Ionicons color="#3B63D4" name="location-outline" size={16} />
+              <Text className="text-sm font-bold text-slate-800">{t('driver.my_city')}</Text>
+            </View>
+            <Text className="mb-3 text-xs text-slate-500">{t('driver.city_hint')}</Text>
+            <CitySearchInput
+              label=""
+              onSelectCity={(city) => {
+                if (city) { setSelectedCity(city); setDirty(true); }
+              }}
+              placeholder={t('driver.city_placeholder')}
+              showLabel={false}
+              value={selectedCity || null}
+            />
           </View>
 
           <View className="flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5">
