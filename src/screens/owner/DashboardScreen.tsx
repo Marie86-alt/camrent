@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { doc, getDoc } from 'firebase/firestore';
+
 import { BrandLogo } from '../../components/BrandLogo';
+import { db } from '../../services/firebase';
 import { Screen } from '../../components/Screen';
 import { useBottomSheet, useToast } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
-import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
+import { hapticError, hapticLight, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { useBookings } from '../../hooks/useBookings';
 import { useCars } from '../../hooks/useCars';
 import { ownerCancelBooking, updateBookingStatus } from '../../services/bookingService';
@@ -38,6 +41,23 @@ export function DashboardScreen({ navigation }: Props) {
   const { cars } = useCars(user?.id);
   const { bookings } = useBookings(user?.id, 'owner');
   const toast = useToast();
+  const [commissionRate, setCommissionRate] = useState(10);
+
+  useEffect(() => {
+    async function loadCommission() {
+      try {
+        const [sec, fin] = await Promise.all([
+          getDoc(doc(db, 'adminSettings', 'security')),
+          getDoc(doc(db, 'adminSettings', 'finance')),
+        ]);
+        const secData = sec.data() as { rentalCommissionRate?: number } | undefined;
+        const finData = fin.data() as { commissionRate?: number } | undefined;
+        const rate = secData?.rentalCommissionRate ?? finData?.commissionRate ?? 10;
+        setCommissionRate(Number(rate));
+      } catch { /* garde le taux par défaut */ }
+    }
+    void loadCommission();
+  }, []);
   const bottomSheet = useBottomSheet();
 
   const STATUS_MAP: Record<BookingStatus, { label: string; color: string; bg: string }> = {
@@ -94,6 +114,8 @@ export function DashboardScreen({ navigation }: Props) {
     (b) => b.status === 'confirmed' || b.status === 'completed',
   );
   const confirmedRevenue = paidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+  const commissionAmount = Math.round((confirmedRevenue * commissionRate) / 100);
+  const netRevenue = confirmedRevenue - commissionAmount;
 
   const revenueByMethod = PAYMENT_METHODS.map(({ key, label, color }) => ({
     label,
@@ -103,6 +125,44 @@ export function DashboardScreen({ navigation }: Props) {
       .reduce((sum, b) => sum + b.totalPrice, 0),
     count: paidBookings.filter((b) => b.paymentMethod === key).length,
   }));
+
+  const carsById = useMemo(() => new Map(cars.map((car) => [car.id, car])), [cars]);
+
+  const openCars = useCallback(() => {
+    hapticLight();
+    navigation.navigate('ManageCars');
+  }, [navigation]);
+
+  const openReservations = useCallback(() => {
+    hapticLight();
+    navigation.navigate('Reservations');
+  }, [navigation]);
+
+  const openVehicle = useCallback((carId: string) => {
+    hapticLight();
+    const car = carsById.get(carId);
+    if (car) {
+      navigation.navigate('EditCar', { car });
+      return;
+    }
+    navigation.navigate('ManageCars');
+  }, [carsById, navigation]);
+
+  const byVehicle = useMemo(() => {
+    const map = new Map<string, { carId: string; label: string; count: number; revenue: number }>();
+    for (const b of paidBookings) {
+      const label =
+        b.carBrand && b.carModel ? `${b.carBrand} ${b.carModel}` : t('owner.vehicle_label');
+      const existing = map.get(b.carId);
+      if (existing) {
+        existing.count += 1;
+        existing.revenue += b.totalPrice;
+      } else {
+        map.set(b.carId, { carId: b.carId, label, count: 1, revenue: b.totalPrice });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+  }, [paidBookings, t]);
 
   return (
     <Screen scroll={false} topSafeArea>
@@ -144,21 +204,43 @@ export function DashboardScreen({ navigation }: Props) {
           </View>
 
           <View className="flex-row gap-3">
-            <View className="flex-1 rounded-2xl bg-white p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}>
+            <TouchableOpacity
+              accessibilityLabel={t('owner.my_cars')}
+              activeOpacity={0.82}
+              className="flex-1 rounded-2xl bg-white p-4"
+              onPress={openCars}
+              style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+            >
               <View className="mb-2 h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
                 <Ionicons color="#3B63D4" name="car-outline" size={18} />
               </View>
-              <Text className="text-2xl font-black text-slate-950">{cars.length}</Text>
-              <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.cars')}</Text>
-            </View>
+              <View className="flex-row items-end justify-between gap-2">
+                <View>
+                  <Text className="text-2xl font-black text-slate-950">{cars.length}</Text>
+                  <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.cars')}</Text>
+                </View>
+                <Ionicons color="#94a3b8" name="chevron-forward" size={16} />
+              </View>
+            </TouchableOpacity>
 
-            <View className="flex-1 rounded-2xl bg-white p-4" style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}>
+            <TouchableOpacity
+              accessibilityLabel={t('owner.reservations')}
+              activeOpacity={0.82}
+              className="flex-1 rounded-2xl bg-white p-4"
+              onPress={openReservations}
+              style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+            >
               <View className="mb-2 h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
                 <Ionicons color="#2563eb" name="calendar-outline" size={18} />
               </View>
-              <Text className="text-2xl font-black text-slate-950">{bookings.length}</Text>
-              <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.bookings')}</Text>
-            </View>
+              <View className="flex-row items-end justify-between gap-2">
+                <View>
+                  <Text className="text-2xl font-black text-slate-950">{bookings.length}</Text>
+                  <Text className="mt-0.5 text-xs text-slate-400">{t('tabs.bookings')}</Text>
+                </View>
+                <Ionicons color="#94a3b8" name="chevron-forward" size={16} />
+              </View>
+            </TouchableOpacity>
           </View>
 
           <View className="rounded-2xl bg-slate-950 p-5" style={{ shadowColor: '#3B63D4', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 4 }}>
@@ -176,6 +258,19 @@ export function DashboardScreen({ navigation }: Props) {
             ) : (
               <View className="mt-4 gap-2">
                 <View className="h-px bg-white/10" />
+                <View className="flex-row items-center">
+                  <Text className="flex-1 text-xs text-slate-400">{t('owner.revenue_gross')}</Text>
+                  <Text className="text-xs font-bold text-slate-300">{formatFcfa(confirmedRevenue)}</Text>
+                </View>
+                <View className="flex-row items-center">
+                  <Text className="flex-1 text-xs text-slate-400">{t('owner.revenue_commission', { rate: commissionRate })}</Text>
+                  <Text className="text-xs font-bold text-red-400">- {formatFcfa(commissionAmount)}</Text>
+                </View>
+                <View className="flex-row items-center">
+                  <Text className="flex-1 text-xs font-semibold text-white">{t('owner.revenue_net')}</Text>
+                  <Text className="text-sm font-black text-white">{formatFcfa(netRevenue)}</Text>
+                </View>
+                <View className="h-px bg-white/10" />
                 {revenueByMethod.map(({ label, color, amount, count }) => (
                   <View key={label} className="flex-row items-center gap-2.5">
                     <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
@@ -188,6 +283,38 @@ export function DashboardScreen({ navigation }: Props) {
               </View>
             )}
           </View>
+
+          {byVehicle.length > 0 ? (
+            <View className="gap-3">
+              <Text className="font-bold text-slate-950">{t('owner.by_vehicle_title')}</Text>
+              {byVehicle.map(({ carId, label, count, revenue }) => (
+                <TouchableOpacity
+                  accessibilityLabel={`${t('owner.by_vehicle_title')} ${label}`}
+                  activeOpacity={0.82}
+                  key={carId}
+                  className="flex-row items-center gap-3 rounded-2xl bg-white p-4"
+                  onPress={() => openVehicle(carId)}
+                  style={{ shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                    <Ionicons color="#3B63D4" name="car-outline" size={20} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-semibold text-slate-950">{label}</Text>
+                    <Text className="text-xs text-slate-400">
+                      {count === 1
+                        ? t('owner.vehicle_bookings_one', { count })
+                        : t('owner.vehicle_bookings_other', { count })}
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="font-black text-brand-blue">{formatFcfa(revenue)}</Text>
+                    <Ionicons color="#94a3b8" name="chevron-forward" size={16} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
 
           {pendingBookings.length > 0 ? (
             <View className="gap-3">

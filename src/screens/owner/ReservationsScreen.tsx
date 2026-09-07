@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState, useBottomSheet, useToast } from '../../components/ui';
 import EmptyReservationsIllustration from '../../../assets/illustrations/empty-reservations.svg';
@@ -10,13 +12,74 @@ import ErrorIllustration from '../../../assets/illustrations/state-error.svg';
 import { useAuth } from '../../hooks/useAuth';
 import { useBookings } from '../../hooks/useBookings';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { ownerCancelBooking, updateBookingStatus } from '../../services/bookingService';
+import { ownerCancelBooking, saveBookingInspection, updateBookingStatus } from '../../services/bookingService';
 import { isOfflineError } from '../../services/networkGuard';
+import { uploadInspectionPhoto } from '../../services/storageService';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/models';
 import { hapticError, hapticSuccess, hapticWarning } from '../../utils/haptics';
 import { formatFcfa } from '../../utils/currency';
 import { formatDateRange } from '../../utils/dates';
 import { toJsDate } from '../../utils/firestoreDate';
+
+const MAX_INSPECTION_PHOTOS = 3;
+
+function InspectionSection({
+  label,
+  existingPhotos,
+  newPhotos,
+  note,
+  onAddPhoto,
+  onNote,
+}: {
+  label: string;
+  existingPhotos: string[];
+  newPhotos: string[];
+  note: string;
+  onAddPhoto: () => void;
+  onNote: (v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const total = existingPhotos.length + newPhotos.length;
+  return (
+    <View className="mb-5">
+      <Text className="mb-3 font-bold text-slate-800">{label}</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {existingPhotos.map((uri, i) => (
+          <Image
+            className="h-20 w-20 rounded-xl bg-slate-100"
+            key={`ex-${i}`}
+            resizeMode="cover"
+            source={{ uri }}
+          />
+        ))}
+        {newPhotos.map((uri, i) => (
+          <Image
+            className="h-20 w-20 rounded-xl bg-slate-100"
+            key={`new-${i}`}
+            resizeMode="cover"
+            source={{ uri }}
+          />
+        ))}
+        {total < MAX_INSPECTION_PHOTOS ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            className="h-20 w-20 items-center justify-center rounded-xl bg-slate-100"
+            onPress={onAddPhoto}
+          >
+            <Ionicons color="#94a3b8" name="add-outline" size={28} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      <TextInput
+        className="mt-3 h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950"
+        onChangeText={onNote}
+        placeholder={t('owner.inspection_note_placeholder')}
+        placeholderTextColor="#94a3b8"
+        value={note}
+      />
+    </View>
+  );
+}
 
 type StatusStyle = { label: string; textColor: string; bgColor: string };
 
@@ -28,6 +91,12 @@ export function ReservationsScreen() {
   const { bookings, error, loading, retry } = useBookings(user?.id, 'owner');
   const { isOnline } = useNetworkStatus();
   const [refreshing, setRefreshing] = useState(false);
+  const [inspectingBooking, setInspectingBooking] = useState<Booking | null>(null);
+  const [newBeforeLocal, setNewBeforeLocal] = useState<string[]>([]);
+  const [newAfterLocal, setNewAfterLocal] = useState<string[]>([]);
+  const [beforeNote, setBeforeNote] = useState('');
+  const [afterNote, setAfterNote] = useState('');
+  const [inspectionSaving, setInspectionSaving] = useState(false);
   const wasOfflineRef = useRef(false);
   const toast = useToast();
   const bottomSheet = useBottomSheet();
@@ -104,6 +173,59 @@ export function ReservationsScreen() {
     });
   }, [bottomSheet, toast, t]);
 
+  const openInspection = useCallback((booking: Booking) => {
+    setInspectingBooking(booking);
+    setNewBeforeLocal([]);
+    setNewAfterLocal([]);
+    setBeforeNote(booking.inspection?.beforeNote ?? '');
+    setAfterNote(booking.inspection?.afterNote ?? '');
+  }, []);
+
+  const closeInspection = useCallback(() => setInspectingBooking(null), []);
+
+  const addInspectionPhoto = useCallback(async (phase: 'before' | 'after') => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      mediaTypes: ['images' as const],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    if (phase === 'before') setNewBeforeLocal((prev) => [...prev, uri]);
+    else setNewAfterLocal((prev) => [...prev, uri]);
+  }, []);
+
+  const saveInspection = useCallback(async () => {
+    if (!inspectingBooking) return;
+    try {
+      setInspectionSaving(true);
+      const existingBefore = inspectingBooking.inspection?.beforePhotos ?? [];
+      const existingAfter = inspectingBooking.inspection?.afterPhotos ?? [];
+      const [newBeforeUrls, newAfterUrls] = await Promise.all([
+        Promise.all(newBeforeLocal.map((uri, i) => uploadInspectionPhoto(inspectingBooking.id, uri, 'before', existingBefore.length + i))),
+        Promise.all(newAfterLocal.map((uri, i) => uploadInspectionPhoto(inspectingBooking.id, uri, 'after', existingAfter.length + i))),
+      ]);
+      await saveBookingInspection(inspectingBooking.id, {
+        afterNote: afterNote.trim() || undefined,
+        afterPhotos: [...existingAfter, ...newAfterUrls],
+        beforeNote: beforeNote.trim() || undefined,
+        beforePhotos: [...existingBefore, ...newBeforeUrls],
+        completedAt: new Date().toISOString(),
+      });
+      hapticSuccess();
+      toast.success(t('owner.inspection_saved'));
+      setInspectingBooking(null);
+    } catch (err) {
+      if (isOfflineError(err)) { hapticWarning(); toast.warning((err as Error).message); return; }
+      hapticError();
+      toast.error(t('owner.inspection_error'));
+    } finally {
+      setInspectionSaving(false);
+    }
+  }, [inspectingBooking, newBeforeLocal, newAfterLocal, beforeNote, afterNote, toast, t]);
+
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -176,6 +298,21 @@ export function ReservationsScreen() {
             </View>
           ) : null}
 
+          {(item.status === 'confirmed' || item.status === 'completed') ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              className="mt-4 flex-row items-center justify-center gap-2 rounded-xl bg-slate-50 py-2.5"
+              onPress={() => openInspection(item)}
+              style={{ borderWidth: 1, borderColor: '#e2e8f0' }}
+            >
+              <Ionicons color="#475569" name="camera-outline" size={15} />
+              <Text className="text-xs font-bold text-slate-600">
+                {item.inspection ? t('owner.inspection_done') : t('owner.inspection_start')}
+              </Text>
+              {item.inspection ? <Ionicons color="#16a34a" name="checkmark-circle" size={14} /> : null}
+            </TouchableOpacity>
+          ) : null}
+
           {canDecide ? (
             <View className="mt-4 flex-row gap-2">
               <TouchableOpacity
@@ -200,16 +337,65 @@ export function ReservationsScreen() {
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cancelOwnerReservation, setStatus, t],
+    [cancelOwnerReservation, openInspection, setStatus, t],
   );
+
+  const existingBefore = inspectingBooking?.inspection?.beforePhotos ?? [];
+  const existingAfter = inspectingBooking?.inspection?.afterPhotos ?? [];
 
   const header = (
     <Text className="mb-4 text-2xl font-black text-slate-950">{t('owner.reservations_title')}</Text>
   );
 
+  const inspectionModal = (
+    <Modal
+      animationType="slide"
+      onRequestClose={closeInspection}
+      transparent
+      visible={inspectingBooking !== null}
+    >
+      <View className="flex-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <Pressable className="flex-1" onPress={closeInspection} />
+        <View className="rounded-t-3xl bg-white px-5 pb-8 pt-5" style={{ maxHeight: '82%' }}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View className="mb-5 flex-row items-center justify-between">
+              <Text className="text-xl font-black text-slate-950">{t('owner.inspection_title')}</Text>
+              <TouchableOpacity onPress={closeInspection}>
+                <Ionicons color="#64748b" name="close-outline" size={26} />
+              </TouchableOpacity>
+            </View>
+
+            <InspectionSection
+              existingPhotos={existingBefore}
+              label={t('owner.inspection_before')}
+              newPhotos={newBeforeLocal}
+              note={beforeNote}
+              onAddPhoto={() => { void addInspectionPhoto('before'); }}
+              onNote={setBeforeNote}
+            />
+
+            <InspectionSection
+              existingPhotos={existingAfter}
+              label={t('owner.inspection_after')}
+              newPhotos={newAfterLocal}
+              note={afterNote}
+              onAddPhoto={() => { void addInspectionPhoto('after'); }}
+              onNote={setAfterNote}
+            />
+
+            <PrimaryButton loading={inspectionSaving} onPress={() => { void saveInspection(); }}>
+              {t('owner.inspection_save')}
+            </PrimaryButton>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (loading) {
     return (
       <Screen scroll={false}>
+        {inspectionModal}
         <View className="flex-1 px-5 pt-4">
           <FlatList
             ListHeaderComponent={header}
@@ -226,6 +412,7 @@ export function ReservationsScreen() {
 
   return (
     <Screen scroll={false}>
+      {inspectionModal}
       <View className="flex-1 px-5 pt-4">
         <FlatList
           ListHeaderComponent={header}

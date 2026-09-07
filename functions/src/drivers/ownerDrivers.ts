@@ -6,6 +6,7 @@ import { getAuthenticatedUid, sendJson } from '../http';
 
 type CreateOwnerDriverRequest = {
   city?: string;
+  criminalRecordUrl?: string;
   email?: string;
   experienceYears?: number;
   fullName?: string;
@@ -168,6 +169,7 @@ export async function handleCreateIndependentDriver(request: Request, response: 
   }
 
   const documents = {
+    criminalRecordUrl: assertString(body.criminalRecordUrl, 'criminalRecordUrl'),
     driverLicenseUrl: assertString(body.driverLicenseUrl, 'driverLicenseUrl'),
     nationalIdBackUrl: assertString(body.nationalIdBackUrl, 'nationalIdBackUrl'),
     nationalIdUrl: assertString(body.nationalIdUrl, 'nationalIdUrl'),

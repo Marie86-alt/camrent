@@ -46,6 +46,7 @@ export type AppUser = {
   expoPushTokens?: string[];
   pushTokenUpdatedAt?: Date;
   documents?: {
+    criminalRecordUrl?: string;
     driverLicenseUrl?: string;
     nationalIdUrl?: string;
     nationalIdBackUrl?: string;
@@ -81,6 +82,7 @@ export type Car = {
   isAvailable: boolean;
   description: string;
   adminStatus?: 'pending_review' | 'approved' | 'rejected';
+  blockedDates?: string[];
   documentsVerified?: boolean;
   allowIndependentDrivers?: boolean;
   technicalSheet?: {
@@ -104,11 +106,13 @@ export type Booking = {
   clientId: string;
   startDate: Date;
   endDate: Date;
+  startTime?: string;
+  endTime?: string;
   totalDays: number;
   totalPrice: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
-  driverLicense: DriverLicense;
+  driverLicense?: DriverLicense | null;
   status: BookingStatus;
   createdAt: Date;
   city?: CameroonCity;
@@ -131,6 +135,16 @@ export type Booking = {
   driverPricePerDay?: number;
   reviewSubmitted?: boolean;
   driverReviewSubmitted?: boolean;
+  ownerReviewSubmitted?: boolean;
+  inspection?: BookingInspection;
+};
+
+export type BookingInspection = {
+  afterNote?: string;
+  afterPhotos: string[];
+  beforeNote?: string;
+  beforePhotos: string[];
+  completedAt?: string;
 };
 
 export type PaymentFlow = {
@@ -149,7 +163,7 @@ export type PaymentFlow = {
   updatedAt?: Date;
 };
 
-export type ReviewTargetType = 'car' | 'driver' | 'client';
+export type ReviewTargetType = 'car' | 'driver' | 'client' | 'owner';
 
 export type ReviewStatus = 'published' | 'flagged' | 'removed';
 

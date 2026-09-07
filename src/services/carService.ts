@@ -10,6 +10,7 @@ export type UpdateCarPayload = Partial<
     Car,
     | 'adminStatus'
     | 'allowIndependentDrivers'
+    | 'blockedDates'
     | 'brand'
     | 'city'
     | 'description'

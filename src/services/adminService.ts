@@ -34,6 +34,7 @@ export function updateUserAdminStatus(userId: string, payload: Partial<AppUser>)
 
 export type CreateIndependentDriverAdminPayload = {
   city: CameroonCity;
+  criminalRecordUrl: string;
   driverLicenseUrl: string;
   email: string;
   experienceYears: number;

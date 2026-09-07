@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 import { PAYMENT_PROVIDER_BY_METHOD } from '../../constants/cameroon';
 import { BackButton } from '../../components/BackButton';
@@ -9,6 +10,7 @@ import { PaymentModal } from '../../components/PaymentModal';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SuccessOverlay } from '../../components/ui';
+import { db } from '../../services/firebase';
 import { isOfflineError } from '../../services/networkGuard';
 import { requestMobileMoneyPayment } from '../../services/paymentService';
 import type { PaymentMethod } from '../../types/models';
@@ -23,8 +25,50 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
   const { amount, bookingId, paymentMethod } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [waitingForConfirmation, setWaitingForConfirmation] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const toast = useToast();
+
+  const handlePaymentReturn = useCallback((url: string | null) => {
+    if (!url || !url.startsWith('autofixpro://payment-return')) {
+      return;
+    }
+
+    toast.info('Retour du paiement reçu. Vérification de la confirmation...');
+    setWaitingForConfirmation(true);
+  }, [toast]);
+
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => handlePaymentReturn(url));
+
+    Linking.getInitialURL()
+      .then(handlePaymentReturn)
+      .catch(() => undefined);
+
+    return () => subscription.remove();
+  }, [handlePaymentReturn]);
+
+  useEffect(() => {
+    if (!waitingForConfirmation) {
+      return undefined;
+    }
+
+    return onSnapshot(doc(db, 'bookings', bookingId), (snapshot) => {
+      const paymentStatus = snapshot.data()?.paymentStatus;
+
+      if (paymentStatus === 'paid') {
+        setWaitingForConfirmation(false);
+        toast.success('Paiement confirmé. Votre location est confirmée.');
+        setSuccessMessage('Paiement confirmé. Votre location est confirmée.');
+      }
+
+      if (paymentStatus === 'failed') {
+        setWaitingForConfirmation(false);
+        hapticError();
+        toast.error('Le paiement a échoué. Réessayez avec un autre moyen de paiement.');
+      }
+    });
+  }, [bookingId, toast, waitingForConfirmation]);
 
   const submit = async (method: PaymentMethod, phone?: string) => {
     if (method !== 'Carte bancaire' && !isValidCameroonPhone(phone ?? '')) {
@@ -38,18 +82,20 @@ export function PaymentScreen({ navigation, route }: PaymentScreenProps) {
       const payment = await requestMobileMoneyPayment({
         amount,
         bookingId,
+        failureReturnUrl: `autofixpro://payment-return?bookingId=${encodeURIComponent(bookingId)}&status=failed`,
         method,
         phone,
         provider: PAYMENT_PROVIDER_BY_METHOD[method],
+        returnUrl: `autofixpro://payment-return?bookingId=${encodeURIComponent(bookingId)}&status=success`,
       });
       setModalVisible(false);
+      setWaitingForConfirmation(true);
 
       if (payment.checkoutUrl) {
         await Linking.openURL(payment.checkoutUrl);
       }
 
       toast.success(t('payment.success_ref', { ref: payment.reference }));
-      setSuccessMessage(t('payment.success'));
     } catch (error) {
       if (isOfflineError(error)) {
         hapticWarning();

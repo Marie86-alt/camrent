@@ -22,7 +22,7 @@ export function ContractScreen({ navigation, route }: ContractScreenProps) {
   const [signatureBase64, setSignatureBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const clientName = user?.fullName ?? booking.driverLicense.fullName;
+  const clientName = user?.fullName ?? booking.driverLicense?.fullName ?? 'Client Autofix Pro';
   const contractText = buildContractText(booking, clientName);
   const contractRef = booking.contractRef ?? `CR-${new Date().getFullYear()}-${booking.id.slice(-6).toUpperCase()}`;
 

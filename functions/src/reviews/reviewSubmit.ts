@@ -5,12 +5,14 @@ import { db } from '../firebase';
 import { getAuthenticatedUid, sendJson } from '../http';
 import { computeDriverRatingUpdate } from './reviewLogic';
 
+type ReviewTargetType = 'car' | 'driver' | 'owner';
+
 type SubmitReviewRequest = {
   bookingId?: string;
   comment?: string;
   rating?: number;
   targetId?: string;
-  targetType?: 'car' | 'driver';
+  targetType?: ReviewTargetType;
 };
 
 function assertRating(value: unknown) {
@@ -26,6 +28,23 @@ function assertString(value: unknown, field: string) {
     throw new Error(`${field} est requis.`);
   }
   return value.trim();
+}
+
+async function recalculateOwnerRating(ownerId: string) {
+  const snap = await db
+    .collection('reviews')
+    .where('targetId', '==', ownerId)
+    .where('targetType', '==', 'owner')
+    .where('status', '==', 'published')
+    .get();
+
+  const ratings = snap.docs.map((d) => Number(d.data().rating)).filter((r) => Number.isFinite(r));
+  if (ratings.length === 0) return;
+
+  const avg = ratings.reduce((s, r) => s + r, 0) / ratings.length;
+  await db.collection('users').doc(ownerId).update({
+    ratingAverage: Math.round(avg * 10) / 10,
+  });
 }
 
 async function recalculateDriverRating(driverId: string) {
@@ -53,11 +72,11 @@ export async function handleSubmitReview(request: Request, response: Response) {
   const body = request.body as SubmitReviewRequest;
   const bookingId = assertString(body.bookingId, 'bookingId');
   const targetId = assertString(body.targetId, 'targetId');
-  const targetType = assertString(body.targetType, 'targetType') as 'car' | 'driver';
+  const targetType = assertString(body.targetType, 'targetType') as ReviewTargetType;
   const rating = assertRating(body.rating);
   const comment = typeof body.comment === 'string' ? body.comment.trim() : '';
 
-  if (targetType !== 'car' && targetType !== 'driver') {
+  if (targetType !== 'car' && targetType !== 'driver' && targetType !== 'owner') {
     throw new Error('Type d avis invalide.');
   }
 
@@ -82,6 +101,10 @@ export async function handleSubmitReview(request: Request, response: Response) {
 
   if (targetType === 'driver' && booking.driverId !== targetId) {
     throw new Error('Chauffeur invalide pour cette reservation.');
+  }
+
+  if (targetType === 'owner' && booking.ownerId !== targetId) {
+    throw new Error('Proprietaire invalide pour cette reservation.');
   }
 
   const existingReviewSnapshot = await db
@@ -110,6 +133,9 @@ export async function handleSubmitReview(request: Request, response: Response) {
   if (targetType === 'driver') {
     await recalculateDriverRating(targetId);
     await bookingRef.update({ driverReviewSubmitted: true });
+  } else if (targetType === 'owner') {
+    await recalculateOwnerRating(targetId);
+    await bookingRef.update({ ownerReviewSubmitted: true });
   } else {
     await bookingRef.update({ reviewSubmitted: true });
   }

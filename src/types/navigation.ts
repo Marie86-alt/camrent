@@ -18,7 +18,7 @@ export type ClientTabParamList = {
 export type ClientStackParamList = {
   Tabs: undefined;
   CarDetail: { car: Car };
-  Booking: { car: Car };
+  Booking: { car: Car; startDate?: string; endDate?: string };
   DriverList: { carCity: string; carId: string; startDate?: string; endDate?: string; selectable?: boolean };
   DriverDetail: { driver: AppUser };
   Payment: { amount: number; bookingId: string; paymentMethod: import('./models').PaymentMethod };
@@ -34,7 +34,7 @@ export type PublicTabParamList = {
 export type PublicStackParamList = {
   PublicTabs: undefined;
   CarDetail: { car: Car };
-  Booking: { car: Car };
+  Booking: { car: Car; startDate?: string; endDate?: string };
   DriverList: { carCity: string; carId: string; startDate?: string; endDate?: string; selectable?: boolean };
   DriverDetail: { driver: AppUser };
   AuthPrompt: undefined;
@@ -67,6 +67,7 @@ export type OwnerStackParamList = {
   OwnerTabs: undefined;
   AddCar: undefined;
   EditCar: { car: Car };
+  CarBlockDates: { car: Car };
   DriverProfile: undefined;
   OwnerDrivers: undefined;
 };

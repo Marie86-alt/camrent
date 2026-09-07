@@ -237,6 +237,14 @@ export function AdminBookingsScreen() {
                 <DetailLine label={t('admin.field_deposit')} value={selectedBooking.depositStatus ?? 'held'} />
                 <DetailLine label={t('admin.field_license')} value={selectedBooking.driverLicense?.licenseNumber} />
                 <DetailLine label={t('admin.field_license_expiry')} value={selectedBooking.driverLicense?.expiryDate} />
+                <DetailLine
+                  label={t('admin.field_inspection_before')}
+                  value={selectedBooking.inspection ? String(selectedBooking.inspection.beforePhotos.length) : undefined}
+                />
+                <DetailLine
+                  label={t('admin.field_inspection_after')}
+                  value={selectedBooking.inspection ? String(selectedBooking.inspection.afterPhotos.length) : undefined}
+                />
 
                 <View className="gap-3 pt-2">
                   <PrimaryButton

@@ -2,15 +2,17 @@ import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/f
 
 import { auth, db } from './firebase';
 import { assertOnlineForAction } from './networkGuard';
-import type { Booking, BookingStatus, Car, DriverLicense, PaymentMethod } from '../types/models';
+import type { Booking, BookingInspection, BookingStatus, Car, DriverLicense, PaymentMethod } from '../types/models';
 
 export type CreateBookingPayload = {
   car: Car;
   clientId: string;
   endDate: Date;
-  driverLicense: DriverLicense;
+  endTime?: string;
+  driverLicense: DriverLicense | null;
   paymentMethod: PaymentMethod;
   startDate: Date;
+  startTime?: string;
   totalDays: number;
   totalPrice: number;
   withDriver?: boolean;
@@ -80,8 +82,10 @@ export async function createBooking(payload: CreateBookingPayload) {
       driverId: payload.driverId,
       driverLicense: payload.driverLicense,
       endDate: payload.endDate.toISOString(),
+      endTime: payload.endTime,
       paymentMethod: payload.paymentMethod,
       startDate: payload.startDate.toISOString(),
+      startTime: payload.startTime,
       withDriver: payload.withDriver ?? false,
   });
 
@@ -137,6 +141,63 @@ export async function ownerCancelBooking(bookingId: string) {
   }>;
 }
 
+export type DateRange = {
+  startDate: Date;
+  endDate: Date;
+};
+
+function timestampToDate(value: unknown): Date {
+  if (value instanceof Date) return value;
+  if (value !== null && typeof value === 'object' && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return new Date(String(value));
+}
+
+export function subscribeToCarBookings(
+  carId: string,
+  onData: (ranges: DateRange[]) => void,
+  onError: () => void,
+) {
+  const q = query(
+    collection(db, 'bookings'),
+    where('carId', '==', carId),
+    where('status', 'in', ['pending', 'confirmed']),
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const ranges = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          startDate: timestampToDate(data.startDate),
+          endDate: timestampToDate(data.endDate),
+        };
+      });
+      onData(ranges);
+    },
+    onError,
+  );
+}
+
+export function bookingRangesToOccupiedDates(
+  ranges: DateRange[],
+  blockedDates: string[] = [],
+): Set<string> {
+  const occupied = new Set<string>(blockedDates);
+  for (const { startDate, endDate } of ranges) {
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    while (current <= end) {
+      occupied.add(current.toISOString().slice(0, 10));
+      current.setDate(current.getDate() + 1);
+    }
+  }
+  return occupied;
+}
+
 export function subscribeToDriverBookings(driverId: string, onData: (bookings: Booking[]) => void, onError: () => void) {
   const q = query(collection(db, 'bookings'), where('driverId', '==', driverId));
   return onSnapshot(
@@ -169,4 +230,9 @@ export function subscribeToOwnerBookings(ownerId: string, onData: (bookings: Boo
 export async function updateBookingStatus(bookingId: string, status: Extract<BookingStatus, 'confirmed' | 'completed'>) {
   await assertOnlineForAction();
   return updateDoc(doc(db, 'bookings', bookingId), { status });
+}
+
+export async function saveBookingInspection(bookingId: string, inspection: BookingInspection) {
+  await assertOnlineForAction();
+  return updateDoc(doc(db, 'bookings', bookingId), { inspection });
 }

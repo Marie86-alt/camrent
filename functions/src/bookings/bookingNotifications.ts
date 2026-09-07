@@ -67,3 +67,50 @@ export async function handleBookingCreated(snapshot: QueryDocumentSnapshot) {
 
   await Promise.allSettled(tasks);
 }
+
+export async function handleBookingPaymentConfirmed(bookingId: string) {
+  const bookingSnapshot = await db.collection('bookings').doc(bookingId).get();
+
+  if (!bookingSnapshot.exists) {
+    return;
+  }
+
+  const booking = bookingSnapshot.data() as BookingNotificationPayload;
+  const carLabel = `${booking.carBrand ?? 'Vehicule'} ${booking.carModel ?? ''}`.trim();
+  const tasks: Array<Promise<void>> = [];
+
+  if (booking.clientId) {
+    tasks.push(
+      sendExpoPush(
+        booking.clientId,
+        'Location confirmee',
+        `Votre paiement est confirme pour ${carLabel}.`,
+        { bookingId, type: 'booking_payment_confirmed' },
+      ),
+    );
+  }
+
+  if (booking.ownerId) {
+    tasks.push(
+      sendExpoPush(
+        booking.ownerId,
+        'Paiement recu',
+        `La location de ${carLabel} est payee et confirmee.`,
+        { bookingId, type: 'booking_payment_confirmed' },
+      ),
+    );
+  }
+
+  if (booking.driverId) {
+    tasks.push(
+      sendExpoPush(
+        booking.driverId,
+        'Mission confirmee',
+        `La mission pour ${carLabel} est confirmee.`,
+        { bookingId, type: 'booking_payment_confirmed' },
+      ),
+    );
+  }
+
+  await Promise.allSettled(tasks);
+}

@@ -17,6 +17,7 @@ import { useBookings } from '../../hooks/useBookings';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { cancelBooking } from '../../services/bookingService';
 import { isOfflineError } from '../../services/networkGuard';
+import { shareInvoice } from '../../utils/invoice';
 import type { Booking } from '../../types/models';
 import type { ClientStackParamList, ClientTabParamList } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
@@ -69,6 +70,19 @@ export function MyBookingsScreen() {
   const handleSignContract = useCallback((booking: Booking) => {
     navigation.navigate('Contract', { booking });
   }, [navigation]);
+
+  const handleDownloadInvoice = useCallback(async (booking: Booking) => {
+    try {
+      await shareInvoice({
+        booking,
+        clientName: user?.fullName ?? '',
+        clientEmail: user?.email ?? '',
+      });
+    } catch {
+      hapticError();
+      toast.error(t('invoice.error'));
+    }
+  }, [user, toast, t]);
 
   const getCancellationPreview = useCallback((booking: Booking) => {
     const startDate = toJsDate(booking.startDate);
@@ -127,11 +141,12 @@ export function MyBookingsScreen() {
       <BookingCard
         booking={item}
         onCancel={() => handleCancelBooking(item)}
+        onDownloadInvoice={() => { void handleDownloadInvoice(item); }}
         onReview={() => navigation.navigate('Review', { booking: item })}
         onSignContract={() => handleSignContract(item)}
       />
     ),
-    [handleCancelBooking, handleSignContract, navigation],
+    [handleCancelBooking, handleDownloadInvoice, handleSignContract, navigation],
   );
   const onRefresh = useCallback(() => {
     setRefreshing(true);

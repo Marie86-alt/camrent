@@ -77,6 +77,13 @@ service cloud.firestore {
             && request.resource.data.status in ['confirmed', 'completed']
           )
           || (
+            request.auth.uid == resource.data.ownerId
+            && affected.hasOnly(['inspection'])
+            && resource.data.status in ['confirmed', 'completed']
+            && request.resource.data.inspection.beforePhotos is list
+            && request.resource.data.inspection.afterPhotos is list
+          )
+          || (
             request.auth.uid == resource.data.clientId
             && resource.data.status == 'completed'
             && changed.hasOnly(['reviewSubmitted', 'driverReviewSubmitted'])

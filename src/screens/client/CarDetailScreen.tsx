@@ -1,19 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
+import type { DateData } from 'react-native-calendars';
 
 const CAR_BLURHASH = 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.';
 
 import { BackButton } from '../../components/BackButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { bookingRangesToOccupiedDates, subscribeToCarBookings } from '../../services/bookingService';
+import type { DateRange } from '../../services/bookingService';
+import { useToast } from '../../components/ui';
+import { hapticWarning } from '../../utils/haptics';
 import { subscribeToCarReviews } from '../../services/reviewService';
 import { useAuthStore } from '../../store/authStore';
 import type { Review } from '../../types/models';
 import type { CarDetailScreenProps } from '../../types/navigation';
 import { formatFcfa } from '../../utils/currency';
+
+LocaleConfig.locales['fr'] = {
+  monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+  monthNamesShort: ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'],
+  dayNames: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+  dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+  today: "Aujourd'hui",
+};
+LocaleConfig.defaultLocale = 'fr';
 
 type SpecCardProps = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -112,19 +127,125 @@ function ActionCard({
   );
 }
 
+type PeriodMark = {
+  startingDay?: boolean;
+  endingDay?: boolean;
+  color: string;
+  textColor: string;
+};
+
+function hasOccupiedInRange(start: string, end: string, occupied: Set<string>): boolean {
+  const cur = new Date(start);
+  const endDate = new Date(end);
+  while (cur <= endDate) {
+    if (occupied.has(cur.toISOString().slice(0, 10))) return true;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return false;
+}
+
+function formatDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+const CALENDAR_THEME = {
+  calendarBackground: '#ffffff',
+  textSectionTitleColor: '#475569',
+  todayTextColor: '#3B63D4',
+  todayBackgroundColor: '#EEF2FD',
+  dayTextColor: '#0f172a',
+  textDisabledColor: '#cbd5e1',
+  arrowColor: '#3B63D4',
+  disabledArrowColor: '#e2e8f0',
+  monthTextColor: '#0f172a',
+  textDayFontWeight: '500' as const,
+  textMonthFontWeight: '700' as const,
+  textDayHeaderFontWeight: '600' as const,
+  textDayFontSize: 14,
+  textMonthFontSize: 16,
+  textDayHeaderFontSize: 12,
+};
+
 export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
   const { t } = useTranslation();
   const { car } = route.params;
   const user = useAuthStore((state) => state.user);
   const isVerified = car.documentsVerified && car.adminStatus === 'approved';
+  const toast = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [bookedRanges, setBookedRanges] = useState<DateRange[]>([]);
+  const [selectedStart, setSelectedStart] = useState<string | null>(null);
+  const [selectedEnd, setSelectedEnd] = useState<string | null>(null);
   const photos = getCarPhotos(car);
   const technicalSheet = car.technicalSheet;
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   useEffect(() => {
     const unsub = subscribeToCarReviews(car.id, setReviews, () => {});
     return unsub;
   }, [car.id]);
+
+  useEffect(() => {
+    const unsub = subscribeToCarBookings(car.id, setBookedRanges, () => {});
+    return unsub;
+  }, [car.id]);
+
+  const occupiedSet = useMemo(
+    () => bookingRangesToOccupiedDates(bookedRanges, car.blockedDates),
+    [bookedRanges, car.blockedDates],
+  );
+
+  const markedDates = useMemo(() => {
+    const result: Record<string, PeriodMark> = {};
+    for (const date of occupiedSet) {
+      result[date] = { color: '#f1f5f9', textColor: '#94a3b8' };
+    }
+    if (selectedStart) {
+      if (!selectedEnd) {
+        result[selectedStart] = { startingDay: true, endingDay: true, color: '#3B63D4', textColor: '#fff' };
+      } else {
+        const cur = new Date(selectedStart);
+        const end = new Date(selectedEnd);
+        while (cur <= end) {
+          const d = cur.toISOString().slice(0, 10);
+          const isEdge = d === selectedStart || d === selectedEnd;
+          result[d] = {
+            startingDay: d === selectedStart,
+            endingDay: d === selectedEnd,
+            color: isEdge ? '#3B63D4' : '#EEF2FD',
+            textColor: isEdge ? '#fff' : '#3B63D4',
+          };
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+    }
+    return result;
+  }, [occupiedSet, selectedStart, selectedEnd]);
+
+  const onDayPress = useCallback((day: DateData) => {
+    const dateStr = day.dateString;
+    if (dateStr < todayStr || occupiedSet.has(dateStr)) return;
+
+    if (!selectedStart || selectedEnd) {
+      setSelectedStart(dateStr);
+      setSelectedEnd(null);
+      return;
+    }
+
+    if (dateStr <= selectedStart) {
+      setSelectedStart(dateStr);
+      return;
+    }
+
+    if (hasOccupiedInRange(selectedStart, dateStr, occupiedSet)) {
+      hapticWarning();
+      toast.warning(t('car.selection_conflict'));
+      setSelectedStart(null);
+      return;
+    }
+
+    setSelectedEnd(dateStr);
+  }, [todayStr, occupiedSet, selectedStart, selectedEnd, toast, t]);
 
   const avgRating =
     reviews.length > 0
@@ -254,6 +375,77 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
             <Text className="leading-6 text-slate-600">{car.description}</Text>
           </View>
         ) : null}
+
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-slate-950">{t('car.availability_title')}</Text>
+            {selectedStart ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => { setSelectedStart(null); setSelectedEnd(null); }}
+              >
+                <Text className="text-sm font-semibold text-brand-blue">{t('car.availability_reset')}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <View
+            className="overflow-hidden rounded-2xl bg-white"
+            style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+          >
+            <Calendar
+              enableSwipeMonths
+              markingType="period"
+              markedDates={markedDates}
+              minDate={todayStr}
+              onDayPress={onDayPress}
+              theme={CALENDAR_THEME}
+            />
+          </View>
+
+          <Text className="text-center text-sm text-slate-400">
+            {!selectedStart
+              ? t('car.availability_hint_start')
+              : !selectedEnd
+                ? t('car.availability_hint_end')
+                : t('car.availability_selected', {
+                    start: formatDateShort(selectedStart),
+                    end: formatDateShort(selectedEnd),
+                  })}
+          </Text>
+
+          <View className="flex-row items-center gap-5 px-1">
+            <View className="flex-row items-center gap-1.5">
+              <View className="h-3 w-3 rounded-sm border border-slate-200 bg-white" />
+              <Text className="text-xs text-slate-500">{t('car.legend_free')}</Text>
+            </View>
+            <View className="flex-row items-center gap-1.5">
+              <View className="h-3 w-3 rounded-sm bg-slate-200" />
+              <Text className="text-xs text-slate-500">{t('car.legend_booked')}</Text>
+            </View>
+            <View className="flex-row items-center gap-1.5">
+              <View className="h-3 w-3 rounded-full bg-blue-50" style={{ borderWidth: 1.5, borderColor: '#3B63D4' }} />
+              <Text className="text-xs text-slate-500">{t('car.legend_today')}</Text>
+            </View>
+          </View>
+
+          {selectedStart && selectedEnd ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              className="flex-row items-center justify-center gap-2 rounded-2xl bg-brand-blue py-4"
+              onPress={() => {
+                if (user) {
+                  navigation.navigate('Booking', { car, startDate: selectedStart, endDate: selectedEnd });
+                } else {
+                  (navigation as any).navigate('Login');
+                }
+              }}
+            >
+              <Ionicons color="white" name="calendar-outline" size={18} />
+              <Text className="text-base font-bold text-white">{t('car.book_selected_dates')}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
         {reviews.length > 0 && (
           <View className="gap-3">

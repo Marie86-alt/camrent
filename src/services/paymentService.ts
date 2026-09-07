@@ -5,9 +5,11 @@ import type { PaymentMethod, PaymentProvider } from '../types/models';
 export type PaymentRequest = {
   amount: number;
   bookingId: string;
+  failureReturnUrl?: string;
   method: PaymentMethod;
   phone?: string;
   provider: PaymentProvider;
+  returnUrl?: string;
 };
 
 export type PaymentResponse = {
@@ -63,9 +65,11 @@ export async function requestMobileMoneyPayment(request: PaymentRequest) {
         amount: request.amount,
         bookingId: request.bookingId,
         currency: 'XAF',
+        failureReturnUrl: request.failureReturnUrl,
         method: request.method,
         phone: request.phone,
         provider: request.provider,
+        returnUrl: request.returnUrl,
       }),
     });
 

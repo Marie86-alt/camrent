@@ -28,10 +28,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.mariemeng.autofixpro"
+      "package": "com.mariemeng.autofixpro",
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -67,6 +69,12 @@
       "eas": {
         "projectId": "567eefdd-8f54-4064-ba56-15c39dcdff36"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/567eefdd-8f54-4064-ba56-15c39dcdff36"
     }
   }
 }

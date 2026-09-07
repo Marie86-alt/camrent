@@ -16,7 +16,7 @@ import type { AppUser, CameroonCity, UserRole } from '../../types/models';
 import type { RegisterScreenProps } from '../../types/navigation';
 import { isValidCameroonPhone } from '../../utils/validation';
 
-type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense';
+type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense' | 'criminalRecord';
 
 async function pickImage(): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,6 +50,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [nationalIdNumber, setNationalIdNumber] = useState('');
   const [pricePerDay, setPricePerDay] = useState('');
   const [driverDocuments, setDriverDocuments] = useState<Record<DriverDocumentKey, string | null>>({
+    criminalRecord: null,
     driverLicense: null,
     nationalId: null,
     nationalIdBack: null,
@@ -75,6 +76,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
     { key: 'nationalId' as const, label: t('driver.national_id_front') },
     { key: 'nationalIdBack' as const, label: t('driver.national_id_back') },
     { key: 'driverLicense' as const, label: t('driver.license') },
+    { key: 'criminalRecord' as const, label: t('driver.doc_criminal_record') },
   ];
 
   const selectDriverDocument = async (key: DriverDocumentKey) => {
@@ -141,16 +143,18 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         return;
       }
 
-      const [profilePhotoUrl, nationalIdUrl, nationalIdBackUrl, driverLicenseUrl] = await Promise.all([
+      const [profilePhotoUrl, nationalIdUrl, nationalIdBackUrl, driverLicenseUrl, criminalRecordUrl] = await Promise.all([
         uploadDriverProfilePhoto(user.id, driverDocuments.profilePhoto as string),
         uploadUserDocument(user.id, driverDocuments.nationalId as string, 'national-id-front'),
         uploadUserDocument(user.id, driverDocuments.nationalIdBack as string, 'national-id-back'),
         uploadUserDocument(user.id, driverDocuments.driverLicense as string, 'driver-license'),
+        uploadUserDocument(user.id, driverDocuments.criminalRecord as string, 'criminal-record'),
       ]);
 
       const updatedUser: AppUser = {
         ...user,
         documents: {
+          criminalRecordUrl,
           driverLicenseUrl,
           nationalIdBackUrl,
           nationalIdUrl,

@@ -39,8 +39,10 @@ export function validatePaymentPayload(payload: Partial<MobileMoneyPaymentReques
     amount: Number(payload.amount ?? 0),
     bookingId: payload.bookingId,
     currency: payload.currency,
+    failureReturnUrl: typeof payload.failureReturnUrl === 'string' ? payload.failureReturnUrl : undefined,
     method: payload.method,
     phone: payload.phone ? normalizeCameroonPhone(payload.phone) : undefined,
     provider: payload.provider,
+    returnUrl: typeof payload.returnUrl === 'string' ? payload.returnUrl : undefined,
   } satisfies MobileMoneyPaymentRequest;
 }

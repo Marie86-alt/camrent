@@ -56,6 +56,14 @@ export async function uploadUserDocument(userId: string, localUri: string, docum
   return getDownloadURL(documentRef);
 }
 
+export async function uploadInspectionPhoto(bookingId: string, localUri: string, phase: 'before' | 'after', index: number) {
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+  const photoRef = ref(storage, `bookings/${bookingId}/inspection/${phase}-${index}-${Date.now()}.jpg`);
+  await uploadBytes(photoRef, blob, { contentType: blob.type || 'image/jpeg' });
+  return getDownloadURL(photoRef);
+}
+
 export async function uploadUserProfilePhoto(userId: string, localUri: string) {
   const response = await fetch(localUri);
   const blob = await response.blob();

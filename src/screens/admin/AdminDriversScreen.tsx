@@ -20,7 +20,7 @@ import { useAuth } from '../../hooks/useAuth';
 import type { AppUser, CameroonCity } from '../../types/models';
 
 type DriverFilter = 'all' | 'independent' | 'owner';
-type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense';
+type DriverDocumentKey = 'profilePhoto' | 'nationalId' | 'nationalIdBack' | 'driverLicense' | 'criminalRecord';
 
 const SKELETON_ITEMS = [0, 1, 2];
 
@@ -101,6 +101,7 @@ export function AdminDriversScreen() {
   const [newPhone, setNewPhone] = useState('+237');
   const [newPricePerDay, setNewPricePerDay] = useState('');
   const [newDocuments, setNewDocuments] = useState<Record<DriverDocumentKey, string | null>>({
+    criminalRecord: null,
     driverLicense: null,
     nationalId: null,
     nationalIdBack: null,
@@ -191,6 +192,7 @@ export function AdminDriversScreen() {
     setNewPhone('+237');
     setNewPricePerDay('');
     setNewDocuments({
+      criminalRecord: null,
       driverLicense: null,
       nationalId: null,
       nationalIdBack: null,
@@ -220,15 +222,17 @@ export function AdminDriversScreen() {
 
     try {
       setCreating(true);
-      const [profilePhotoUrl, nationalIdUrl, nationalIdBackUrl, driverLicenseUrl] = await Promise.all([
+      const [profilePhotoUrl, nationalIdUrl, nationalIdBackUrl, driverLicenseUrl, criminalRecordUrl] = await Promise.all([
         uploadDriverProfilePhoto(user.id, newDocuments.profilePhoto as string),
         uploadUserDocument(user.id, newDocuments.nationalId as string, 'admin-independent-national-id-front'),
         uploadUserDocument(user.id, newDocuments.nationalIdBack as string, 'admin-independent-national-id-back'),
         uploadUserDocument(user.id, newDocuments.driverLicense as string, 'admin-independent-driver-license'),
+        uploadUserDocument(user.id, newDocuments.criminalRecord as string, 'admin-independent-criminal-record'),
       ]);
 
       await createIndependentDriverByAdmin({
         city: newCity,
+        criminalRecordUrl,
         driverLicenseUrl,
         email: newEmail.trim(),
         experienceYears: Number(newExperienceYears) || 0,
@@ -326,6 +330,7 @@ export function AdminDriversScreen() {
     { key: 'nationalId', label: t('admin.doc_cni_front') },
     { key: 'nationalIdBack', label: t('admin.doc_cni_back') },
     { key: 'driverLicense', label: t('admin.doc_license') },
+    { key: 'criminalRecord', label: t('admin.doc_criminal_record') },
   ];
 
   const filterItems = [
@@ -576,6 +581,7 @@ export function AdminDriversScreen() {
                 <DetailLine label={t('admin.detail_cni')} value={selectedDriver.documents?.nationalIdUrl ? t('admin.detail_provided') : undefined} />
                 <DetailLine label={t('admin.detail_cni_back')} value={selectedDriver.documents?.nationalIdBackUrl ? t('admin.detail_provided') : undefined} />
                 <DetailLine label={t('admin.detail_license_doc')} value={selectedDriver.documents?.driverLicenseUrl ? t('admin.detail_provided') : undefined} />
+                <DetailLine label={t('admin.detail_criminal_record')} value={selectedDriver.documents?.criminalRecordUrl ? t('admin.detail_provided') : undefined} />
                 <DetailLine label={t('admin.detail_last_action')} value={selectedDriver.adminLastActionReason} />
 
                 <View className="gap-3 pt-2">

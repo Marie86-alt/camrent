@@ -120,12 +120,14 @@ export async function requestCampayPayment(request: CampayPaymentRequest): Promi
       description: `Reservation Autofix Pro ${request.bookingId}`,
       email: request.customerEmail ?? '',
       external_reference: request.reference,
-      failure_redirect_url: optionalEnv('CAMPAY_FAILURE_REDIRECT_URL', optionalEnv('CAMPAY_REDIRECT_URL')),
+      failure_redirect_url:
+        request.failureReturnUrl ??
+        optionalEnv('CAMPAY_FAILURE_REDIRECT_URL', optionalEnv('CAMPAY_REDIRECT_URL')),
       first_name: firstName,
       ...(from ? { from } : {}),
       last_name: lastName,
       payment_options: paymentOptions(request.provider),
-      redirect_url: optionalEnv('CAMPAY_REDIRECT_URL', 'https://campay.net'),
+      redirect_url: request.returnUrl ?? optionalEnv('CAMPAY_REDIRECT_URL', 'autofixpro://payment-return'),
     }),
     headers: {
       Authorization: `Token ${token}`,

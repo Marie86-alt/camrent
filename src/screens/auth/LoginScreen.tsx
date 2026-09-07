@@ -88,16 +88,17 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <ScrollView
             contentContainerStyle={{
               flexGrow: 1,
               paddingHorizontal: 22,
-              paddingBottom: 24,
+              paddingBottom: 44,
               justifyContent: 'space-between',
             }}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >

@@ -20,8 +20,10 @@ type CreateBookingRequest = {
   driverId?: string;
   driverLicense?: DriverLicensePayload;
   endDate?: string;
+  endTime?: string;
   paymentMethod?: PaymentMethod;
   startDate?: string;
+  startTime?: string;
   withDriver?: boolean;
 };
 
@@ -50,6 +52,24 @@ function parseDate(value: unknown, field: string) {
   return date;
 }
 
+function parseTime(value: unknown, fallback: string, field: string) {
+  if (value === undefined || value === null || value === '') return fallback;
+
+  const raw = assertString(value, field);
+
+  if (!/^\d{2}:\d{2}$/.test(raw)) {
+    throw new Error(`${field} est invalide.`);
+  }
+
+  const [hours, minutes] = raw.split(':').map(Number);
+
+  if (hours > 23 || minutes > 59) {
+    throw new Error(`${field} est invalide.`);
+  }
+
+  return raw;
+}
+
 function toDate(value: unknown) {
   return typeof (value as { toDate?: () => Date })?.toDate === 'function'
     ? (value as { toDate: () => Date }).toDate()
@@ -68,9 +88,11 @@ export async function handleCreateBooking(request: Request, response: Response) 
   const carId = assertString(body.carId, 'carId');
   const startDate = parseDate(body.startDate, 'startDate');
   const endDate = parseDate(body.endDate, 'endDate');
+  const startTime = parseTime(body.startTime, '08:00', 'startTime');
+  const endTime = parseTime(body.endTime, '18:00', 'endTime');
   const paymentMethod = body.paymentMethod;
   const withDriver = body.withDriver === true;
-  const driverLicense = assertDriverLicense(body.driverLicense);
+  const driverLicense = withDriver ? null : assertDriverLicense(body.driverLicense);
 
   if (!paymentMethod || !PAYMENT_METHODS.includes(paymentMethod)) {
     throw new Error('Methode de paiement invalide.');
@@ -93,9 +115,10 @@ export async function handleCreateBooking(request: Request, response: Response) 
 
     const car = carSnapshot.data() as {
       adminStatus?: string;
+      allowIndependentDrivers?: boolean;
+      blockedDates?: string[];
       brand?: string;
       city?: string;
-      allowIndependentDrivers?: boolean;
       isAvailable?: boolean;
       model?: string;
       ownerId?: string;
@@ -118,6 +141,10 @@ export async function handleCreateBooking(request: Request, response: Response) 
 
     if (hasConflict) {
       throw new Error('Ce vehicule est deja reserve sur ces dates.');
+    }
+
+    if (!isAvailableForDates(car.blockedDates, startDate, endDate)) {
+      throw new Error('Ce vehicule n est pas disponible sur ces dates (maintenance ou usage personnel).');
     }
 
     let driverFields: Record<string, unknown> = {};
@@ -183,10 +210,12 @@ export async function handleCreateBooking(request: Request, response: Response) 
       createdAt: FieldValue.serverTimestamp(),
       driverLicense,
       endDate: Timestamp.fromDate(endDate),
+      endTime,
       ownerId: car.ownerId,
       paymentMethod,
       paymentStatus: 'unpaid',
       startDate: Timestamp.fromDate(startDate),
+      startTime,
       status: 'pending',
       totalDays,
       totalPrice,

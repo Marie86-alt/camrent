@@ -5,11 +5,13 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { doc, getDoc } from 'firebase/firestore';
 
 import { BrandLogo } from '../../components/BrandLogo';
 import { Screen } from '../../components/Screen';
 import { BookingCardSkeleton, EmptyState } from '../../components/ui';
 import EmptyMissionsIllustration from '../../../assets/illustrations/empty-missions.svg';
+import { db } from '../../services/firebase';
 import { subscribeToDriverBookings } from '../../services/bookingService';
 import { useAuth } from '../../hooks/useAuth';
 import type { Booking, BookingStatus } from '../../types/models';
@@ -98,6 +100,14 @@ export function DriverMissionsScreen({ navigation }: Props) {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [commissionRate, setCommissionRate] = useState(10);
+
+  useEffect(() => {
+    void getDoc(doc(db, 'adminSettings', 'security')).then((snap) => {
+      const rate = snap.data()?.rentalCommissionRate;
+      if (typeof rate === 'number') setCommissionRate(rate);
+    });
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -111,9 +121,11 @@ export function DriverMissionsScreen({ navigation }: Props) {
 
   const active = bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed');
   const history = bookings.filter((b) => b.status === 'completed' || b.status === 'cancelled');
-  const totalEarned = bookings
+  const grossEarnings = bookings
     .filter((b) => b.status === 'completed' && b.driverPricePerDay)
     .reduce((sum, b) => sum + b.totalDays * (b.driverPricePerDay ?? 0), 0);
+  const commissionAmount = Math.round(grossEarnings * commissionRate / 100);
+  const netEarnings = grossEarnings - commissionAmount;
   const bookingKeyExtractor = useCallback((item: Booking) => item.id, []);
   const renderHistoryMission = useCallback(
     ({ item }: { item: Booking }) => (
@@ -156,7 +168,21 @@ export function DriverMissionsScreen({ navigation }: Props) {
                 <View className="flex-row gap-3">
                   <View className="flex-1 rounded-2xl bg-slate-950 p-4">
                     <Text className="text-xs font-semibold text-slate-400">{t('driver.cumulative_earnings')}</Text>
-                    <Text className="mt-1 text-xl font-black text-white">{formatFcfa(totalEarned)}</Text>
+                    <View className="mt-2 gap-1.5">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs text-slate-400">{t('driver.earnings_gross')}</Text>
+                        <Text className="text-xs font-semibold text-slate-300">{formatFcfa(grossEarnings)}</Text>
+                      </View>
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs text-red-400">{t('driver.earnings_commission', { rate: commissionRate })}</Text>
+                        <Text className="text-xs font-semibold text-red-400">-{formatFcfa(commissionAmount)}</Text>
+                      </View>
+                      <View className="my-1 h-px bg-slate-700" />
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs font-bold text-white">{t('driver.earnings_net')}</Text>
+                        <Text className="text-base font-black text-white">{formatFcfa(netEarnings)}</Text>
+                      </View>
+                    </View>
                   </View>
                   <View className="flex-1 rounded-2xl bg-white p-4" style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}>
                     <View className="mb-1 h-8 w-8 items-center justify-center rounded-lg bg-blue-50">

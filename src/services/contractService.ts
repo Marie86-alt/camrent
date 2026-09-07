@@ -1,7 +1,7 @@
 import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 
-import { db } from './firebase';
-import { uploadSignature } from './storageService';
+import { auth, db } from './firebase';
+import { assertOnlineForAction } from './networkGuard';
 import type { Booking } from '../types/models';
 import { formatFullDate } from '../utils/dates';
 import { toJsDate } from '../utils/firestoreDate';
@@ -11,27 +11,60 @@ function buildContractRef(bookingId: string) {
   return `CR-${year}-${bookingId.slice(-6).toUpperCase()}`;
 }
 
-export async function signContract(booking: Booking, signatureBase64: string): Promise<string> {
-  let signatureUrl = signatureBase64;
+function getSignContractEndpoint() {
+  const explicit = process.env.EXPO_PUBLIC_SIGN_CONTRACT_API_URL;
+  if (explicit) return explicit;
 
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+  return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/signContract` : undefined;
+}
+
+function cleanContractError(body: string) {
   try {
-    signatureUrl = await uploadSignature(
-      booking.clientId,
-      booking.id,
-      signatureBase64,
-    );
-  } catch (error) {
-    console.warn('Signature Storage upload failed, saving data URL in booking.', error);
+    const parsed = JSON.parse(body) as { error?: unknown };
+    if (typeof parsed.error === 'string') return parsed.error;
+  } catch {
+    // Keep raw fallback.
+  }
+
+  return body;
+}
+
+export async function signContract(booking: Booking, signatureBase64: string): Promise<string> {
+  await assertOnlineForAction();
+
+  const endpoint = getSignContractEndpoint();
+
+  if (endpoint) {
+    const token = await auth.currentUser?.getIdToken();
+    const response = await fetch(endpoint, {
+      body: JSON.stringify({
+        bookingId: booking.id,
+        signatureDataUrl: signatureBase64,
+      }),
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(cleanContractError(message) || 'Signature impossible.');
+    }
+
+    return signatureBase64;
   }
 
   await updateDoc(doc(db, 'bookings', booking.id), {
     contractStatus: 'client_signed',
-    clientSignatureUrl: signatureUrl,
+    clientSignatureUrl: signatureBase64,
     contractSignedAt: Timestamp.now(),
     contractRef: buildContractRef(booking.id),
   });
 
-  return signatureUrl;
+  return signatureBase64;
 }
 
 export function buildContractText(booking: Booking, clientName: string): string {
@@ -39,6 +72,9 @@ export function buildContractText(booking: Booking, clientName: string): string 
   const today = formatFullDate(new Date());
   const start = formatFullDate(toJsDate(booking.startDate));
   const end = formatFullDate(toJsDate(booking.endDate));
+  const startTime = booking.startTime ?? '08:00';
+  const endTime = booking.endTime ?? '18:00';
+  const license = booking.driverLicense;
 
   return `CONTRAT DE LOCATION DE VÉHICULE
 Référence : ${ref}
@@ -53,10 +89,10 @@ Référence interne : ${booking.ownerId.slice(-8).toUpperCase()}
 
 LOCATAIRE :
 ${clientName}
-N° permis : ${booking.driverLicense.licenseNumber}
-Catégories : ${booking.driverLicense.categories}
-Pays d'émission : ${booking.driverLicense.issuingCountry}
-Expiration permis : ${booking.driverLicense.expiryDate}
+N° permis : ${license?.licenseNumber ?? 'Non requis - location avec chauffeur'}
+Catégories : ${license?.categories ?? 'N/A'}
+Pays d'émission : ${license?.issuingCountry ?? 'N/A'}
+Expiration permis : ${license?.expiryDate ?? 'N/A'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ARTICLE 2 — VÉHICULE LOUÉ
@@ -68,8 +104,8 @@ Référence annonce : ${booking.carId.slice(-8).toUpperCase()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ARTICLE 3 — DURÉE DE LA LOCATION
 
-Début : ${start}
-Fin : ${end}
+Début : ${start} à ${startTime}
+Fin : ${end} à ${endTime}
 Durée totale : ${booking.totalDays} jour${booking.totalDays > 1 ? 's' : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━

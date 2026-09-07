@@ -107,11 +107,13 @@ function AdminStatusBanner({ car }: { car: Car }) {
 
 function OwnerCarListItem({
   car,
+  onBlockDates,
   onDelete,
   onEdit,
   onToggleAvailability,
 }: {
   car: Car;
+  onBlockDates: (car: Car) => void;
   onDelete: (car: Car) => void;
   onEdit: (car: Car) => void;
   onToggleAvailability: (car: Car) => void;
@@ -201,6 +203,15 @@ function OwnerCarListItem({
 
         <TouchableOpacity
           activeOpacity={0.8}
+          className="flex-row items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
+          onPress={() => onBlockDates(car)}
+        >
+          <Ionicons color="#D97706" name="calendar-outline" size={16} />
+          <Text className="text-sm font-semibold text-amber-700">{t('owner.manage_availability')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
           className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
           onPress={() => onDelete(car)}
         >
@@ -263,16 +274,20 @@ export function ManageCarsScreen({ navigation }: Props) {
   const editCar = useCallback((car: Car) => {
     navigation.navigate('EditCar', { car });
   }, [navigation]);
+  const blockDates = useCallback((car: Car) => {
+    navigation.navigate('CarBlockDates', { car });
+  }, [navigation]);
   const renderCar = useCallback(
     ({ item }: { item: Car }) => (
       <OwnerCarListItem
         car={item}
+        onBlockDates={blockDates}
         onDelete={confirmDeleteCar}
         onEdit={editCar}
         onToggleAvailability={toggleAvailability}
       />
     ),
-    [confirmDeleteCar, editCar, toggleAvailability],
+    [blockDates, confirmDeleteCar, editCar, toggleAvailability],
   );
 
   const header = (

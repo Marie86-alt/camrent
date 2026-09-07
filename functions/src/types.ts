@@ -8,9 +8,11 @@ export type MobileMoneyPaymentRequest = {
   amount: number;
   bookingId: string;
   currency: 'XAF';
+  failureReturnUrl?: string;
   method: PaymentMethod;
   phone?: string;
   provider: PaymentProvider;
+  returnUrl?: string;
 };
 
 export type ProviderPaymentRequest = {
@@ -19,8 +21,10 @@ export type ProviderPaymentRequest = {
   currency: 'XAF';
   customerEmail?: string;
   customerName?: string;
+  failureReturnUrl?: string;
   phone?: string;
   reference: string;
+  returnUrl?: string;
 };
 
 export type ProviderPaymentResponse = {
@@ -32,6 +36,10 @@ export type ProviderPaymentResponse = {
 
 export type BookingDocument = {
   clientId: string;
+  carBrand?: string;
+  carId?: string;
+  carModel?: string;
+  driverId?: string;
   ownerId: string;
   totalPrice: number;
   paymentStatus: 'unpaid' | 'pending' | 'paid' | 'failed';

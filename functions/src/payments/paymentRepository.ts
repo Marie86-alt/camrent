@@ -1,5 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
+import { handleBookingPaymentConfirmed } from '../bookings/bookingNotifications';
 import { db } from '../firebase';
 import type { BookingDocument, PaymentProvider, PaymentStatus } from '../types';
 
@@ -120,7 +121,10 @@ export async function updatePaymentFromProvider(params: {
 
   const bookingRef = db.collection('bookings').doc(payment.bookingId);
 
-  await db.runTransaction(async (transaction) => {
+  const shouldNotify = await db.runTransaction(async (transaction) => {
+    const bookingSnapshot = await transaction.get(bookingRef);
+    const booking = bookingSnapshot.data() as BookingDocument | undefined;
+
     transaction.update(paymentRef, {
       providerStatus: params.status,
       rawCallback: params.raw,
@@ -129,12 +133,13 @@ export async function updatePaymentFromProvider(params: {
     });
 
     if (params.status === 'success') {
+      const notify = booking?.paymentStatus !== 'paid';
       transaction.update(bookingRef, {
         paymentStatus: 'paid',
         status: 'confirmed',
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return;
+      return notify;
     }
 
     if (params.status === 'failed') {
@@ -143,7 +148,13 @@ export async function updatePaymentFromProvider(params: {
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
+
+    return false;
   });
+
+  if (shouldNotify) {
+    await handleBookingPaymentConfirmed(payment.bookingId);
+  }
 }
 
 export async function updatePaymentFromGateway(params: {
@@ -155,7 +166,10 @@ export async function updatePaymentFromGateway(params: {
   const payment = paymentSnapshot.data() as { bookingId: string };
   const bookingRef = db.collection('bookings').doc(payment.bookingId);
 
-  await db.runTransaction(async (transaction) => {
+  const shouldNotify = await db.runTransaction(async (transaction) => {
+    const bookingSnapshot = await transaction.get(bookingRef);
+    const booking = bookingSnapshot.data() as BookingDocument | undefined;
+
     transaction.update(paymentRef, {
       providerStatus: params.status,
       rawCallback: params.raw,
@@ -164,12 +178,13 @@ export async function updatePaymentFromGateway(params: {
     });
 
     if (params.status === 'success') {
+      const notify = booking?.paymentStatus !== 'paid';
       transaction.update(bookingRef, {
         paymentStatus: 'paid',
         status: 'confirmed',
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return;
+      return notify;
     }
 
     if (params.status === 'failed') {
@@ -178,5 +193,11 @@ export async function updatePaymentFromGateway(params: {
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
+
+    return false;
   });
+
+  if (shouldNotify) {
+    await handleBookingPaymentConfirmed(payment.bookingId);
+  }
 }

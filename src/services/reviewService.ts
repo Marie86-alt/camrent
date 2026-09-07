@@ -59,6 +59,10 @@ export function markDriverReviewSubmitted(_bookingId: string): Promise<void> {
   return updateDoc(doc(db, 'bookings', _bookingId), { driverReviewSubmitted: true });
 }
 
+export function markOwnerReviewSubmitted(_bookingId: string): Promise<void> {
+  return updateDoc(doc(db, 'bookings', _bookingId), { ownerReviewSubmitted: true });
+}
+
 export function subscribeToCarReviews(
   carId: string,
   onData: (reviews: Review[]) => void,

@@ -5,6 +5,7 @@ import { handleBookingCreated } from './bookings/bookingNotifications';
 import { handleCancelBooking } from './bookings/cancelBooking';
 import { handleCreateBooking } from './bookings/createBooking';
 import { handleOwnerCancelBooking } from './bookings/ownerCancelBooking';
+import { handleSignContract } from './bookings/signContract';
 import {
   handleCreateIndependentDriver,
   handleCreateOwnerDriver,
@@ -78,6 +79,21 @@ export const ownerCancelBooking = onRequest({ cors: true }, async (request, resp
     console.error(error);
     sendJson(response, 400, {
       error: error instanceof Error ? error.message : 'Owner booking cancellation failed',
+    });
+  }
+});
+
+export const signContract = onRequest({ cors: true }, async (request, response) => {
+  try {
+    if (!assertPost(request, response)) {
+      return;
+    }
+
+    await handleSignContract(request, response);
+  } catch (error) {
+    console.error(error);
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : 'Contract signature failed',
     });
   }
 });

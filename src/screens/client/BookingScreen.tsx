@@ -9,8 +9,10 @@ import { PAYMENT_METHODS } from '../../constants/cameroon';
 import { DatePickerField } from '../../components/DatePickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
+import { doc, getDoc } from 'firebase/firestore';
+
 import { createBooking } from '../../services/bookingService';
-import { hasFirebaseConfig } from '../../services/firebase';
+import { db, hasFirebaseConfig } from '../../services/firebase';
 import { isOfflineError } from '../../services/networkGuard';
 import { useAuthStore } from '../../store/authStore';
 import { useBookingDraftStore } from '../../store/bookingDraftStore';
@@ -22,6 +24,7 @@ import { formatFcfa } from '../../utils/currency';
 import { formatDate, formatInputDate, getRentalDays, parseHumanDate } from '../../utils/dates';
 
 type DateField = 'start' | 'end';
+type TimeField = 'startTime' | 'endTime';
 
 type DriverLicenseForm = {
   fullName: string;
@@ -78,6 +81,28 @@ function LicenseInput({ keyboardType, label, maxLength, onChangeText, placeholde
   );
 }
 
+function clampDate(d: Date, floor: Date): Date {
+  return d >= floor ? d : floor;
+}
+
+function parseDateParam(iso: string | undefined, floor: Date): Date {
+  if (!iso) return floor;
+  const d = new Date(iso);
+  d.setHours(0, 0, 0, 0);
+  return clampDate(d, floor);
+}
+
+function formatTime(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function timeToDate(time: string) {
+  const date = new Date();
+  const [hours, minutes] = time.split(':').map(Number);
+  date.setHours(Number.isFinite(hours) ? hours : 8, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+  return date;
+}
+
 export function BookingScreen({ navigation, route }: BookingScreenProps) {
   const { t } = useTranslation();
   const { car } = route.params;
@@ -91,11 +116,21 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
-  const [startDateInput, setStartDateInput] = useState(formatInputDate(today));
-  const [endDateInput, setEndDateInput] = useState(formatInputDate(today));
+
+  const [startDate, setStartDate] = useState(() => parseDateParam(route.params.startDate, today));
+  const [endDate, setEndDate] = useState(() => {
+    const start = parseDateParam(route.params.startDate, today);
+    return parseDateParam(route.params.endDate, start);
+  });
+  const [startDateInput, setStartDateInput] = useState(() => formatInputDate(parseDateParam(route.params.startDate, today)));
+  const [endDateInput, setEndDateInput] = useState(() => {
+    const start = parseDateParam(route.params.startDate, today);
+    return formatInputDate(parseDateParam(route.params.endDate, start));
+  });
   const [activeDatePicker, setActiveDatePicker] = useState<DateField | null>(null);
+  const [activeTimePicker, setActiveTimePicker] = useState<TimeField | null>(null);
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('18:00');
   const [driverLicense, setDriverLicense] = useState<DriverLicenseForm>(INITIAL_DRIVER_LICENSE);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN MoMo');
   const [loading, setLoading] = useState(false);
@@ -104,10 +139,22 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     bookingId: string;
     paymentMethod: PaymentMethod;
   } | null>(null);
+  const [depositAmount, setDepositAmount] = useState<number>(0);
 
   useEffect(() => {
     return () => { clearDriver(); };
   }, [clearDriver]);
+
+  useEffect(() => {
+    async function loadDeposit() {
+      try {
+        const snap = await getDoc(doc(db, 'adminSettings', 'security'));
+        const data = snap.data() as { defaultDepositAmount?: number } | undefined;
+        if (data?.defaultDepositAmount) setDepositAmount(Number(data.defaultDepositAmount));
+      } catch { /* ignore — le champ reste à 0 */ }
+    }
+    void loadDeposit();
+  }, []);
 
   const totalDays = useMemo(() => getRentalDays(startDate, endDate), [endDate, startDate]);
   const driverPricePerDay = selectedDriver?.driverProfile?.pricePerDay ?? 10000;
@@ -172,6 +219,24 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
     setActiveDatePicker(null);
   };
 
+  const onTimePickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setActiveTimePicker(null);
+      return;
+    }
+
+    if (activeTimePicker && selectedDate) {
+      const value = formatTime(selectedDate);
+      if (activeTimePicker === 'startTime') {
+        setStartTime(value);
+      } else {
+        setEndTime(value);
+      }
+    }
+
+    setActiveTimePicker(null);
+  };
+
   const validateDriverLicense = () => {
     const normalized = {
       fullName: driverLicense.fullName.trim(),
@@ -231,8 +296,8 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
       return;
     }
 
-    const validatedDriverLicense = validateDriverLicense();
-    if (!validatedDriverLicense) return;
+    const validatedDriverLicense = withDriver ? null : validateDriverLicense();
+    if (!withDriver && !validatedDriverLicense) return;
 
     try {
       setLoading(true);
@@ -250,8 +315,10 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
         clientId: user.id,
         driverLicense: validatedDriverLicense,
         endDate,
+        endTime,
         paymentMethod,
         startDate,
+        startTime,
         totalDays,
         totalPrice,
         withDriver,
@@ -379,6 +446,44 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             />
           ) : null}
 
+          <View className="gap-3">
+            <Text className="font-semibold text-slate-800">{t('booking.rental_times')}</Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                activeOpacity={0.85}
+                className="flex-1 rounded-xl border border-slate-200 bg-white p-4"
+                onPress={() => setActiveTimePicker('startTime')}
+              >
+                <View className="mb-1 flex-row items-center gap-1.5">
+                  <Ionicons color="#94a3b8" name="time-outline" size={14} />
+                  <Text className="text-xs text-slate-500">{t('booking.pickup_time')}</Text>
+                </View>
+                <Text className="text-base font-bold text-slate-950">{startTime}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                className="flex-1 rounded-xl border border-slate-200 bg-white p-4"
+                onPress={() => setActiveTimePicker('endTime')}
+              >
+                <View className="mb-1 flex-row items-center gap-1.5">
+                  <Ionicons color="#94a3b8" name="time-outline" size={14} />
+                  <Text className="text-xs text-slate-500">{t('booking.return_time')}</Text>
+                </View>
+                <Text className="text-base font-bold text-slate-950">{endTime}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {activeTimePicker ? (
+            <DateTimePicker
+              display="default"
+              mode="time"
+              onChange={onTimePickerChange}
+              value={timeToDate(activeTimePicker === 'startTime' ? startTime : endTime)}
+            />
+          ) : null}
+
           <View className="flex-row items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2">
             <Ionicons color="#3b82f6" name="information-circle-outline" size={16} />
             <Text className="text-xs text-blue-600">{t('booking.date_info')}</Text>
@@ -472,64 +577,66 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
           </View>
         </View>
 
-        <View className="gap-3">
-          <View>
-            <Text className="font-semibold text-slate-800">{t('booking.license_section')}</Text>
-            <Text className="mt-1 text-xs text-slate-500">{t('booking.license_help')}</Text>
-          </View>
+        {!withDriver && (
+          <View className="gap-3">
+            <View>
+              <Text className="font-semibold text-slate-800">{t('booking.license_section')}</Text>
+              <Text className="mt-1 text-xs text-slate-500">{t('booking.license_help')}</Text>
+            </View>
 
-          <LicenseInput
-            label={t('booking.license_full_name')}
-            onChangeText={(value) => updateDriverLicense('fullName', value)}
-            placeholder="Ex: Jean Kamga"
-            value={driverLicense.fullName}
-          />
-          <LicenseInput
-            label={t('booking.license_number')}
-            onChangeText={(value) => updateDriverLicense('licenseNumber', value)}
-            placeholder="Ex: CE-123456789"
-            value={driverLicense.licenseNumber}
-          />
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <LicenseInput
-                label={t('booking.license_country_short')}
-                onChangeText={(value) => updateDriverLicense('issuingCountry', value)}
-                placeholder="Cameroun"
-                value={driverLicense.issuingCountry}
-              />
+            <LicenseInput
+              label={t('booking.license_full_name')}
+              onChangeText={(value) => updateDriverLicense('fullName', value)}
+              placeholder="Ex: Jean Kamga"
+              value={driverLicense.fullName}
+            />
+            <LicenseInput
+              label={t('booking.license_number')}
+              onChangeText={(value) => updateDriverLicense('licenseNumber', value)}
+              placeholder="Ex: CE-123456789"
+              value={driverLicense.licenseNumber}
+            />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <LicenseInput
+                  label={t('booking.license_country_short')}
+                  onChangeText={(value) => updateDriverLicense('issuingCountry', value)}
+                  placeholder="Cameroun"
+                  value={driverLicense.issuingCountry}
+                />
+              </View>
+              <View className="w-24">
+                <LicenseInput
+                  label={t('booking.license_cat_short')}
+                  onChangeText={(value) => updateDriverLicense('categories', value)}
+                  placeholder="B"
+                  value={driverLicense.categories}
+                />
+              </View>
             </View>
-            <View className="w-24">
-              <LicenseInput
-                label={t('booking.license_cat_short')}
-                onChangeText={(value) => updateDriverLicense('categories', value)}
-                placeholder="B"
-                value={driverLicense.categories}
-              />
-            </View>
-          </View>
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <DatePickerField
-                label={t('booking.license_issue_date')}
-                maximumDate={today}
-                onChange={(value) => updateDriverLicense('issueDate', value)}
-                placeholder="Ex: 03/06/2026"
-                value={driverLicense.issueDate}
-              />
-            </View>
-            <View className="flex-1">
-              <DatePickerField
-                label={t('booking.license_expire')}
-                minimumDate={today}
-                onChange={(value) => updateDriverLicense('expiryDate', value)}
-                placeholder="Ex: 03/06/2030"
-                value={driverLicense.expiryDate}
-              />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <DatePickerField
+                  label={t('booking.license_issue_date')}
+                  maximumDate={today}
+                  onChange={(value) => updateDriverLicense('issueDate', value)}
+                  placeholder="Ex: 03/06/2026"
+                  value={driverLicense.issueDate}
+                />
+              </View>
+              <View className="flex-1">
+                <DatePickerField
+                  label={t('booking.license_expire')}
+                  minimumDate={today}
+                  onChange={(value) => updateDriverLicense('expiryDate', value)}
+                  placeholder="Ex: 03/06/2030"
+                  value={driverLicense.expiryDate}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         <View
           className="rounded-xl bg-white p-4"
@@ -555,6 +662,18 @@ export function BookingScreen({ navigation, route }: BookingScreenProps) {
             <Text className="font-semibold text-slate-700">{t('booking.total_price')}</Text>
             <Text className="text-xl font-black text-brand-blue">{formatFcfa(totalPrice)}</Text>
           </View>
+          {depositAmount > 0 ? (
+            <View className="mt-3 flex-row items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <Ionicons color="#D97706" name="shield-checkmark-outline" size={16} style={{ marginTop: 1 }} />
+              <View className="flex-1">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-sm font-bold text-amber-800">{t('booking.deposit_label')}</Text>
+                  <Text className="text-sm font-black text-amber-800">{formatFcfa(depositAmount)}</Text>
+                </View>
+                <Text className="mt-0.5 text-xs text-amber-700">{t('booking.deposit_note')}</Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <PrimaryButton loading={loading} onPress={reserve}>{t('booking.confirm_cta')}</PrimaryButton>

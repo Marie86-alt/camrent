@@ -8,7 +8,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { useToast } from '../../components/ui';
 import { isOfflineError } from '../../services/networkGuard';
-import { markBookingReviewSubmitted, markDriverReviewSubmitted, submitReview } from '../../services/reviewService';
+import { markBookingReviewSubmitted, markDriverReviewSubmitted, markOwnerReviewSubmitted, submitReview } from '../../services/reviewService';
 import { useAuthStore } from '../../store/authStore';
 import type { ReviewScreenProps } from '../../types/navigation';
 import { hapticSuccess, hapticWarning, hapticError } from '../../utils/haptics';
@@ -39,6 +39,8 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
   const [carComment, setCarComment] = useState('');
   const [driverRating, setDriverRating] = useState(0);
   const [driverComment, setDriverComment] = useState('');
+  const [ownerRating, setOwnerRating] = useState(0);
+  const [ownerComment, setOwnerComment] = useState('');
   const [loading, setLoading] = useState(false);
 
   const hasDriver = Boolean(booking.withDriver && booking.driverId);
@@ -50,6 +52,10 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
     }
     if (hasDriver && driverRating === 0) {
       hapticWarning(); toast.warning(t('review.rating_driver_required'));
+      return;
+    }
+    if (ownerRating === 0) {
+      hapticWarning(); toast.warning(t('review.rating_owner_required'));
       return;
     }
     if (!user) return;
@@ -77,6 +83,16 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
         });
         await markDriverReviewSubmitted(booking.id);
       }
+
+      await submitReview({
+        authorId: user.id,
+        targetId: booking.ownerId,
+        targetType: 'owner',
+        rating: ownerRating,
+        comment: ownerComment.trim(),
+        bookingId: booking.id,
+      });
+      await markOwnerReviewSubmitted(booking.id);
 
       await markBookingReviewSubmitted(booking.id);
 
@@ -185,6 +201,34 @@ export function ReviewScreen({ navigation, route }: ReviewScreenProps) {
             />
           </View>
         ) : null}
+
+        {/* Owner rating */}
+        <View
+          className="gap-4 rounded-2xl bg-white p-4"
+          style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+        >
+          <View className="flex-row items-center gap-2">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-green-50">
+              <Ionicons color="#16a34a" name="home-outline" size={18} />
+            </View>
+            <View>
+              <Text className="text-xs text-slate-400">{t('review.owner_label')}</Text>
+              <Text className="font-bold text-slate-950">{t('review.owner_label')}</Text>
+            </View>
+          </View>
+          <StarRow rating={ownerRating} onRate={setOwnerRating} />
+          <TextInput
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950"
+            maxLength={300}
+            multiline
+            numberOfLines={3}
+            onChangeText={setOwnerComment}
+            placeholder={t('review.comment_owner_placeholder')}
+            placeholderTextColor="#94a3b8"
+            textAlignVertical="top"
+            value={ownerComment}
+          />
+        </View>
 
         <PrimaryButton loading={loading} onPress={submit}>
           {t('review.submit_cta')}

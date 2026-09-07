@@ -13,6 +13,7 @@ type BookingCardProps = {
   onCancel?: () => void;
   onSignContract?: () => void;
   onReview?: () => void;
+  onDownloadInvoice?: () => void;
 };
 
 type StatusStyle = {
@@ -40,7 +41,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   'Carte bancaire': '#3b82f6',
 };
 
-export function BookingCard({ booking, onCancel, onSignContract, onReview }: BookingCardProps) {
+export function BookingCard({ booking, onCancel, onSignContract, onReview, onDownloadInvoice }: BookingCardProps) {
   const { t } = useTranslation();
 
   const statusStyle = STATUS_STYLE[booking.status] ?? STATUS_STYLE.pending;
@@ -145,6 +146,18 @@ export function BookingCard({ booking, onCancel, onSignContract, onReview }: Boo
                 : t('booking.cancel_fee_label', { amount: formatFcfa(cancellationFee) })}
             </Text>
           </View>
+        ) : null}
+
+        {booking.paymentStatus === 'paid' && onDownloadInvoice ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-slate-50 py-2.5"
+            style={{ borderWidth: 1, borderColor: '#cbd5e1' }}
+            onPress={() => { hapticLight(); onDownloadInvoice(); }}
+          >
+            <Ionicons color="#475569" name="document-text-outline" size={15} />
+            <Text className="text-xs font-bold text-slate-600">{t('invoice.download_btn')}</Text>
+          </TouchableOpacity>
         ) : null}
 
         {booking.status === 'completed' && !booking.reviewSubmitted && onReview ? (

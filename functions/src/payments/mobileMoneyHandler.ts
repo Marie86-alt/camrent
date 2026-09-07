@@ -43,10 +43,12 @@ export async function handleMobileMoneyPayment(request: Request, response: Respo
     currency: 'XAF' as const,
     customerEmail: profile.email,
     customerName: profile.fullName,
+    failureReturnUrl: payload.failureReturnUrl,
     phone: payload.phone,
     method: payload.method,
     provider: payload.provider,
     reference,
+    returnUrl: payload.returnUrl,
   };
 
   const providerResponse = await requestCampayPayment(providerRequest);
